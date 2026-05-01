@@ -1697,3 +1697,7 @@ body{
     width: 0%;
   }
 }
+#btnCrazy {
+  background: linear-gradient(180deg, #3b82f6, #1e40af) !important;
+  color: #fff !important;
+}
