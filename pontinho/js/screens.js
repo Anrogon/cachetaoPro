@@ -109,9 +109,8 @@ export function showScreen(idToShow) {
   if (game) game.style.display = (idToShow === "game") ? "block" : "none";
 
   if (idToShow === "home") {
-    transformHomePlayButtons();
-    setTimeout(() => ensureHomeStatusFeed(), 50);
-  }
+  setTimeout(() => ensureHomeStatusFeed(), 50);
+}
 
   if (idToShow === "tables") {
   window.renderTablesScreen?.();

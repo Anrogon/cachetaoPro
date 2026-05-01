@@ -1310,6 +1310,14 @@ function isMobilePortraitTable() {
   return window.matchMedia("(max-width: 768px) and (orientation: portrait)").matches;
 }
 
+const mobilePortraitMediaQuery = window.matchMedia(
+  "(max-width: 768px) and (orientation: portrait)"
+);
+
+mobilePortraitMediaQuery.addEventListener("change", () => {
+  renderAll();
+});
+
 function getPublicStateSafe() {
   return window.state_public || window.state || state_public || state || {};
 }
@@ -1436,6 +1444,16 @@ const miniAnte = Number(
     const p = players.find(player => Number(player?.seat) === seat);
 
     if (!el) continue;
+
+    if (!p) {
+      el.innerHTML = "";
+      el.classList.add("empty");
+      el.classList.remove("is-current-turn");
+      continue;
+    }
+
+    el.classList.remove("empty");
+    el.classList.toggle("is-current-turn", Number(s.currentSeat) === Number(p.seat));
 
     if (!p) {
       el.innerHTML = "";
@@ -1584,6 +1602,11 @@ function renderMobileBottomHudClean(tableData, s) {
       <div class="mobile-bottom-meta">${chips} · ${pts} pts</div>
     </div>
   `;
+
+  hud.classList.toggle(
+  "is-current-turn",
+  Number(s.currentSeat) === Number(s.mySeat)
+  );
 }
 
 function moveMobileSortButtonsToDeckArea() {

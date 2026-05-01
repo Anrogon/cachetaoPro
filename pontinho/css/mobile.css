@@ -167,6 +167,13 @@
     box-shadow: 0 3px 10px rgba(0,0,0,0.25) !important;
   }
 
+  .mobile-seat.is-current-turn {
+  border: 2px solid #ffd700 !important;
+  box-shadow:
+    0 0 0 2px rgba(255, 215, 0, 0.35),
+    0 0 14px rgba(255, 215, 0, 0.85) !important;
+}
+
   .mobile-seat.empty,
   .mobile-seat.pos6 {
     display: none !important;

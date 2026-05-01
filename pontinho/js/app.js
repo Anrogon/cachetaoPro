@@ -579,6 +579,7 @@ window.wsSendAction = wsSendAction;
 // RENDER GERAL
 // =============================
 export function renderAll() {
+  
   renderPlayerInfo();
   renderHand();
   renderTable();
@@ -588,6 +589,7 @@ export function renderAll() {
   renderScoreboard();
   updateSpectatorUI();
   renderNextPlayerButton();
+  
 
   const gameEl = document.getElementById("game");
   const gameVisible = !!gameEl && gameEl.style.display !== "none";
@@ -1108,10 +1110,9 @@ async function validateCurrentSession() {
   renderTablesScreen();
   showScreen("home");
   setTimeout(() => {
-    transformHomePlayButtons();
     ensureHomeStatusFeed();
   }, 100);
-})();
+  })();
 
 bindGameControls();
 refreshHomeUser();
@@ -1135,6 +1136,10 @@ async function refreshHomeUser() {
   const btnLogin = document.getElementById("btnLogin");
   const btnSignup = document.getElementById("btnSignup");
   const btnLogout = document.getElementById("btnLogout");
+  const btnSettings = document.getElementById("btnSettings");
+  const btnProfile = document.getElementById("btnTrain");
+  const btnClassic = document.getElementById("btnClassic");
+  const btnCrazy = document.getElementById("btnCrazy");
 
   // 1) fallback imediato pelo localStorage
   try {
@@ -1152,6 +1157,11 @@ async function refreshHomeUser() {
       if (btnLogin) btnLogin.style.display = "none";
       if (btnSignup) btnSignup.style.display = "none";
       if (btnLogout) btnLogout.style.display = "";
+
+      if (btnSettings) btnSettings.style.display = "";
+      if (btnProfile) btnProfile.style.display = "";
+      if (btnClassic) btnClassic.style.display = "";
+      if (btnCrazy) btnCrazy.style.display = "";
     } else {
       if (homeUserName) homeUserName.textContent = "Visitante";
       if (homeUserBalance) homeUserBalance.textContent = "Saldo: —";
@@ -1159,7 +1169,12 @@ async function refreshHomeUser() {
 
       if (btnLogin) btnLogin.style.display = "";
       if (btnSignup) btnSignup.style.display = "";
+
       if (btnLogout) btnLogout.style.display = "none";
+      if (btnSettings) btnSettings.style.display = "none";
+      if (btnProfile) btnProfile.style.display = "none";
+      if (btnClassic) btnClassic.style.display = "none";
+      if (btnCrazy) btnCrazy.style.display = "none";
     }
   } catch (err) {
     console.error("Erro lendo usuário local:", err);
@@ -1175,6 +1190,23 @@ async function refreshHomeUser() {
     const data = await res.json().catch(() => null);
 
     if (!res.ok || !data?.ok) {
+      localStorage.removeItem("pontinhoAuthUser");
+      localStorage.removeItem("pontinhoPlayerName");
+      localStorage.removeItem("pontinhoAvatarUrl");
+
+      if (homeUserName) homeUserName.textContent = "Visitante";
+      if (homeUserBalance) homeUserBalance.textContent = "Saldo: —";
+      if (homeUserAvatar) homeUserAvatar.src = "/assets/avatars/avatar-01.png";
+
+      if (btnLogin) btnLogin.style.display = "";
+      if (btnSignup) btnSignup.style.display = "";
+
+      if (btnLogout) btnLogout.style.display = "none";
+      if (btnSettings) btnSettings.style.display = "none";
+      if (btnProfile) btnProfile.style.display = "none";
+      if (btnClassic) btnClassic.style.display = "none";
+      if (btnCrazy) btnCrazy.style.display = "none";
+
       return;
     }
 
@@ -1200,6 +1232,11 @@ async function refreshHomeUser() {
     if (btnLogin) btnLogin.style.display = "none";
     if (btnSignup) btnSignup.style.display = "none";
     if (btnLogout) btnLogout.style.display = "";
+
+    if (btnSettings) btnSettings.style.display = "";
+    if (btnProfile) btnProfile.style.display = "";
+    if (btnClassic) btnClassic.style.display = "";
+    if (btnCrazy) btnCrazy.style.display = "";
   } catch (err) {
     console.error("Erro ao carregar usuário da home:", err);
   }

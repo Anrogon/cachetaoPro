@@ -1391,6 +1391,13 @@
     height: 40px !important;
     z-index: 36000 !important;
   }
+  
+  #mobileBottomHud.is-current-turn {
+  border: 2px solid #ffd700 !important;
+  box-shadow:
+    0 0 0 2px rgba(255, 215, 0, 0.35),
+    0 0 14px rgba(255, 215, 0, 0.85) !important;
+}
 
   body.mobile-table-mode #mobileSortButtonsHud {
     position: fixed !important;
