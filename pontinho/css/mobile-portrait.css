@@ -754,7 +754,6 @@
     align-items: center !important;
     justify-content: center !important;
 
-    box-shadow: 0 4px 12px rgba(0,0,0,0.22) !important;
     cursor: pointer !important;
     white-space: nowrap !important;
   }
@@ -1293,4 +1292,147 @@
     margin-top: 12px !important;
   }
 }
+}
+
+/* =========================================================
+   FIX DEFINITIVO - HUD INFERIOR MOBILE
+========================================================= */
+@media (max-width: 520px) and (orientation: portrait) {
+
+  body.mobile-table-mode #scoreboard {
+    display: none !important;
+  }
+
+  body.mobile-table-mode #mobileBottomHud {
+    position: fixed !important;
+    left: 14px !important;
+    right: auto !important;
+    top: auto !important;
+    bottom: calc(10px + env(safe-area-inset-bottom) + 122px) !important;
+    transform: none !important;
+
+    width: 112px !important;
+    height: 36px !important;
+
+    z-index: 36000 !important;
+  }
+
+  body.mobile-table-mode #bottomArea .sort-btn {
+    position: fixed !important;
+    top: auto !important;
+    bottom: calc(10px + env(safe-area-inset-bottom) + 115px) !important;
+    transform: none !important;
+
+    width: 30px !important;
+    height: 30px !important;
+
+    z-index: 37000 !important;
+  }
+
+  body.mobile-table-mode #bottomArea .sort-btn:nth-of-type(1) {
+    left: 38px !important;
+    right: auto !important;
+  }
+
+  body.mobile-table-mode #bottomArea .sort-btn:nth-of-type(2) {
+    left: 76px !important;
+    right: auto !important;
+  }
+
+  body.mobile-table-mode #deck-area {
+    position: fixed !important;
+    left: 50% !important;
+    right: auto !important;
+    top: auto !important;
+    bottom: calc(10px + env(safe-area-inset-bottom) + 118px) !important;
+    transform: translateX(-50%) !important;
+
+    z-index: 30000 !important;
+  }
+
+  body.mobile-table-mode .sb-mobile-bati-btn {
+    position: fixed !important;
+    left: auto !important;
+    right: 14px !important;
+    top: auto !important;
+    bottom: calc(10px + env(safe-area-inset-bottom) + 122px) !important;
+    transform: none !important;
+
+    min-width: 74px !important;
+    height: 32px !important;
+
+    z-index: 38000 !important;
+  }
+}
+
+/*
+@media (max-width: 520px) and (orientation: portrait) {
+  #mobileBottomHud {
+    outline: 4px solid red !important;
+  }
+
+  .sb-mobile-bati-btn {
+    outline: 4px solid yellow !important;
+  }
+
+  #bottomArea .sort-btn {
+    outline: 4px solid cyan !important;
+  }
+}
+
+*/
+@media (max-width: 520px) and (orientation: portrait) {
+
+  body.mobile-table-mode #mobileBottomHud {
+    position: fixed !important;
+    left: 14px !important;
+    bottom: calc(10px + env(safe-area-inset-bottom) + 155px) !important;
+    width: 100px !important;
+    height: 40px !important;
+    z-index: 36000 !important;
+  }
+
+  body.mobile-table-mode #mobileSortButtonsHud {
+    position: fixed !important;
+    left: 24px !important;
+    bottom: calc(10px + env(safe-area-inset-bottom) + 140px) !important;
+    display: flex !important;
+    gap: 10px !important;
+    z-index: 37000 !important;
+  }
+
+  body.mobile-table-mode #mobileSortButtonsHud .sort-btn {
+    position: static !important;
+    width: 30px !important;
+    height: 30px !important;
+    padding: 0 !important;
+  }
+
+  body.mobile-table-mode .sb-mobile-bati-btn {
+    position: fixed !important;
+    right: 14px !important;
+    bottom: calc(10px + env(safe-area-inset-bottom) + 122px) !important;
+    z-index: 38000 !important;
+  }
+}
+@media (max-width: 520px) and (orientation: portrait) {
+  
+  body.mobile-table-mode #mobileBatiBtnHud {
+    position: fixed !important;
+
+    right: 25px !important;
+    bottom: calc(10px + env(safe-area-inset-bottom) + 145px) !important;
+
+    min-width: 70px !important;
+    width: 50px !important;
+    height: 28px !important;
+    padding: 0 10px !important;
+
+    border-radius: 999px !important;
+    font-size: 11px !important;
+    font-weight: 900 !important;
+
+    z-index: 39000 !important;
+    pointer-events: auto !important;
+  }
 }

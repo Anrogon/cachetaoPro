@@ -1301,6 +1301,7 @@ el.style.display = "";
     }, { passive: true });
   }
   renderMobileTableLayout();
+  moveMobileBatiButtonToBottomArea();
 }
 
 
@@ -1544,15 +1545,14 @@ function renderMobileBottomHudClean(tableData, s) {
     return;
   }
 
-  const deckArea = document.getElementById("deck-area");
-  if (!deckArea) return;
+  const bottomArea = document.getElementById("bottomArea") || document.body;
 
   let hud = document.getElementById("mobileBottomHud");
 
   if (!hud) {
     hud = document.createElement("div");
     hud.id = "mobileBottomHud";
-    deckArea.prepend(hud);
+    bottomArea.appendChild(hud);
   }
 
   const mySeat = s.mySeat;
@@ -1586,38 +1586,45 @@ function renderMobileBottomHudClean(tableData, s) {
   `;
 }
 
-
 function moveMobileSortButtonsToDeckArea() {
   if (!isMobilePortraitTable()) return;
 
-  const deckArea = document.getElementById("deck-area");
-  if (!deckArea) return;
+  const bottomArea = document.getElementById("bottomArea") || document.body;
 
   let holder = document.getElementById("mobileSortButtonsHud");
 
   if (!holder) {
     holder = document.createElement("div");
     holder.id = "mobileSortButtonsHud";
-    deckArea.appendChild(holder);
+    bottomArea.appendChild(holder);
   }
 
   const buttons = Array.from(document.querySelectorAll("button")).filter(btn => {
-    const txt = String(btn.textContent || "").trim().toLowerCase();
+    const cls = String(btn.className || "").toLowerCase();
+    const id = String(btn.id || "").toLowerCase();
 
-    return (
-      txt === "k" ||
-      txt === "♠" ||
-      txt.includes("naipe") ||
-      txt.includes("valor") ||
-      btn.id?.toLowerCase().includes("sort") ||
-      btn.className?.toString().toLowerCase().includes("sort")
-    );
+    return id.includes("sort") || cls.includes("sort-btn");
   });
 
   buttons.forEach(btn => {
     if (btn.closest("#mobileSortButtonsHud")) return;
     holder.appendChild(btn);
   });
+}
+
+function moveMobileBatiButtonToBottomArea() {
+  if (!isMobilePortraitTable()) return;
+
+  const bottomArea = document.getElementById("bottomArea") || document.body;
+  const btn = document.querySelector(".sb-mobile-bati-btn");
+
+  if (!btn) return;
+
+  if (!btn.closest("#bottomArea")) {
+    bottomArea.appendChild(btn);
+  }
+
+  btn.id = "mobileBatiBtnHud";
 }
 
 // expõe para actions.js sem import (evita ciclo)
