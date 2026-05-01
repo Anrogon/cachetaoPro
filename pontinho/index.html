@@ -2,73 +2,67 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8" />
-  <title>♠   Pontinho Play   ♠</title>
+  <title>♠ Pontinho Play ♠</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
   <link rel="stylesheet" href="css/reset.css" />
   <link rel="stylesheet" href="css/layout.css" />
   <link rel="stylesheet" href="css/game.css" />
   <link rel="stylesheet" href="css/mobile-portrait.css" />
-  <link rel="stylesheet" href="css/mobile-tables.css">
+  <link rel="stylesheet" href="css/mobile-tables.css" />
   <link rel="stylesheet" href="css/mobile.css" />
 </head>
 
 <body>
 
-  <!-- =============================
-       HOME (Mobile + Desktop)
-  ============================== -->
+  <!-- HOME -->
   <div id="homeScreen">
-
     <div class="home-shell">
 
       <div class="home-logo">
-        <img src="/assets/image/logo-mobile.png" alt="PontinhoBR" />
+        <img src="/assets/image/logo-mobile.png" alt="Pontinho Play" />
       </div>
 
       <div class="home-menu">
-      <<button id="btnSettings" style="display:none;">Configurações</button>
-      <button id="btnLogin">Login</button>
-      <button id="btnSignup">Cadastre-se</button>
-      <button id="btnTrain" style="display:none;">Perfil</button>
+        <button type="button" id="btnSettings" style="display:none;">Configurações</button>
+        <button type="button" id="btnLogin">Login</button>
+        <button type="button" id="btnSignup">Cadastre-se</button>
+        <button type="button" id="btnTrain" style="display:none;">Perfil</button>
 
-      <button id="btnClassic" class="primary" style="display:none;">Jogar Clássico</button>
-      <button id="btnCrazy" class="primary" style="display:none;">Jogar Crazy</button>
+        <button type="button" id="btnClassic" class="primary" style="display:none;">Jogar Clássico</button>
+        <button type="button" id="btnCrazy" class="primary" style="display:none;">Jogar Crazy</button>
 
-      <button id="btnLogout" style="display:none;">Sair</button>
-    </div>
+        <button type="button" id="btnLogout" style="display:none;">Sair</button>
+      </div>
 
       <div class="home-status-wrap">
+        <div class="home-usercard" id="homeUserCard">
+          <div class="home-usercard-row">
+            <img id="homeUserAvatar" class="home-user-avatar" src="/assets/avatars/avatar-01.png" alt="Avatar" />
+            <div class="home-user-meta">
+              <div id="homeUserName">Visitante</div>
+              <div id="homeUserBalance">Saldo: —</div>
+            </div>
+          </div>
+        </div>
 
-  <div class="home-usercard" id="homeUserCard">
-    <div class="home-usercard-row">
-      <img id="homeUserAvatar" class="home-user-avatar" src="https://i.pravatar.cc/80?img=3" alt="Avatar" />
-      <div class="home-user-meta">
-        <div id="homeUserName">Visitante</div>
-        <div id="homeUserBalance">Saldo: —</div>
+        <div class="home-status">
+          <div class="panel-title">Status Online</div>
+          <div class="panel-row"><span>Jogadores online</span><strong id="onlinePlayers">—</strong></div>
+          <div class="panel-row"><span>Mesas abertas</span><strong id="openTables">—</strong></div>
+          <div class="panel-row"><span>Ping</span><strong id="pingMs">—</strong></div>
+        </div>
       </div>
-    </div>
-  </div>
-
-  <div class="home-status">
-    <div class="panel-title">Status Online</div>
-    <div class="panel-row"><span>Jogadores online</span><strong id="onlinePlayers">—</strong></div>
-    <div class="panel-row"><span>Mesas abertas</span><strong id="openTables">—</strong></div>
-    <div class="panel-row"><span>Ping</span><strong id="pingMs">—</strong></div>
-  </div>
-
-  </div>
 
     </div>
 
     <div class="home-banner">
       <div class="home-banner-title">♣ CRIE SUA CONTA GRÁTIS! ♠</div>
-      <br>
+      <br />
       <div class="home-banner-sub">♥ JOGUE ONLINE COM SEUS AMIGOS E DIVIRTA-SE! ♦</div>
     </div>
 
     <div class="home-lastrow">
-
       <div class="home-panel">
         <div class="panel-title">Últimas mesas</div>
         <div class="last-table">
@@ -101,42 +95,26 @@
           <button type="button" class="lt-btn" id="quickJoin3">Entrar</button>
         </div>
       </div>
-
     </div>
+  </div>
 
-  </div> <!-- ✅ FECHA homeScreen CORRETAMENTE -->
+  <!-- TELA DE MESAS -->
+  <div id="tablesScreen" style="display:none;">
+    <div class="tables-header">
+      <div class="tables-title">
+        ♦ ♣ Pontinho Play ♠ ♥
+      </div>
 
-
-
-  <!-- =============================
-       TELA DE MESAS
-  ============================== -->
-  <div id="tablesScreen">
-
-  <div class="tables-header">
-    <div class="tables-title">
-      ♦ ♣ Pontinho Play ♠ ♥
-    </div>
-
-    <div id="tablesVariantSwitch"></div>
-    </div>
-
-    <div id="tablesGrid"></div>
-
+      <div id="tablesVariantSwitch"></div>
     </div>
 
     <div id="tablesGrid"></div>
 
     <button id="startGame" style="display:none;">Iniciar jogo</button>
-
   </div>
 
-
-  <!-- =============================
-       JOGO
-  ============================== -->
+  <!-- JOGO -->
   <div id="game" style="display:none;">
-
     <div id="playerInfo"></div>
 
     <div id="table"></div>
@@ -149,14 +127,15 @@
     <div id="bottomArea">
       <div id="hand"></div>
       <div id="scoreboard"></div>
-      <button class="sort-btn" onclick="window.setHandSort('value')">
-  <img src="./assets/image/sort-value.png" alt="Ordenar por valor"></button>
 
-<button class="sort-btn" onclick="window.setHandSort('suit')">
-  <img src="./assets/image/sort-suit.png" alt="Ordenar por naipe"></button>
+      <button type="button" class="sort-btn" onclick="window.setHandSort('value')">
+        <img src="./assets/image/sort-value.png" alt="Ordenar por valor" />
+      </button>
 
-<!--<button class="sort-btn" onclick="window.setHandSort(null)">
-  <img src="./assets/image/sort-manual.png" alt="Ordem manual"></button>-->
+      <button type="button" class="sort-btn" onclick="window.setHandSort('suit')">
+        <img src="./assets/image/sort-suit.png" alt="Ordenar por naipe" />
+      </button>
+    </div>
   </div>
 
   <script type="module" src="./js/app.js"></script>

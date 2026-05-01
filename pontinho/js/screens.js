@@ -97,23 +97,17 @@ function ensureHomeStatusFeed() {
 
 // Feed termina aqui
 
-export function showScreen(idToShow) {
-  state.currentScreen = idToShow;
+function showScreen(idToShow) {
+  const screens = ["homeScreen", "tablesScreen", "game"];
 
-  const home = document.getElementById("homeScreen");
-  const tables = document.getElementById("tablesScreen");
-  const game = document.getElementById("game");
+  screens.forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
 
-  if (home) home.style.display = (idToShow === "home") ? "block" : "none";
-  if (tables) tables.style.display = (idToShow === "tables") ? "block" : "none";
-  if (game) game.style.display = (idToShow === "game") ? "block" : "none";
+    el.style.display = id === idToShow ? "" : "none";
+  });
 
   if (idToShow === "home") {
-  setTimeout(() => ensureHomeStatusFeed(), 50);
-}
-
-  if (idToShow === "tables") {
-  window.renderTablesScreen?.();
-  startTableStartTicker();
+    setTimeout(() => ensureHomeStatusFeed(), 50);
   }
 }
