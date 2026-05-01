@@ -1141,6 +1141,22 @@ async function refreshHomeUser() {
   const btnClassic = document.getElementById("btnClassic");
   const btnCrazy = document.getElementById("btnCrazy");
 
+  const btnClassic = document.getElementById("btnClassic");
+if (btnClassic) {
+  btnClassic.onclick = () => {
+    state.selectedVariant = "CLASSIC";
+    showScreen("tables");
+  };
+}
+
+const btnCrazy = document.getElementById("btnCrazy");
+if (btnCrazy) {
+  btnCrazy.onclick = () => {
+    state.selectedVariant = "CRAZY";
+    showScreen("tables");
+  };
+}
+
   // 1) fallback imediato pelo localStorage
   try {
     const localUser = JSON.parse(localStorage.getItem("pontinhoAuthUser") || "null");
