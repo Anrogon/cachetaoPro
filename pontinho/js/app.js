@@ -1068,36 +1068,26 @@ function clearAuthUserAndRedirect(message = "Sua sessão expirou. Faça login no
 
 async function validateCurrentSession() {
   try {
-    const res = await fetch("http://localhost:3001/api/auth/me", {
+    if (window.location.hostname !== "localhost") {
+      return true;
+    }
+
+    const res = await fetch(`${API_BASE}/auth/me`, {
       method: "GET",
       credentials: "include",
     });
 
     const data = await res.json().catch(() => null);
 
-    if (res.status === 401) {
-      clearAuthUserAndRedirect("Sua sessão expirou. Faça login novamente.");
-      return false;
-    }
-
-    if (res.status === 403) {
-      clearAuthUserAndRedirect(data?.message || "Seu acesso foi bloqueado.");
-      return false;
-    }
-
     if (!res.ok || !data?.ok) {
-      clearAuthUserAndRedirect("Não foi possível validar sua sessão.");
+      localStorage.removeItem("pontinhoAuthUser");
       return false;
-    }
-
-    if (data.user) {
-      localStorage.setItem("pontinhoAuthUser", JSON.stringify(data.user));
     }
 
     return true;
   } catch (err) {
-    console.error("Erro ao validar sessão atual:", err);
-    return true;
+    console.warn("Erro ao validar sessão atual:", err);
+    return true; // 🔥 IMPORTANTE
   }
 }
 
