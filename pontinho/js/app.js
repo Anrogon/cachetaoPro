@@ -8,6 +8,8 @@ import { startTurnTimer } from "./turnTimer.js";
 import { renderRebuyButton, playPendingDrawAnimation, playPendingDiscardDrawAnimation, playPendingHandToTableAnimation } from "./render.js";
 import { showScreen } from "./screens.js";
 
+window.showScreen = showScreen;
+
 const API_BASE =
   window.location.hostname === "localhost"
     ? "http://localhost:3001/api"
