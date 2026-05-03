@@ -1,3 +1,5 @@
+console.log("PASSOU DOS IMPORTS");
+
 import { initDeck, shuffleDeck } from "./deck.js";
 import { renderHand, renderTable, renderMonte, renderLixo, renderPlayerInfo, bindTableUI, renderRoundInfo } from "./render.js";
 import { state } from "./state.js";
@@ -7,6 +9,10 @@ import { startTurnTimer } from "./turnTimer.js";
 import { renderRebuyButton, playPendingDrawAnimation, playPendingDiscardDrawAnimation, playPendingHandToTableAnimation } from "./render.js";
 import { showScreen } from "./screens.js";
 
+const API_BASE =
+  window.location.hostname === "localhost"
+    ? "http://localhost:3001/api"
+    : "/api";
 
 // =============================
 // ONLINE (WS)
@@ -1097,6 +1103,8 @@ async function validateCurrentSession() {
 }
 
 
+
+
 (async function bootstrapApp() {
   if (enforceForcedPasswordChange()) return;
 
@@ -1109,24 +1117,68 @@ async function validateCurrentSession() {
   connectWS();
   renderTablesScreen();
   showScreen("home");
+
+  bindHomeButtons();
+
   setTimeout(() => {
-    ensureHomeStatusFeed();
+    if (typeof ensureHomeStatusFeed === "function") {
+      ensureHomeStatusFeed();
+    }
   }, 100);
   })();
 
+
+console.log("CHEGOU NOS BOTÕES DA HOME");
+
+// ===== BOTÕES DA HOME =====
+function bindHomeButtons() {
+  const btnLogin = document.getElementById("btnLogin");
+  if (btnLogin) {
+    btnLogin.onclick = () => {
+      window.location.href = "./login.html";
+    };
+  }
+
+  const btnSignup = document.getElementById("btnSignup");
+  if (btnSignup) {
+    btnSignup.onclick = () => {
+      window.location.href = "./signup.html";
+    };
+  }
+
+  const btnProfile = document.getElementById("btnTrain");
+  if (btnProfile) {
+    btnProfile.onclick = () => {
+      window.location.href = "./profile.html";
+    };
+  }
+
+  const btnSettings = document.getElementById("btnSettings");
+  if (btnSettings) {
+    btnSettings.onclick = () => {
+      window.location.href = "./settings.html";
+    };
+  }
+
+  const btnClassicHome = document.getElementById("btnClassic");
+  if (btnClassicHome) {
+    btnClassicHome.onclick = () => {
+      state.selectedVariant = "CLASSIC";
+      showScreen("tables");
+    };
+  }
+
+  const btnCrazyHome = document.getElementById("btnCrazy");
+  if (btnCrazyHome) {
+    btnCrazyHome.onclick = () => {
+      state.selectedVariant = "CRAZY";
+      showScreen("tables");
+    };
+  }
+}
+
 bindGameControls();
 refreshHomeUser();
-
-
-
-
-
-
-
-const API_BASE =
-  window.location.hostname === "localhost"
-    ? "http://localhost:3001/api"
-    : "/api";
 
 async function refreshHomeUser() {
   const homeUserName = document.getElementById("homeUserName");
@@ -1267,52 +1319,6 @@ if (btnLogout) {
 
 
 
-
-
-// ===== BOTÕES DA HOME =====
-const btnLogin = document.getElementById("btnLogin");
-if (btnLogin) {
-  btnLogin.onclick = () => {
-    window.location.href = "./login.html";
-  };
-}
-
-const btnSignup = document.getElementById("btnSignup");
-if (btnSignup) {
-  btnSignup.onclick = () => {
-    window.location.href = "./signup.html";
-  };
-}
-
-const btnProfile = document.getElementById("btnTrain");
-if (btnProfile) {
-  btnProfile.onclick = () => {
-    window.location.href = "./profile.html";
-  };
-}
-
-const btnSettings = document.getElementById("btnSettings");
-if (btnSettings) {
-  btnSettings.onclick = () => {
-    window.location.href = "./settings.html";
-  };
-}
-
-const btnClassicHome = document.getElementById("btnClassic");
-if (btnClassicHome) {
-  btnClassicHome.onclick = () => {
-    state.selectedVariant = "CLASSIC";
-    showScreen("tables");
-  };
-}
-
-const btnCrazyHome = document.getElementById("btnCrazy");
-if (btnCrazyHome) {
-  btnCrazyHome.onclick = () => {
-    state.selectedVariant = "CRAZY";
-    showScreen("tables");
-  };
-}
 
 
 
