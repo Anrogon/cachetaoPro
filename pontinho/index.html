@@ -50,7 +50,7 @@
           <div class="panel-title">Status Online</div>
           <div class="panel-row"><span>Jogadores online</span><strong id="onlinePlayers">—</strong></div>
           <div class="panel-row"><span>Mesas abertas</span><strong id="openTables">—</strong></div>
-          <div class="panel-row"><span>Ping</span><strong id="pingMs">—</strong></div>
+          
         </div>
       </div>
 
@@ -62,32 +62,28 @@
       <div class="home-banner-sub">♥ JOGUE ONLINE COM SEUS AMIGOS E DIVIRTA-SE! ♦</div>
     </div>
 
-    <div class="home-lastrow">
-      <div class="home-panel">
-        <div class="panel-title">Últimas mesas</div>
-        <div class="last-table">
+    <!-- MESAS AO VIVO -->
+    <div class="home-live-section">
+      <div class="home-section-title">🔥 Mesas ao vivo</div>
+
+      <div class="home-live-row">
+        <div class="home-live-card">
           <div>
             <div class="lt-name">Mesa 1</div>
             <div class="lt-sub">Aposta: 1.000 • 2/6</div>
           </div>
           <button type="button" class="lt-btn" id="quickJoin1">Entrar</button>
         </div>
-      </div>
 
-      <div class="home-panel">
-        <div class="panel-title">Últimas mesas</div>
-        <div class="last-table">
+        <div class="home-live-card">
           <div>
             <div class="lt-name">Mesa 2</div>
             <div class="lt-sub">Aposta: 5.000 • 3/6</div>
           </div>
           <button type="button" class="lt-btn" id="quickJoin2">Entrar</button>
         </div>
-      </div>
 
-      <div class="home-panel">
-        <div class="panel-title">Últimas mesas</div>
-        <div class="last-table">
+        <div class="home-live-card">
           <div>
             <div class="lt-name">Mesa 3</div>
             <div class="lt-sub">Aposta: 10.000 • 1/6</div>
@@ -96,7 +92,21 @@
         </div>
       </div>
     </div>
-  </div>
+
+    <!-- DICA DO JOGO -->
+    <div class="home-tip-section">
+      <div class="home-tip-title">💡 Dica do jogo</div>
+      <div id="homeStatusFeed" class="home-status-feed">
+        <div class="home-status-feed-text">
+          No clássico, a trinca usa 3 naipes diferentes.
+        </div>
+      </div>
+    </div>
+
+    <!-- RODAPÉ -->
+    <div class="home-footer">
+      ♦ ♣ Pontinho Play ♠ ♥
+    </div>
 
   <!-- TELA DE MESAS -->
   <div id="tablesScreen" style="display:none;">

@@ -1,4 +1,3 @@
-console.log("PASSOU DOS IMPORTS");
 
 import { initDeck, shuffleDeck } from "./deck.js";
 import { renderHand, renderTable, renderMonte, renderLixo, renderPlayerInfo, bindTableUI, renderRoundInfo } from "./render.js";

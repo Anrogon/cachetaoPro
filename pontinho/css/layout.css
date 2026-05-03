@@ -1145,15 +1145,16 @@ body{
    HOME DESKTOP: centralizar + background nas laterais
 ============================= */
 @media (min-width: 900px){
+html, body {
+  min-height: 100%;
+  margin: 0;
 
-  /* background que aparece nas laterais (fora dos cards brancos) */
-  html, body{
-    height: 100%;
-    /*background: radial-gradient(circle at top, #0b5a3a 0%, #063020 60%, #041a12 100%);*/
-    
-    background-image: url("./assets/image/bg-g.png") center/cover fixed no-repeat;
-    
-  }
+  background:
+    linear-gradient(rgba(0, 70, 25, 0.35), rgba(0, 45, 20, 0.55)),
+    url("/assets/image/bg-g.png") center / cover fixed no-repeat;
+
+  background-color: #063f1f;
+}
 
   /* container da home ocupa a tela e centraliza tudo */
   #homeScreen{
@@ -1700,4 +1701,100 @@ body{
 #btnCrazy {
   background: linear-gradient(180deg, #3b82f6, #1e40af) !important;
   color: #fff !important;
+}
+
+/* =========================================================
+   HOME - MESAS AO VIVO / DICA / RODAPÉ
+========================================================= */
+
+.home-live-section {
+  width: min(1120px, 96vw);
+  margin: 2px auto 0;
+  padding: 16px;
+  border-radius: 18px;
+  background: rgba(0, 0, 0, 0.18);
+  border: 1px solid rgba(255,255,255,0.10);
+}
+
+.home-section-title {
+  font-size: 20px;
+  font-weight: 900;
+  margin-bottom: 14px;
+  text-align: left;
+}
+
+.home-live-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
+}
+
+.home-live-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+
+  padding: 14px;
+  border-radius: 14px;
+
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid rgba(0,0,0,0.08);
+  color: #fff;
+}
+
+.home-tip-section {
+  width: min(1120px, 96vw);
+  margin: 2px auto 0;
+  padding: 16px 18px;
+  border-radius: 18px;
+
+  background: rgba(0, 0, 0, 0.28);
+  border: 1px solid rgba(255,255,255,0.12);
+
+  color: #fff;
+}
+
+.home-tip-title {
+  font-weight: 900;
+  color: #ffd54a;
+  margin-bottom: 6px;
+}
+
+.home-tip-section .home-status-feed {
+  margin: 0 !important;
+  padding: 0 !important;
+  background: transparent !important;
+  border: none !important;
+}
+
+.home-footer {
+  width: min(1120px, 96vw);
+  margin: 2px auto 0;
+  padding: 18px 12px;
+  text-align: center;
+  font-size: 20px;
+  font-weight: 900;
+  color: #fff;
+  background: rgba(0,0,0,0.18);
+  border-radius: 18px;
+}
+
+/* MOBILE */
+@media (max-width: 768px) {
+  .home-live-row {
+    grid-template-columns: 1fr;
+  }
+
+  .home-section-title {
+    text-align: center;
+  }
+
+  .home-live-card {
+    padding: 12px;
+  }
+
+  .home-footer {
+    font-size: 16px;
+  }
 }
