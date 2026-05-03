@@ -1155,6 +1155,7 @@ function bindHomeButtons() {
   if (btnClassicHome) {
     btnClassicHome.onclick = () => {
       state.selectedVariant = "CLASSIC";
+      renderTablesScreen();
       showScreen("tables");
     };
   }
@@ -1163,6 +1164,7 @@ function bindHomeButtons() {
   if (btnCrazyHome) {
     btnCrazyHome.onclick = () => {
       state.selectedVariant = "CRAZY";
+      renderTablesScreen();
       showScreen("tables");
     };
   }
