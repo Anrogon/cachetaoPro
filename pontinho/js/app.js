@@ -8,7 +8,14 @@ import { startTurnTimer } from "./turnTimer.js";
 import { renderRebuyButton, playPendingDrawAnimation, playPendingDiscardDrawAnimation, playPendingHandToTableAnimation } from "./render.js";
 import { showScreen } from "./screens.js";
 
-window.showScreen = showScreen;
+window.openTablesFromHome = function (variant) {
+  state.selectedVariant = variant;
+  renderTablesScreen();
+
+  document.getElementById("homeScreen").style.display = "none";
+  document.getElementById("game").style.display = "none";
+  document.getElementById("tablesScreen").style.display = "";
+};
 
 const API_BASE =
   window.location.hostname === "localhost"
@@ -829,10 +836,7 @@ function openTablesAndFocus(tableId) {
   setTimeout(() => focusTable(tableId), 80);
 }
 
-// botões "Entrar" do painel da Home
-document.getElementById("quickJoin1")?.addEventListener("click", () => openTablesAndFocus("S1"));
-document.getElementById("quickJoin2")?.addEventListener("click", () => openTablesAndFocus("S2"));
-document.getElementById("quickJoin3")?.addEventListener("click", () => openTablesAndFocus("S3"));
+
 
 // =============================
 // INICIAR JOGO
@@ -1107,9 +1111,9 @@ async function validateCurrentSession() {
 
   connectWS();
   renderTablesScreen();
+  renderHomeLiveTables();
+  bindHomeLiveTables();
   showScreen("home");
-
-  bindHomeButtons();
 
   setTimeout(() => {
     if (typeof ensureHomeStatusFeed === "function") {
@@ -1119,9 +1123,16 @@ async function validateCurrentSession() {
   })();
 
 
-console.log("CHEGOU NOS BOTÕES DA HOME");
-
 // ===== BOTÕES DA HOME =====
+function openTablesFromHome(variant) {
+  state.selectedVariant = variant;
+  renderTablesScreen();
+
+  document.getElementById("homeScreen").style.display = "none";
+  document.getElementById("game").style.display = "none";
+  document.getElementById("tablesScreen").style.display = "";
+}
+
 function bindHomeButtons() {
   const btnLogin = document.getElementById("btnLogin");
   if (btnLogin) {
@@ -1151,27 +1162,130 @@ function bindHomeButtons() {
     };
   }
 
-  const btnClassicHome = document.getElementById("btnClassic");
-  if (btnClassicHome) {
-    btnClassicHome.onclick = () => {
-      state.selectedVariant = "CLASSIC";
-      renderTablesScreen();
-      showScreen("tables");
+  const btnClassic = document.getElementById("btnClassic");
+  if (btnClassic) {
+    btnClassic.onclick = () => {
+      openTablesFromHome("CLASSIC");
     };
   }
 
-  const btnCrazyHome = document.getElementById("btnCrazy");
-  if (btnCrazyHome) {
-    btnCrazyHome.onclick = () => {
-      state.selectedVariant = "CRAZY";
-      renderTablesScreen();
-      showScreen("tables");
+  const btnCrazy = document.getElementById("btnCrazy");
+  if (btnCrazy) {
+    btnCrazy.onclick = () => {
+      openTablesFromHome("CRAZY");
+    };
+  }
+
+  const btnLogout = document.getElementById("btnLogout");
+  if (btnLogout) {
+    btnLogout.onclick = async () => {
+      try {
+        await fetch(`${API_BASE}/auth/logout`, {
+          method: "POST",
+          credentials: "include",
+        });
+      } catch (err) {
+        console.error("Erro no logout:", err);
+      }
+
+      localStorage.removeItem("pontinhoAuthUser");
+      localStorage.removeItem("pontinhoPlayerName");
+      localStorage.removeItem("pontinhoAvatarUrl");
+
+      window.location.href = "./index.html";
     };
   }
 }
 
-bindGameControls();
-refreshHomeUser();
+function renderHomeLiveTables() {
+  const el = document.getElementById("homeLiveTables");
+  if (!el) return;
+
+  /*const tables = Object.values(state.tables || {}).slice(0, 3);*/
+  // Mudar para mesas reais
+
+//delete esse bloco depois
+  let tables = Object.values(state.tables || {}).slice(0, 3);
+
+  if (!tables.length) {
+    tables = [
+      { name: "Mesa 1", seatedCount: 2, maxSeats: 6, stake: 1000, variant: "CLASSIC" },
+      { name: "Mesa 2", seatedCount: 3, maxSeats: 6, stake: 5000, variant: "CLASSIC" },
+      { name: "Mesa 3", seatedCount: 1, maxSeats: 6, stake: 10000, variant: "CRAZY" }
+    ];
+  }
+  //até aqui
+  
+
+  if (!tables.length) {
+    el.innerHTML = `
+      <div class="home-live-empty">
+        Nenhuma mesa aberta no momento.
+      </div>
+    `;
+    return;
+  }
+
+  el.innerHTML = tables.map((t, index) => {
+    const seated = Number(t.seatedCount ?? t.playersCount ?? 0);
+    const max = Number(t.maxSeats ?? 6);
+    const stake = Number(
+      t.stake ??
+      t.mesaValor ??
+      t.tableValue ??
+      ((Number(t.buyIn) || 100) * 10)
+    );
+
+    const variant = String(t.variant || "CLASSIC").toUpperCase();
+    const tableName = t.name || `Mesa ${index + 1}`;
+
+    const seatsHtml = Array.from({ length: 6 }).map((_, i) => {
+      const seatNum = i + 1;
+      const occupied = seatNum <= seated;
+
+      return `
+        <div class="home-live-seat home-live-seat-${seatNum} ${occupied ? "occupied" : ""}">
+          ${occupied ? `<img src="/assets/avatars/avatar-01.png" alt="Jogador">` : ""}
+        </div>
+      `;
+    }).join("");
+
+    return `
+      <div class="home-live-card-visual" data-variant="${variant}">
+        <div class="home-live-count">👥 ${seated}/${max}</div>
+
+        <div class="home-live-table-visual">
+          <div class="home-live-table-felt"></div>
+          ${seatsHtml}
+        </div>
+
+        <div class="home-live-name">${tableName}</div>
+        <div class="home-live-stake">
+          Aposta: <strong>${stake.toLocaleString("pt-BR")}</strong>
+        </div>
+
+        <button type="button" class="home-live-enter">Entrar</button>
+      </div>
+    `;
+  }).join("");
+}
+
+function bindHomeLiveTables() {
+  const el = document.getElementById("homeLiveTables");
+  if (!el) return;
+
+  el.onclick = (ev) => {
+    const btn = ev.target.closest(".home-live-enter");
+    if (!btn) return;
+
+    const card = btn.closest(".home-live-card-visual");
+    const variant = card?.dataset?.variant || "CLASSIC";
+
+    state.selectedVariant = variant;
+    renderTablesScreen();
+    showScreen("tables");
+  };
+}
 
 async function refreshHomeUser() {
   const homeUserName = document.getElementById("homeUserName");
@@ -1186,48 +1300,52 @@ async function refreshHomeUser() {
   const btnClassic = document.getElementById("btnClassic");
   const btnCrazy = document.getElementById("btnCrazy");
 
-  
+  function setLoggedOutHome() {
+    if (homeUserName) homeUserName.textContent = "Visitante";
+    if (homeUserBalance) homeUserBalance.textContent = "Saldo: —";
+    if (homeUserAvatar) homeUserAvatar.src = "/assets/avatars/avatar-01.png";
 
-  // 1) fallback imediato pelo localStorage
+    if (btnLogin) btnLogin.style.display = "";
+    if (btnSignup) btnSignup.style.display = "";
+
+    if (btnLogout) btnLogout.style.display = "none";
+    if (btnSettings) btnSettings.style.display = "none";
+    if (btnProfile) btnProfile.style.display = "none";
+    if (btnClassic) btnClassic.style.display = "none";
+    if (btnCrazy) btnCrazy.style.display = "none";
+  }
+
+  function setLoggedInHome(user) {
+    if (homeUserName) homeUserName.textContent = user.username || "Usuário";
+    if (homeUserBalance) {
+      homeUserBalance.textContent = `Saldo: ${(Number(user.chipsBalance) || 0).toLocaleString("pt-BR")}`;
+    }
+    if (homeUserAvatar) {
+      homeUserAvatar.src = user.avatarUrl || "/assets/avatars/avatar-01.png";
+    }
+
+    if (btnLogin) btnLogin.style.display = "none";
+    if (btnSignup) btnSignup.style.display = "none";
+
+    if (btnLogout) btnLogout.style.display = "";
+    if (btnSettings) btnSettings.style.display = "";
+    if (btnProfile) btnProfile.style.display = "";
+    if (btnClassic) btnClassic.style.display = "";
+    if (btnCrazy) btnCrazy.style.display = "";
+  }
+
   try {
     const localUser = JSON.parse(localStorage.getItem("pontinhoAuthUser") || "null");
-
     if (localUser) {
-      if (homeUserName) homeUserName.textContent = localUser.username || "Usuário";
-      if (homeUserBalance) {
-        homeUserBalance.textContent = `Saldo: ${(Number(localUser.chipsBalance) || 0).toLocaleString("pt-BR")}`;
-      }
-      if (homeUserAvatar) {
-        homeUserAvatar.src = localUser.avatarUrl || "/assets/avatars/avatar-01.png";
-      }
-
-      if (btnLogin) btnLogin.style.display = "none";
-      if (btnSignup) btnSignup.style.display = "none";
-      if (btnLogout) btnLogout.style.display = "";
-
-      if (btnSettings) btnSettings.style.display = "";
-      if (btnProfile) btnProfile.style.display = "";
-      if (btnClassic) btnClassic.style.display = "";
-      if (btnCrazy) btnCrazy.style.display = "";
+      setLoggedInHome(localUser);
     } else {
-      if (homeUserName) homeUserName.textContent = "Visitante";
-      if (homeUserBalance) homeUserBalance.textContent = "Saldo: —";
-      if (homeUserAvatar) homeUserAvatar.src = "/assets/avatars/avatar-01.png";
-
-      if (btnLogin) btnLogin.style.display = "";
-      if (btnSignup) btnSignup.style.display = "";
-
-      if (btnLogout) btnLogout.style.display = "none";
-      if (btnSettings) btnSettings.style.display = "none";
-      if (btnProfile) btnProfile.style.display = "none";
-      if (btnClassic) btnClassic.style.display = "none";
-      if (btnCrazy) btnCrazy.style.display = "none";
+      setLoggedOutHome();
     }
   } catch (err) {
     console.error("Erro lendo usuário local:", err);
+    setLoggedOutHome();
   }
 
-  // 2) tenta sincronizar com o backend
   try {
     const res = await fetch(`${API_BASE}/auth/me`, {
       method: "GET",
@@ -1240,20 +1358,7 @@ async function refreshHomeUser() {
       localStorage.removeItem("pontinhoAuthUser");
       localStorage.removeItem("pontinhoPlayerName");
       localStorage.removeItem("pontinhoAvatarUrl");
-
-      if (homeUserName) homeUserName.textContent = "Visitante";
-      if (homeUserBalance) homeUserBalance.textContent = "Saldo: —";
-      if (homeUserAvatar) homeUserAvatar.src = "/assets/avatars/avatar-01.png";
-
-      if (btnLogin) btnLogin.style.display = "";
-      if (btnSignup) btnSignup.style.display = "";
-
-      if (btnLogout) btnLogout.style.display = "none";
-      if (btnSettings) btnSettings.style.display = "none";
-      if (btnProfile) btnProfile.style.display = "none";
-      if (btnClassic) btnClassic.style.display = "none";
-      if (btnCrazy) btnCrazy.style.display = "none";
-
+      setLoggedOutHome();
       return;
     }
 
@@ -1268,48 +1373,15 @@ async function refreshHomeUser() {
       localStorage.removeItem("pontinhoAvatarUrl");
     }
 
-    if (homeUserName) homeUserName.textContent = user.username || "Usuário";
-    if (homeUserBalance) {
-      homeUserBalance.textContent = `Saldo: ${(Number(user.chipsBalance) || 0).toLocaleString("pt-BR")}`;
-    }
-    if (homeUserAvatar) {
-      homeUserAvatar.src = user.avatarUrl || "/assets/avatars/avatar-01.png";
-    }
-
-    if (btnLogin) btnLogin.style.display = "none";
-    if (btnSignup) btnSignup.style.display = "none";
-    if (btnLogout) btnLogout.style.display = "";
-
-    if (btnSettings) btnSettings.style.display = "";
-    if (btnProfile) btnProfile.style.display = "";
-    if (btnClassic) btnClassic.style.display = "";
-    if (btnCrazy) btnCrazy.style.display = "";
+    setLoggedInHome(user);
   } catch (err) {
     console.error("Erro ao carregar usuário da home:", err);
   }
 }
 
-const btnLogout = document.getElementById("btnLogout");
-if (btnLogout) {
-  btnLogout.onclick = async () => {
-    try {
-      await fetch(`${API_BASE}/auth/logout`, {
-        method: "POST",
-        credentials: "include",
-      });
-    } catch (err) {
-      console.error("Erro no logout:", err);
-    }
-
-    localStorage.removeItem("pontinhoAuthUser");
-    localStorage.removeItem("pontinhoPlayerName");
-    localStorage.removeItem("pontinhoAvatarUrl");
-
-    window.location.href = "./index.html";
-  };
-}
-
-
+bindGameControls();
+bindHomeButtons();
+refreshHomeUser();
 
 
 

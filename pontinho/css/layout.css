@@ -991,6 +991,48 @@ body{
 .home-menu button:active{
   transform: translateY(1px);
 }
+
+.home-menu button {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 12px;
+}
+
+.home-menu button[style*="display:none"],
+.home-menu button[style*="display: none"] {
+  display: none !important;
+}
+
+.home-menu .btn-icon {
+  width: 26px;
+  min-width: 26px;
+  height: 26px;
+
+  display: grid;
+  place-items: center;
+
+  font-size: 19px;
+  line-height: 1;
+  color: rgba(255,255,255,0.92);
+}
+
+.home-menu .btn-text {
+  flex: 1;
+  text-align: left;
+}
+
+#btnClassic .btn-icon {
+  color: #d8ff8f;
+}
+
+#btnCrazy .btn-icon {
+  color: #ffe08a;
+}
+
+#btnLogout .btn-icon {
+  color: #ff5a4f;
+}
 /* =============================
    HOME DESKTOP CHEIA (portal)
 ============================= */
@@ -1049,6 +1091,7 @@ body{
     font-weight: 900;
     font-size: 16px;
     margin-bottom: 10px;
+    color: #002a75;
 
   }
 /* Painel Status*/
@@ -1066,12 +1109,45 @@ body{
   }
 
   /* banner */
-  #homeScreen .home-banner{
-    width: min(1120px, 96vw);
-    border-radius: 16px;
-    padding: 14px 18px;
-    background: linear-gradient(180deg, rgba(10,70,120,1) 0%, rgba(6,52,92,1) 100%);
-  }
+  .home-banner {
+  width: min(1120px, 96vw);
+  margin: 14px auto;
+  padding: 18px 28px;
+  border-radius: 16px;
+
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+
+  background: linear-gradient(135deg, #07351f, #041f14);
+  border: 1px solid rgba(255,255,255,0.12);
+  box-shadow: 0 10px 25px rgba(0,0,0,0.25);
+
+  color: #fff;
+}
+
+.home-banner-text {
+  flex: 1;
+  text-align: center;
+}
+
+.home-banner-title {
+  font-size: 20px;
+  font-weight: 900;
+  margin-bottom: 8px;
+}
+
+.home-banner-sub {
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.home-banner-cards {
+  width: 150px;
+  max-width: 28%;
+  filter: drop-shadow(0 8px 14px rgba(0,0,0,0.45));
+}
 
   /* últimas mesas: 3 em uma linha */
   #homeScreen .home-lastrow{
@@ -1085,7 +1161,7 @@ body{
   #homeScreen .home-panel{
     border-radius: 16px;
     padding: 14px;
-    background: rgba(248, 190, 124, 0.95);
+    background: rgba(69, 142, 236, 0.95);
     border: 1px solid rgba(0,0,0,0.08);
     box-shadow: 0 14px 40px rgba(0,0,0,0.08);
   }
@@ -1097,7 +1173,8 @@ body{
     gap: 10px;
     padding: 10px 10px;
     border-radius: 12px;
-    background: rgba(209, 7, 7, 0.04);
+    background: #f5c542;
+    color: #002a75;
     border: 1px solid rgba(0,0,0,0.05);
   }
 
@@ -1108,7 +1185,7 @@ body{
     padding: 10px 12px;
     border-radius: 12px;
     border: none;
-    background: #21b455;
+    background: #002a75;
     color: #f5c542;
     font-weight: 900;
     cursor: pointer;
@@ -1773,10 +1850,10 @@ html, body {
   margin: 2px auto 0;
   padding: 18px 12px;
   text-align: center;
-  font-size: 20px;
+  font-size: 14px;
   font-weight: 900;
   color: #fff;
-  background: rgba(0,0,0,0.18);
+  background: rgba(0,0,0,0.15);
   border-radius: 18px;
 }
 
@@ -1796,5 +1873,243 @@ html, body {
 
   .home-footer {
     font-size: 16px;
+  }
+}
+
+/* =========================================================
+   HOME - MESAS AO VIVO VISUAL PROFISSIONAL
+========================================================= */
+
+.home-live-section {
+  width: min(1120px, 96vw);
+  margin: 12px auto 0;
+  padding: 16px;
+  border-radius: 18px;
+  background: rgba(0, 0, 0, 0.22);
+  border: 1px solid rgba(255,255,255,0.12);
+}
+
+.home-section-title {
+  font-size: 22px;
+  font-weight: 900;
+  margin-bottom: 14px;
+  text-align: left;
+  color: #fff;
+  text-shadow: 0 2px 8px rgba(0,0,0,0.45);
+}
+
+.home-live-row-visual {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
+}
+
+.home-live-card-visual {
+  position: relative;
+  min-height: 260px;
+  padding: 14px 14px 16px;
+  border-radius: 16px;
+
+  background: linear-gradient(
+    180deg,
+    rgba(0, 40, 20, 0.78),
+    rgba(0, 18, 10, 0.88)
+  );
+
+  border: 1px solid rgba(255,255,255,0.18);
+  box-shadow: 0 14px 34px rgba(0,0,0,0.28);
+
+  color: #fff;
+  text-align: center;
+  overflow: hidden;
+}
+
+.home-live-card-visual::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at top, rgba(40,255,120,0.16), transparent 55%);
+  pointer-events: none;
+}
+
+.home-live-count {
+  position: relative;
+  z-index: 2;
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  min-width: 66px;
+  height: 28px;
+  padding: 0 10px;
+  margin-bottom: 8px;
+
+  border-radius: 999px;
+  background: rgba(0,0,0,0.52);
+  border: 1px solid rgba(255,255,255,0.14);
+
+  font-size: 14px;
+  font-weight: 900;
+}
+
+.home-live-table-visual {
+  position: relative;
+  width: 170px;
+  height: 92px;
+  margin: 6px auto 18px;
+}
+
+.home-live-table-felt {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+
+  width: 150px;
+  height: 72px;
+  transform: translate(-50%, -50%);
+
+  border-radius: 999px;
+  background:
+    radial-gradient(circle at center, rgba(20,180,70,0.98), rgba(0,95,35,0.98) 60%, rgba(0,50,20,1));
+
+  border: 4px solid rgba(180, 120, 55, 0.9);
+
+  box-shadow:
+    inset 0 0 18px rgba(0,0,0,0.45),
+    0 8px 20px rgba(0,0,0,0.35);
+}
+
+.home-live-seat {
+  position: absolute;
+  width: 30px;
+  height: 30px;
+
+  border-radius: 50%;
+  background: rgba(255,255,255,0.12);
+  border: 1px solid rgba(255,255,255,0.22);
+
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+
+  box-shadow: 0 4px 10px rgba(0,0,0,0.32);
+}
+
+.home-live-seat.occupied {
+  border-color: rgba(255, 210, 90, 0.9);
+  background: rgba(255, 210, 90, 0.18);
+}
+
+.home-live-seat img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.home-live-seat-1 {
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.home-live-seat-2 {
+  left: 22px;
+  top: 10px;
+}
+
+.home-live-seat-3 {
+  left: 50%;
+  top: 0;
+  transform: translateX(-50%);
+}
+
+.home-live-seat-4 {
+  right: 22px;
+  top: 10px;
+}
+
+.home-live-seat-5 {
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.home-live-seat-6 {
+  left: 50%;
+  bottom: 0;
+  transform: translateX(-50%);
+}
+
+.home-live-name {
+  position: relative;
+  z-index: 2;
+
+  font-size: 20px;
+  font-weight: 900;
+  margin-top: 4px;
+  text-shadow: 0 2px 8px rgba(0,0,0,0.45);
+}
+
+.home-live-stake {
+  position: relative;
+  z-index: 2;
+
+  margin-top: 8px;
+  font-size: 15px;
+  color: rgba(255,255,255,0.92);
+}
+
+.home-live-stake strong {
+  color: #ffd54a;
+}
+
+.home-live-enter {
+  position: relative;
+  z-index: 2;
+
+  width: 82%;
+  margin-top: 16px;
+  padding: 11px 16px;
+
+  border: none;
+  border-radius: 10px;
+
+  background: linear-gradient(180deg, #20c463, #0b8338);
+  color: #fff;
+
+  font-size: 15px;
+  font-weight: 900;
+  cursor: pointer;
+
+  box-shadow: 0 8px 18px rgba(0,0,0,0.28);
+}
+
+.home-live-enter:hover {
+  filter: brightness(1.08);
+}
+
+.home-live-empty {
+  grid-column: 1 / -1;
+  padding: 18px;
+  border-radius: 14px;
+  background: rgba(0,0,0,0.28);
+  color: #fff;
+  text-align: center;
+  font-weight: 800;
+}
+
+/* MOBILE */
+@media (max-width: 768px) {
+  .home-live-row-visual {
+    grid-template-columns: 1fr;
+  }
+
+  .home-section-title {
+    text-align: center;
+  }
+
+  .home-live-card-visual {
+    min-height: 245px;
   }
 }
