@@ -970,7 +970,7 @@ body{
   max-width: 360px;
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 10px;
 }
 
 .home-menu button{
@@ -1033,6 +1033,8 @@ body{
 #btnLogout .btn-icon {
   color: #ff5a4f;
 }
+
+
 /* =============================
    HOME DESKTOP CHEIA (portal)
 ============================= */
@@ -1091,7 +1093,7 @@ body{
     font-weight: 900;
     font-size: 16px;
     margin-bottom: 10px;
-    color: #002a75;
+    color: #fff;
 
   }
 /* Painel Status*/
@@ -1111,6 +1113,7 @@ body{
   /* banner */
   .home-banner {
   width: min(1120px, 96vw);
+  height: 120px;
   margin: 14px auto;
   padding: 18px 28px;
   border-radius: 16px;

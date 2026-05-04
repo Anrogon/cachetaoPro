@@ -1443,3 +1443,33 @@
     pointer-events: auto !important;
   }
 }
+/* ===== FIX HOME MENU MOBILE - BOTÕES COM ÍCONE ===== */
+@media (max-width: 768px) and (orientation: portrait) {
+  #homeScreen .home-menu {
+    width: min(92vw, 320px) !important;
+    max-width: 320px !important;
+  }
+
+  #homeScreen .home-menu button {
+    width: 82% !important;
+    max-width: 320px !important;
+
+    display: flex !important;
+    align-items: center !important;
+    justify-content: flex-start !important;
+    gap: 12px !important;
+
+    white-space: nowrap !important;
+  }
+
+  #homeScreen .home-menu .btn-icon {
+    flex: 0 0 28px !important;
+    width: 28px !important;
+  }
+
+  #homeScreen .home-menu .btn-text {
+    flex: 1 1 auto !important;
+    text-align: center !important;
+    white-space: nowrap !important;
+  }
+}
