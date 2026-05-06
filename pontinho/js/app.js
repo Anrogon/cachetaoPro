@@ -159,6 +159,7 @@ if (msg.type === "joined") {
 // 3) state_public
 if (msg.type === "state_public") {
   const pub = msg.payload || {};
+  console.log("PUB SEATS DEBUG", pub.seats);
   state.tableId = pub.tableId || state.tableId;
   state.matchPot = Number(pub.matchPot) || state.matchPot || 0;
 
@@ -1133,6 +1134,19 @@ function openTablesFromHome(variant) {
   document.getElementById("tablesScreen").style.display = "";
 }
 
+function requireAuthOrRedirect() {
+  const user = JSON.parse(localStorage.getItem("pontinhoAuthUser") || "null");
+
+  if (!user) {
+    alert("Você precisa fazer login para jogar.");
+    window.location.href = "./login.html";
+    return false;
+  }
+
+  return true;
+}
+
+
 function bindHomeButtons() {
   const btnLogin = document.getElementById("btnLogin");
   if (btnLogin) {
@@ -1163,18 +1177,22 @@ function bindHomeButtons() {
   }
 
   const btnClassic = document.getElementById("btnClassic");
-  if (btnClassic) {
-    btnClassic.onclick = () => {
-      openTablesFromHome("CLASSIC");
-    };
-  }
+    if (btnClassic) {
+      btnClassic.onclick = () => {
+        if (!requireAuthOrRedirect()) return;
 
-  const btnCrazy = document.getElementById("btnCrazy");
-  if (btnCrazy) {
-    btnCrazy.onclick = () => {
-      openTablesFromHome("CRAZY");
-    };
-  }
+        openTablesFromHome("CLASSIC");
+      };
+    }
+
+    const btnCrazy = document.getElementById("btnCrazy");
+    if (btnCrazy) {
+      btnCrazy.onclick = () => {
+        if (!requireAuthOrRedirect()) return;
+
+        openTablesFromHome("CRAZY");
+      };
+    }
 
   const btnLogout = document.getElementById("btnLogout");
   if (btnLogout) {
@@ -1264,7 +1282,7 @@ function renderHomeLiveTables() {
           Aposta: <strong>${stake.toLocaleString("pt-BR")}</strong>
         </div>
 
-        <button type="button" class="home-live-enter">Entrar</button>
+        <button type="button" class="home-live-watch">Assistir</button>
       </div>
     `;
   }).join("");
@@ -1275,15 +1293,24 @@ function bindHomeLiveTables() {
   if (!el) return;
 
   el.onclick = (ev) => {
-    const btn = ev.target.closest(".home-live-enter");
-    if (!btn) return;
+  const btn = ev.target.closest(".home-live-watch");
+  if (!btn) return;
 
-    const card = btn.closest(".home-live-card-visual");
-    const variant = card?.dataset?.variant || "CLASSIC";
+  const card = btn.closest(".home-live-card-visual");
+  const variant = card?.dataset?.variant || "CLASSIC";
 
-    state.selectedVariant = variant;
-    renderTablesScreen();
-    showScreen("tables");
+  // opcional: exigir login até para assistir
+  const user = JSON.parse(localStorage.getItem("pontinhoAuthUser") || "null");
+
+  if (!user) {
+    alert("Faça login para assistir às mesas.");
+    window.location.href = "./login.html";
+    return;
+  }
+
+  state.selectedVariant = variant;
+  renderTablesScreen();
+  showScreen("tables");
   };
 }
 

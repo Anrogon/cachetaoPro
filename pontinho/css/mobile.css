@@ -411,3 +411,49 @@
   }
 }
 
+@media (max-width: 768px) and (orientation: portrait) {
+  .mobile-seat {
+    overflow: visible !important;
+  }
+
+  .mobile-seat-cards {
+    position: absolute !important;
+    left: 50% !important;
+    top: -18px !important;
+    transform: translateX(-50%) !important;
+
+    display: flex !important;
+    justify-content: center !important;
+    align-items: flex-end !important;
+
+    pointer-events: none !important;
+    z-index: 2 !important;
+  }
+
+  .mobile-mini-card {
+    width: 9px !important;
+    height: 14px !important;
+    margin-left: -5px !important;
+
+    border-radius: 2px !important;
+    background-image: url("/assets/image/card-back.png") !important;
+    background-size: cover !important;
+    background-position: center !important;
+    background-repeat: no-repeat !important;
+
+    border: 1px solid rgba(255,255,255,0.45) !important;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.45) !important;
+
+    transform-origin: bottom center !important;
+  }
+
+  .mobile-seat-cards .mobile-mini-card:nth-child(1) { transform: rotate(-20deg) translateY(4px) !important; }
+  .mobile-seat-cards .mobile-mini-card:nth-child(2) { transform: rotate(-15deg) translateY(3px) !important; }
+  .mobile-seat-cards .mobile-mini-card:nth-child(3) { transform: rotate(-10deg) translateY(2px) !important; }
+  .mobile-seat-cards .mobile-mini-card:nth-child(4) { transform: rotate(-5deg) translateY(1px) !important; }
+  .mobile-seat-cards .mobile-mini-card:nth-child(5) { transform: rotate(0deg) !important; }
+  .mobile-seat-cards .mobile-mini-card:nth-child(6) { transform: rotate(5deg) translateY(1px) !important; }
+  .mobile-seat-cards .mobile-mini-card:nth-child(7) { transform: rotate(10deg) translateY(2px) !important; }
+  .mobile-seat-cards .mobile-mini-card:nth-child(8) { transform: rotate(15deg) translateY(3px) !important; }
+  .mobile-seat-cards .mobile-mini-card:nth-child(9) { transform: rotate(20deg) translateY(4px) !important; }
+}

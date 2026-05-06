@@ -1050,9 +1050,9 @@ export function renderScoreboard() {
   el.innerHTML = "";
   el.style.display = "none";
   return;
-}
+  }
 
-el.style.display = "";
+  el.style.display = "";
 
   const pl = currentPlayer();
   if (!pl) {
@@ -1301,6 +1301,7 @@ el.style.display = "";
     }, { passive: true });
   }
   renderMobileTableLayout();
+  renderDesktopTableLayout();
   moveMobileBatiButtonToBottomArea();
 }
 
@@ -1324,6 +1325,18 @@ function getPublicStateSafe() {
 
 function getPlayersForMobileTable() {
   const s = getPublicStateSafe();
+
+  const tableId = s.tableId || state.tableId;
+
+  const tableData =
+    tableId && window.state?.tables
+      ? window.state.tables[tableId]
+      : null;
+
+  if (Array.isArray(tableData?.seats)) {
+    return tableData.seats.filter(Boolean);
+  }
+
   return s.players || s.seats || [];
 }
 
@@ -1442,6 +1455,7 @@ const miniAnte = Number(
     for (let seat = 1; seat <= 5; seat++) {
     const el = root.querySelector(`[data-seat-pos="${seat}"]`);
     const p = players.find(player => Number(player?.seat) === seat);
+    
 
     if (!el) continue;
 
@@ -1471,20 +1485,137 @@ const miniAnte = Number(
     const chips = Number(p.tableChips ?? p.stack ?? 0);
     const pts = Number(p.totalPoints ?? 0);
 
-    el.innerHTML = `
-      <div class="mobile-seat-avatar">
-        <img src="${avatar}">
-      </div>
-      <div>
-        <div class="mobile-seat-name">${p.name || "Jogador"}</div>
-        <div class="mobile-seat-meta">${chips} · ${pts} pts</div>
-      </div>
-    `;
-  }
+    const handCount = Number(p.handCount ?? 0);
+
+      el.innerHTML = `
+        ${handCount > 0 ? `
+          <div class="mobile-seat-cards">
+            ${Array.from({ length: Math.min(handCount, 9) }).map(() => `
+              <div class="mobile-mini-card"></div>
+            `).join("")}
+          </div>
+        ` : ""}
+
+        <div class="mobile-seat-avatar">
+          <img src="${avatar}">
+        </div>
+
+        <div>
+          <div class="mobile-seat-name">${p.name || "Jogador"}</div>
+          <div class="mobile-seat-meta">${chips} · ${pts} pts</div>
+        </div>
+      `;
+        }
 
   renderMobileBottomHudClean(tableData, s);
   moveMobilePotToTableTop();
 }
+
+function renderDesktopTableLayout() {
+  const s = getPublicStateSafe();
+
+  const game = document.getElementById("game");
+  if (!game) return;
+
+  let root = document.getElementById("desktopTableLayout");
+
+  const isMobile = isMobilePortraitTable();
+
+  if (isMobile) {
+    if (root) root.remove();
+    document.body.classList.remove("desktop-table-mode");
+    return;
+  }
+
+  document.body.classList.add("desktop-table-mode");
+
+  if (!root) {
+    root = document.createElement("div");
+    root.id = "desktopTableLayout";
+    root.innerHTML = `
+      <div class="desktop-seat-layer">
+        <div class="desktop-seat pos1" data-seat-pos="1"></div>
+        <div class="desktop-seat pos2" data-seat-pos="2"></div>
+        <div class="desktop-seat pos3" data-seat-pos="3"></div>
+        <div class="desktop-seat pos4" data-seat-pos="4"></div>
+        <div class="desktop-seat pos5" data-seat-pos="5"></div>
+        <div class="desktop-seat pos6" data-seat-pos="6"></div>
+      </div>
+    `;
+    game.prepend(root);
+  }
+
+  const tableId = s.tableId || state.tableId;
+  const tableData = tableId && window.state?.tables
+    ? window.state.tables[tableId]
+    : null;
+
+  const players = Array.isArray(tableData?.seats)
+    ? tableData.seats.filter(Boolean)
+    : (Array.isArray(state.players) ? state.players : []);
+
+  for (let seat = 1; seat <= 6; seat++) {
+    const el = root.querySelector(`[data-seat-pos="${seat}"]`);
+    const p = players.find(player => Number(player?.seat) === seat);
+
+    if (!el) continue;
+
+    if (!p) {
+      el.innerHTML = "";
+      el.classList.add("empty");
+      el.classList.remove("is-current-turn");
+      continue;
+    }
+
+    el.classList.remove("empty");
+    el.classList.toggle("is-current-turn", Number(s.currentSeat) === Number(p.seat));
+
+    const avatar =
+      p.avatarUrl ||
+      p.avatar_url ||
+      "/assets/avatars/avatar-01.png";
+
+    const chips = Number(p.tableChips ?? p.stack ?? p.chips ?? 0);
+    const pts = Number(p.totalPoints ?? 0);
+
+    const isMe = Number(p.seat) === Number(s.mySeat);
+    const handCount = Number(
+    p.handCount ??
+    p.cardsCount ??
+    p.handLength ??
+    p.cardCount ??
+    (Array.isArray(p.hand) ? p.hand.length : 0)
+  );
+
+    console.log("PLAYER DEBUG", {
+      seat: p.seat,
+      hand: p.hand,
+      handCount,
+      raw: p
+    });
+
+    el.innerHTML = `
+      <div class="desktop-seat-avatar">
+        <img src="${avatar}">
+      </div>
+
+      <div class="desktop-seat-info">
+        <div class="desktop-seat-name">${p.name || "Jogador"}</div>
+        <div class="desktop-seat-meta">${chips.toLocaleString("pt-BR")} · ${pts} pts</div>
+
+        ${!isMe && handCount > 0 ? `
+        <div class="desktop-seat-cards">
+          ${Array.from({ length: Math.min(handCount, 9) }).map(() => `
+            <div class="mini-card"></div>
+          `).join("")}
+        </div>
+      ` : ""}
+      </div>
+    `;
+  }
+}
+
+
 
 function moveMobilePotToTableTop() {
   if (!isMobilePortraitTable()) return;

@@ -32,7 +32,7 @@ body{
   min-height: 100vh; 
   background: #0b3d2e;
   background-image: url("/assets/image/table-pon.png");/* fundo roxo/mesa gigante */
-  background-size: 95% 580px;
+  background-size: 95% 600px;
   background-position: center top;
   background-repeat: no-repeat;  
   display: flex;/* layout */
@@ -2067,7 +2067,7 @@ html, body {
   color: #ffd54a;
 }
 
-.home-live-enter {
+.home-live-watch {
   position: relative;
   z-index: 2;
 

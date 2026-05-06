@@ -1947,6 +1947,7 @@ function sendState(roomId) {
           : (((Number(room.buyIn) || 0) * 10) - (Number(room.buyIn) || 0)),
         totalPoints: p.totalPoints || 0,
         lastRoundPoints: p.lastRoundPoints || 0,
+        handCount: Array.isArray(p.hand) ? p.hand.length : 0,
         eliminated: !!p.eliminated,
         rebuyCount: p.rebuyCount || 0,
         pendingRebuy: !!p.pendingRebuy,
