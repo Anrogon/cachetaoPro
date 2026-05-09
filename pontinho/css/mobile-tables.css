@@ -2,10 +2,10 @@
    MOBILE TABLES
    Sala de mesas mobile em 1 coluna estilo app
 ========================================================= */
-@media (max-width: 520px) and (orientation: portrait){
 
-  /* tela da sala */
-  #tablesScreen{
+@media (max-width: 520px) and (orientation: portrait) {
+
+  #tablesScreen {
     width: 100% !important;
     max-width: 100% !important;
     min-height: 100vh !important;
@@ -15,27 +15,41 @@
 
     overflow-x: hidden !important;
     overflow-y: auto !important;
+
     box-sizing: border-box !important;
   }
 
-  /* grid/lista */
-  #tablesGrid{
+  .tables-header {
+    width: 100% !important;
+
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+
+    margin-bottom: 10px !important;
+  }
+
+  #tablesGrid {
+    width: 100% !important;
+    max-width: 100% !important;
+
     display: grid !important;
     grid-template-columns: 1fr !important;
     gap: 12px !important;
 
-    width: 100% !important;
-    max-width: 100% !important;
     margin: 0 !important;
     padding: 0 !important;
 
     height: auto !important;
     align-content: start !important;
+
     box-sizing: border-box !important;
   }
 
-  /* card de cada mesa */
-  .table-card{
+  #tablesGrid > .table-card {
+    width: 100% !important;
+    min-width: 0 !important;
+
     display: grid !important;
     grid-template-columns: minmax(0, 1fr) 100px !important;
     grid-template-areas:
@@ -44,132 +58,164 @@
       "actions visual" !important;
 
     align-items: center !important;
+
     column-gap: 10px !important;
     row-gap: 8px !important;
 
-    width: 100% !important;
-    min-width: 0 !important;
     margin: 0 !important;
     padding: 12px !important;
 
     border-radius: 14px !important;
-    box-sizing: border-box !important;
+
     overflow: hidden !important;
+    box-sizing: border-box !important;
   }
 
-  /* coluna esquerda */
-  .table-title{
+  #tablesGrid > .table-card .table-title {
     grid-area: title !important;
+
     margin: 0 !important;
-    text-align: center !important;
+
     font-size: 14px !important;
-    line-height: 1.1 !important;
     font-weight: 900 !important;
+    line-height: 1.1 !important;
+
     text-align: left !important;
   }
 
-  .table-value,
-  .table-buyin{
+  #tablesGrid > .table-card .table-value,
+  #tablesGrid > .table-card .table-buyin {
     grid-area: value !important;
+
     margin: 0 !important;
-    text-align: center !important;
+
     font-size: 13px !important;
     line-height: 1.2 !important;
+
     text-align: left !important;
     opacity: 0.96 !important;
   }
 
-  .table-hint{
+  #tablesGrid > .table-card .table-hint {
     display: none !important;
   }
 
-  /* ações */
-  table-actions{
-  grid-area: actions !important;
-  display: flex !important;
-  align-items: center !important;
-  justify-content: flex-start !important;
-  flex-wrap: wrap !important;
-  gap: 6px !important;
-  margin: 0 !important;
-}
+  #tablesGrid > .table-card .table-actions {
+    grid-area: actions !important;
 
-.table-actions button,
-.table-actions .btn-primary,
-.table-actions .watch-btn{
-  min-height: 28px !important;
-  padding: 5px 8px !important;
-  border-radius: 8px !important;
-  font-size: 12px !important;
-  justify-content: center !important;
-}
+    display: flex !important;
+    align-items: center !important;
+    justify-content: flex-start !important;
+    flex-wrap: wrap !important;
+    gap: 6px !important;
 
-  /* coluna direita: mini mesa */
-  .table-visual{
-  grid-area: visual !important;
-  position: relative !important;
-
-  width: 100px !important;
-  min-width: 100px !important;
-  height: 64px !important;
-
-  margin: 0 !important;
-  justify-self: end !important;
-  align-self: center !important;
-
-  overflow: visible !important; /* importante para não cortar assentos */
-}
-
-
-  .table-visual img{
-  width: 100% !important;
-  height: 100% !important;
-  object-fit: contain !important;
-  display: flex !important;
-  object-fit: contain !important;
-  pointer-events: none !important;
+    width: auto !important;
+    margin: 0 !important;
   }
 
+  #tablesGrid > .table-card .table-actions button,
+  #tablesGrid > .table-card .table-actions .btn-primary,
+  #tablesGrid > .table-card .table-actions .watch-btn {
+    min-height: 28px !important;
 
-  /* overlay dos assentos */
-.seats,
-.seats-overlay{
-  position: absolute !important;
-  inset: 0 !important;
-  pointer-events: auto !important;
-  overflow: visible !important;
-}
+    padding: 5px 8px !important;
+    border-radius: 8px !important;
 
-.seat{
-  width: 20px !important;
-  height: 20px !important;
-  font-size: 10px !important;
-  font-weight: 800 !important;
-  border-width: 1px !important;
-}
+    font-size: 12px !important;
+    font-weight: 900 !important;
 
-  /* posições ajustadas */
-.seat.pos1{  left: -5% !important;  top: 50% !important;  transform: translateY(-50%) !important;}
+    justify-content: center !important;
+  }
 
-.seat.pos2{  left: 15% !important;  top: 6px !important;}
+  #tablesGrid > .table-card .table-visual {
+    grid-area: visual !important;
 
-.seat.pos3{  left: 45% !important;  top: -6px !important;  transform: translateX(-50%) !important;}
+    position: relative !important;
 
-.seat.pos4{  left: 75% !important;  top: 6px !important;}
+    width: 100px !important;
+    min-width: 100px !important;
+    height: 64px !important;
 
-.seat.pos5{  left: 90% !important;  top: 50% !important;  transform: translateY(-50%) !important;}
+    justify-self: end !important;
+    align-self: center !important;
 
-.seat.pos6{  left: 45% !important;  top: 80% !important;  transform: translateX(-50%) !important;}
+    margin: 0 !important;
 
-  /* botão assistir só com ícone */
-  .watch-text{
+    overflow: visible !important;
+  }
+
+  #tablesGrid > .table-card .table-visual img {
+    width: 100% !important;
+    height: 100% !important;
+
+    object-fit: contain !important;
+
+    display: block !important;
+    pointer-events: none !important;
+  }
+
+  #tablesGrid > .table-card .seats,
+  #tablesGrid > .table-card .seats-overlay {
+    position: absolute !important;
+    inset: 0 !important;
+
+    overflow: visible !important;
+    pointer-events: auto !important;
+  }
+
+  #tablesGrid > .table-card .seat {
+    width: 30px !important;
+    height: 30px !important;
+
+    font-size: 10px !important;
+    font-weight: 800 !important;
+
+    border-width: 1px !important;
+  }
+
+  #tablesGrid > .table-card .seat.pos1 {
+    left: -5% !important;
+    top: 50% !important;
+    transform: translateY(-50%) !important;
+  }
+
+  #tablesGrid > .table-card .seat.pos2 {
+    left: 15% !important;
+    top: 6px !important;
+  }
+
+  #tablesGrid > .table-card .seat.pos3 {
+    left: 45% !important;
+    top: -6px !important;
+    transform: translateX(-50%) !important;
+  }
+
+  #tablesGrid > .table-card .seat.pos4 {
+    left: 75% !important;
+    top: 6px !important;
+  }
+
+  #tablesGrid > .table-card .seat.pos5 {
+    left: 90% !important;
+    top: 50% !important;
+    transform: translateY(-50%) !important;
+  }
+
+  #tablesGrid > .table-card .seat.pos6 {
+    left: 45% !important;
+    top: 80% !important;
+    transform: translateX(-50%) !important;
+  }
+
+  #tablesGrid > .table-card .watch-text {
     display: none !important;
   }
 
-  .watch-btn{
+  #tablesGrid > .table-card .watch-btn {
     width: 34px !important;
     min-width: 34px !important;
     height: 34px !important;
+
     padding: 4px !important;
 
     display: inline-flex !important;
@@ -180,35 +226,13 @@
     border: none !important;
   }
 
-  .watch-icon{
+  #tablesGrid > .table-card .watch-icon {
     width: 20px !important;
     height: 20px !important;
   }
-}
-
-@media (max-width: 520px) and (orientation: portrait){
-
-  #tablesGrid > .table-card .table-title{
-    text-align: center !important;
-    display: block !important;
-    width: 100% !important;
-    margin: 0 auto !important;
-  }
-
-  #tablesGrid > .table-card .table-value,
-  #tablesGrid > .table-card .table-buyin{
-    text-align: center !important;
-    display: block !important;
-    width: 100% !important;
-    margin: 4px auto 0 auto !important;
-  }
-
-  #tablesGrid > .table-card .table-actions{
-    display: flex !important;
-    justify-content: center !important;
-    align-items: center !important;
-    width: 100% !important;
-    margin: 8px auto 0 auto !important;
+  
+  #tablesGrid > .table-card .table-visual{
+    width: 200px !important;
+    height: auto !important;
   }
 }
-

@@ -1672,7 +1672,7 @@ export function renderTablesScreen() {
   }
 
     const isCrazyMode = String(state.selectedVariant || "CLASSIC").toUpperCase() === "CRAZY";
-    const tableTitle = isCrazyMode ? `${t.name} 🔥 Crazy` : t.name;
+    const tableTitle = isCrazyMode ? `${t.name} Crazy` : t.name;
 
 
 

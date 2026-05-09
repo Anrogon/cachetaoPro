@@ -1,0 +1,371 @@
+/* =========================================================
+   MOBILE PORTRAIT
+   Uso: somente jogo em andamento no celular
+========================================================= */
+
+@media (max-width: 520px) and (orientation: portrait) {
+
+  html,
+  body {
+    height: 100%;
+    overflow: hidden;
+  }
+
+  body.mobile-table-mode #scoreboard {
+    display: none !important;
+  }
+
+  #game {
+    width: 100vw !important;
+    height: 100vh !important;
+    min-height: 100vh !important;
+    max-width: none !important;
+
+    margin: 0 !important;
+    padding: 0 !important;
+
+    background-image: url("/assets/image/bg-g.jpg");
+    background-size: cover !important;
+    background-position: center !important;
+
+    position: relative;
+  }
+
+  #tableArea {
+    height: 100vh !important;
+    padding-top: 120px !important;
+    padding-bottom: 260px !important;
+
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: flex-end !important;
+
+    overflow-y: auto !important;
+    pointer-events: auto !important;
+  }
+
+  #bottomArea {
+    pointer-events: auto !important;
+    background: transparent !important;
+  }
+}
+
+/* =========================================================
+   MOBILE PORTRAIT - JOGOS BAIXADOS
+========================================================= */
+
+@media (max-width: 520px) and (orientation: portrait) {
+
+  #table {
+    position: fixed !important;
+
+    left: 10px !important;
+    right: 10px !important;
+
+    top: calc(10px + env(safe-area-inset-top) + 150px) !important;
+    bottom: calc(10px + env(safe-area-inset-bottom) + 220px) !important;
+
+    display: flex !important;
+    flex-direction: row !important;
+    flex-wrap: nowrap !important;
+
+    align-items: flex-end !important;
+    justify-content: flex-start !important;
+
+    gap: 18px !important;
+
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
+
+    padding: 8px 6px !important;
+    margin: 0 !important;
+
+    background: transparent !important;
+
+    z-index: 16000 !important;
+    pointer-events: auto !important;
+  }
+
+  .grupo-table {
+    position: relative !important;
+
+    width: 60px !important;
+    min-width: 60px !important;
+    height: 250px !important;
+
+    display: block !important;
+    overflow: visible !important;
+
+    background: transparent !important;
+
+    pointer-events: auto !important;
+  }
+
+  .grupo-table .card {
+    position: absolute !important;
+    left: 0 !important;
+
+    width: 60px !important;
+    height: 86px !important;
+
+    margin: 0 !important;
+    border-radius: 5px !important;
+
+    box-shadow: 0 2px 4px rgba(0,0,0,0.4) !important;
+    transition: transform 0.10s !important;
+  }
+
+  .grupo-table .card:nth-child(1)  { top: 0px;   z-index: 1;  }
+  .grupo-table .card:nth-child(2)  { top: 18px;  z-index: 2;  }
+  .grupo-table .card:nth-child(3)  { top: 36px;  z-index: 3;  }
+  .grupo-table .card:nth-child(4)  { top: 54px;  z-index: 4;  }
+  .grupo-table .card:nth-child(5)  { top: 72px;  z-index: 5;  }
+  .grupo-table .card:nth-child(6)  { top: 90px;  z-index: 6;  }
+  .grupo-table .card:nth-child(7)  { top: 108px; z-index: 7;  }
+  .grupo-table .card:nth-child(8)  { top: 126px; z-index: 8;  }
+  .grupo-table .card:nth-child(9)  { top: 144px; z-index: 9;  }
+  .grupo-table .card:nth-child(10) { top: 162px; z-index: 10; }
+  .grupo-table .card:nth-child(11) { top: 180px; z-index: 11; }
+  .grupo-table .card:nth-child(12) { top: 198px; z-index: 12; }
+  .grupo-table .card:nth-child(13) { top: 216px; z-index: 13; }
+}
+
+/* =========================================================
+   MOBILE PORTRAIT - MÃO + MONTE/LIXO
+========================================================= */
+
+@media (max-width: 520px) and (orientation: portrait) {
+
+  #hand {
+    position: fixed !important;
+
+    left: 8px !important;
+    right: 8px !important;
+    bottom: calc(10px + env(safe-area-inset-bottom)) !important;
+
+    width: auto !important;
+    max-width: none !important;
+
+    display: flex !important;
+    align-items: flex-end !important;
+    justify-content: center !important;
+    gap: 0 !important;
+
+    padding: 10px 6px !important;
+    margin-left: 0 !important;
+
+    border-radius: 3px !important;
+    background: transparent !important;
+    box-shadow: none !important;
+
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
+    -webkit-overflow-scrolling: touch;
+
+    transform: none !important;
+
+    z-index: 30000 !important;
+    pointer-events: auto !important;
+  }
+
+  #hand .card {
+    width: 70px !important;
+    height: 100px !important;
+
+    position: relative !important;
+    z-index: 1 !important;
+
+    flex: 0 0 auto !important;
+    margin-left: -45px !important;
+
+    border-radius: 5px !important;
+
+    pointer-events: auto !important;
+  }
+
+  #hand .card:first-child {
+    margin-left: 0 !important;
+  }
+
+  #hand .card.selected {
+    transform: translateY(-4px) !important;
+  }
+
+  #hand .card.touch-dragging {
+    transform: translateY(-10px) scale(1.04) !important;
+    z-index: 40000 !important;
+    filter: brightness(1.08);
+  }
+
+  #hand .card.touch-drop-target {
+    outline: 2px solid rgba(255,255,255,0.9) !important;
+    outline-offset: 2px !important;
+  }
+
+  #hand::before,
+  #hand::after {
+    pointer-events: none !important;
+  }
+
+  #deck-area {
+    position: fixed !important;
+
+    left: 50% !important;
+    bottom: calc(10px + env(safe-area-inset-bottom) + 110px) !important;
+    transform: translateX(-50%) !important;
+
+    display: flex !important;
+    justify-content: center !important;
+    align-items: center !important;
+    gap: 16px !important;
+
+    margin: 0 !important;
+
+    z-index: 25000 !important;
+    pointer-events: auto !important;
+  }
+
+  .pile-slot,
+  #monte,
+  #lixo {
+    width: 60px !important;
+    height: 86px !important;
+    border-radius: 5px !important;
+  }
+
+  #monte,
+  #lixo {
+    position: relative !important;
+    z-index: 25001 !important;
+    pointer-events: auto !important;
+  }
+  #monte .card,
+    #lixo .card,
+    #monte img,
+    #lixo img {
+    width: 60px !important;
+    height: 86px !important;
+    }
+}
+
+/* =========================================================
+   MOBILE PORTRAIT - HUD INFERIOR
+   Jogador + ordenar + BATI
+========================================================= */
+
+@media (max-width: 520px) and (orientation: portrait) {
+
+  body.mobile-table-mode #mobileBottomHud {
+    position: fixed !important;
+
+    left: 14px !important;
+    right: auto !important;
+    top: auto !important;
+    bottom: calc(10px + env(safe-area-inset-bottom) + 155px) !important;
+    transform: none !important;
+
+    width: 100px !important;
+    height: 40px !important;
+
+    z-index: 36000 !important;
+  }
+
+  body.mobile-table-mode #mobileBottomHud.is-current-turn {
+    border: 2px solid #ffd700 !important;
+    box-shadow:
+      0 0 0 2px rgba(255, 215, 0, 0.35),
+      0 0 14px rgba(255, 215, 0, 0.85) !important;
+  }
+
+  body.mobile-table-mode #mobileSortButtonsHud {
+    position: fixed !important;
+
+    left: 24px !important;
+    bottom: calc(10px + env(safe-area-inset-bottom) + 140px) !important;
+
+    display: flex !important;
+    gap: 10px !important;
+
+    z-index: 37000 !important;
+  }
+
+  body.mobile-table-mode #mobileSortButtonsHud .sort-btn {
+    position: static !important;
+
+    width: 30px !important;
+    height: 30px !important;
+    padding: 0 !important;
+
+    z-index: 37000 !important;
+  }
+
+  body.mobile-table-mode #bottomArea .sort-btn {
+    position: fixed !important;
+
+    top: auto !important;
+    bottom: calc(10px + env(safe-area-inset-bottom) + 115px) !important;
+    transform: none !important;
+
+    width: 30px !important;
+    height: 30px !important;
+
+    z-index: 37000 !important;
+  }
+
+  body.mobile-table-mode #bottomArea .sort-btn:nth-of-type(1) {
+    left: 38px !important;
+    right: auto !important;
+  }
+
+  body.mobile-table-mode #bottomArea .sort-btn:nth-of-type(2) {
+    left: 76px !important;
+    right: auto !important;
+  }
+
+  body.mobile-table-mode #mobileBatiBtnHud,
+  body.mobile-table-mode .sb-mobile-bati-btn {
+    position: fixed !important;
+
+    left: auto !important;
+    right: 25px !important;
+    top: auto !important;
+    bottom: calc(10px + env(safe-area-inset-bottom) + 145px) !important;
+    transform: none !important;
+
+    min-width: 70px !important;
+    width: 50px !important;
+    height: 28px !important;
+    padding: 0 10px !important;
+
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+
+    border: 1px solid rgba(255,255,255,0.22) !important;
+    border-radius: 999px !important;
+
+    font-size: 11px !important;
+    font-weight: 900 !important;
+    line-height: 1 !important;
+
+    color: #fff !important;
+    background: linear-gradient(180deg, #1a73e8, #0d47a1) !important;
+
+    white-space: nowrap !important;
+    cursor: pointer !important;
+    pointer-events: auto !important;
+
+    z-index: 39000 !important;
+  }
+
+  body.mobile-table-mode #mobileBatiBtnHud.is-active,
+  body.mobile-table-mode .sb-mobile-bati-btn.is-active {
+    background: linear-gradient(180deg, #2ecc71, #27ae60) !important;
+  }
+
+  body.mobile-table-mode #mobileBatiBtnHud.is-disabled-ui,
+  body.mobile-table-mode .sb-mobile-bati-btn.is-disabled-ui {
+    background: linear-gradient(180deg, #e53935, #b71c1c) !important;
+  }
+}

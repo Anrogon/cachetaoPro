@@ -107,7 +107,7 @@
   body.mobile-table-mode .mobile-players-bar {
     display: none !important;
   }
-
+/*
   #mobileTableLayout {
     position: relative !important;
     width: 100% !important;
@@ -240,7 +240,7 @@
   .mobile-seat.pos5 {
     right: 4px !important;
     top: 116px !important;
-  }
+  }*/
 }
 
 /* =========================================================
@@ -410,8 +410,11 @@
     text-align: center !important;
   }
 }
-
+/*
 @media (max-width: 768px) and (orientation: portrait) {
+
+
+
   .mobile-seat {
     overflow: visible !important;
   }
@@ -456,4 +459,237 @@
   .mobile-seat-cards .mobile-mini-card:nth-child(7) { transform: rotate(10deg) translateY(2px) !important; }
   .mobile-seat-cards .mobile-mini-card:nth-child(8) { transform: rotate(15deg) translateY(3px) !important; }
   .mobile-seat-cards .mobile-mini-card:nth-child(9) { transform: rotate(20deg) translateY(4px) !important; }
+}
+*/
+
+
+/*******************NOVO MOBILE COMEÇA AQUI***********/
+
+/* =========================================================
+   MOBILE - JOGADORES AO REDOR DA MESA
+========================================================= */
+@media (max-width: 768px) and (orientation: portrait) {
+
+  #mobileTableLayout {
+    position: relative !important;
+
+    width: 100% !important;
+    min-height: 300px !important;
+
+    margin: 0 auto !important;
+    padding-top: 38px !important;
+
+    pointer-events: none !important;
+
+    z-index: 5 !important;
+  }
+
+  .mobile-table-topbar {
+    position: absolute !important;
+
+    top: 4px !important;
+    left: 6px !important;
+    right: 6px !important;
+
+    height: 30px !important;
+
+    display: flex !important;
+    justify-content: center !important;
+    align-items: center !important;
+
+    gap: 6px !important;
+
+    font-size: 11px !important;
+    font-weight: 800 !important;
+
+    color: #fff !important;
+
+    z-index: 10 !important;
+  }
+
+  .mobile-table-topbar span {
+    padding: 4px 7px !important;
+
+    border-radius: 999px !important;
+
+    background: rgba(0,0,0,0.42) !important;
+    border: 1px solid rgba(255,255,255,0.18) !important;
+
+    white-space: nowrap !important;
+  }
+
+  .mobile-seat-layer {
+    position: absolute !important;
+    inset: 38px 0 0 0 !important;
+
+    pointer-events: none !important;
+  }
+
+  .mobile-seat {
+    position: absolute !important;
+
+    width: 100px !important;
+    min-height: 40px !important;
+
+    display: flex !important;
+    align-items: center !important;
+    gap: 6px !important;
+
+    padding: 3px 6px !important;
+
+    text-align: left !important;
+
+    overflow: visible !important;
+
+    border-radius: 999px !important;
+
+    background: rgba(0,0,0,0.42) !important;
+    border: 1px solid rgba(255,255,255,0.18) !important;
+
+    color: #fff !important;
+
+    box-shadow: 0 3px 10px rgba(0,0,0,0.25) !important;
+  }
+
+  .mobile-seat.is-current-turn {
+    border: 2px solid #ffd700 !important;
+
+    box-shadow:
+      0 0 0 2px rgba(255,215,0,0.35),
+      0 0 14px rgba(255,215,0,0.85) !important;
+  }
+
+  .mobile-seat.empty,
+  .mobile-seat.pos6 {
+    display: none !important;
+  }
+
+  .mobile-seat-avatar {
+    width: 24px !important;
+    height: 24px !important;
+
+    flex: 0 0 24px !important;
+
+    margin: 0 !important;
+
+    border-radius: 50% !important;
+    overflow: hidden !important;
+
+    border: 2px solid rgba(255,255,255,0.6) !important;
+  }
+
+  .mobile-seat-avatar img {
+    width: 100% !important;
+    height: 100% !important;
+
+    object-fit: cover !important;
+
+    display: block !important;
+  }
+
+  .mobile-seat-text {
+    min-width: 0 !important;
+  }
+
+  .mobile-seat-name {
+    margin: 0 0 2px 0 !important;
+
+    font-size: 11px !important;
+    font-weight: 900 !important;
+    line-height: 1 !important;
+
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+  }
+
+  .mobile-seat-meta {
+    font-size: 8.5px !important;
+    line-height: 1 !important;
+
+    white-space: nowrap !important;
+  }
+
+  /* =========================
+     POSIÇÕES
+  ========================= */
+
+  .mobile-seat.pos1 {
+    left: 4px !important;
+    top: 116px !important;
+  }
+
+  .mobile-seat.pos2 {
+    left: 8px !important;
+    top: 42px !important;
+  }
+
+  .mobile-seat.pos3 {
+    left: 50% !important;
+    top: 26px !important;
+
+    transform: translateX(-50%) !important;
+  }
+
+  .mobile-seat.pos4 {
+    right: 8px !important;
+    top: 42px !important;
+  }
+
+  .mobile-seat.pos5 {
+    right: 4px !important;
+    top: 116px !important;
+  }
+
+  /* =========================
+     CARTAS DOS JOGADORES
+  ========================= */
+
+  .mobile-seat-cards {
+    position: absolute !important;
+
+    left: 50% !important;
+    top: -18px !important;
+
+    transform: translateX(-50%) !important;
+
+    display: flex !important;
+    justify-content: center !important;
+    align-items: flex-end !important;
+
+    pointer-events: none !important;
+
+    z-index: 2 !important;
+  }
+
+  .mobile-mini-card {
+    width: 9px !important;
+    height: 14px !important;
+
+    margin-left: -5px !important;
+
+    border-radius: 2px !important;
+
+    background-image: url("/assets/image/card-back.png") !important;
+    background-size: cover !important;
+    background-position: center !important;
+    background-repeat: no-repeat !important;
+
+    border: 1px solid rgba(255,255,255,0.45) !important;
+
+    box-shadow: 0 1px 3px rgba(0,0,0,0.45) !important;
+
+    transform-origin: bottom center !important;
+  }
+
+  .mobile-seat-cards .mobile-mini-card:nth-child(1) { transform: rotate(-20deg) translateY(4px) !important; }
+  .mobile-seat-cards .mobile-mini-card:nth-child(2) { transform: rotate(-15deg) translateY(3px) !important; }
+  .mobile-seat-cards .mobile-mini-card:nth-child(3) { transform: rotate(-10deg) translateY(2px) !important; }
+  .mobile-seat-cards .mobile-mini-card:nth-child(4) { transform: rotate(-5deg) translateY(1px) !important; }
+  .mobile-seat-cards .mobile-mini-card:nth-child(5) { transform: rotate(0deg) !important; }
+  .mobile-seat-cards .mobile-mini-card:nth-child(6) { transform: rotate(5deg) translateY(1px) !important; }
+  .mobile-seat-cards .mobile-mini-card:nth-child(7) { transform: rotate(10deg) translateY(2px) !important; }
+  .mobile-seat-cards .mobile-mini-card:nth-child(8) { transform: rotate(15deg) translateY(3px) !important; }
+  .mobile-seat-cards .mobile-mini-card:nth-child(9) { transform: rotate(20deg) translateY(4px) !important; }
+
 }

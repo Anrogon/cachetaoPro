@@ -1,0 +1,184 @@
+/* =========================================================
+   MOBILE HOME
+   Página inicial no celular
+========================================================= */
+
+@media (max-width: 768px) and (orientation: portrait) {
+
+  #homeScreen {
+    min-height: 100vh;
+    padding: 14px 10px;
+    box-sizing: border-box;
+  }
+
+  #homeScreen .home-shell {
+    width: 100%;
+    max-width: 420px;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 14px;
+  }
+
+  #homeScreen .home-logo img {
+    width: 72%;
+    max-width: 260px;
+    display: block;
+    margin: 0 auto;
+  }
+
+  #homeScreen .home-menu {
+    width: min(92vw, 320px);
+    max-width: 320px;
+
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    align-items: center;
+  }
+
+  #homeScreen .home-menu button {
+    width: 100%;
+    max-width: 320px;
+
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 12px;
+
+    padding: 12px 14px;
+    border-radius: 14px;
+
+    font-size: 16px;
+    font-weight: 900;
+
+    white-space: nowrap;
+    box-sizing: border-box;
+
+    box-shadow: 0 4px 10px rgba(0,0,0,0.18);
+  }
+
+  #homeScreen .home-menu button[style*="display:none"],
+  #homeScreen .home-menu button[style*="display: none"] {
+    display: none !important;
+  }
+
+  #homeScreen .home-menu .btn-icon {
+    flex: 0 0 28px;
+    width: 28px;
+    text-align: center;
+  }
+
+  #homeScreen .home-menu .btn-text {
+    flex: 1;
+    text-align: center;
+  }
+
+  #homeScreen .home-status-wrap {
+    width: min(92vw, 320px);
+    max-width: 320px;
+
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+
+    margin-top: 8px;
+  }
+
+  #homeScreen .home-usercard,
+  #homeScreen .home-status {
+    width: 100%;
+    box-sizing: border-box;
+
+    padding: 12px 14px;
+    border-radius: 16px;
+  }
+
+  #homeScreen .home-usercard-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  #homeScreen .home-user-avatar {
+    width: 52px;
+    height: 52px;
+    flex: 0 0 52px;
+
+    border-radius: 50%;
+    object-fit: cover;
+  }
+
+  #homeScreen .home-user-meta {
+    min-width: 0;
+  }
+
+  #homeUserName {
+    font-size: 16px;
+    font-weight: 800;
+    line-height: 1.15;
+    margin-bottom: 4px;
+  }
+
+  #homeUserBalance {
+    font-size: 14px;
+    line-height: 1.15;
+  }
+
+  #homeScreen .home-banner {
+    width: min(92vw, 360px);
+    margin: 14px auto 0;
+    padding: 14px;
+
+    border-radius: 16px;
+  }
+
+  #homeScreen .home-banner-title {
+    font-size: 16px;
+    line-height: 1.2;
+  }
+
+  #homeScreen .home-banner-sub {
+    font-size: 13px;
+    line-height: 1.25;
+  }
+
+  #homeScreen .home-live-section,
+  #homeScreen .home-tip-section {
+    width: min(92vw, 360px);
+    margin: 12px auto 0;
+    padding: 12px;
+    box-sizing: border-box;
+  }
+
+  #homeScreen .home-live-row,
+  #homeScreen .home-live-row-visual {
+    grid-template-columns: 1fr;
+  }
+
+  #homeScreen .home-footer {
+    margin-top: 14px;
+    font-size: 15px;
+  }
+
+  #homeScreen .home-status {
+    display: none !important;
+  }
+
+  #homeScreen .home-banner {
+    display: none !important;
+  }
+
+  #homeScreen .home-lastrow,
+  #homeScreen .home-panels {
+    display: none !important;
+  }
+
+  #homeScreen .home-live-section,
+  #homeScreen .home-tip-section,
+  #homeScreen .home-footer {
+    display: none !important;
+  }
+}
