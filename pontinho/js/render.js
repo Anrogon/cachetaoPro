@@ -1368,6 +1368,51 @@ function getMobilePlayerPoints(p) {
   );
 }
 
+function getMobileTurnTimerInfo(s = getPublicStateSafe()) {
+  const endsAt = Number(s.turnEndsAt || state.turnEndsAt || 0);
+
+  const totalMs = Number(
+    s.turnMs ||
+    state.turnMs ||
+    state.turnDurationSec * 1000 ||
+    30000
+  );
+
+  const remainingMs = Math.max(0, endsAt - Date.now());
+
+  const pct = totalMs > 0
+    ? Math.max(0, Math.min(100, (remainingMs / totalMs) * 100))
+    : 0;
+
+  return {
+    pct,
+    remainingSec: Math.ceil(remainingMs / 1000),
+    show: endsAt > 0 && totalMs > 0 && Number(s.currentSeat) > 0
+  };
+}
+
+function updateMobileTurnBars() {
+  const info = getMobileTurnTimerInfo();
+
+  document.querySelectorAll("[data-mobile-turnbar-fill]").forEach(el => {
+    el.style.width = `${info.pct}%`;
+  });
+
+  document.querySelectorAll("[data-mobile-turnbar-text]").forEach(el => {
+    el.textContent = `${info.remainingSec}s`;
+  });
+}
+
+function ensureMobileTurnBarTicker() {
+  if (window.__mobileTurnBarTicker) return;
+
+  window.__mobileTurnBarTicker = setInterval(() => {
+    if (!isMobilePortraitTable()) return;
+    updateMobileTurnBars();
+  }, 200);
+}
+
+
 
 function renderMobileTableLayout() {
   const s = getPublicStateSafe();
@@ -1451,6 +1496,8 @@ const miniAnte = Number(
   const players = getPlayersForMobileTable();
 
   const mySeat = s.mySeat;
+  const timerInfo = getMobileTurnTimerInfo(s);
+  ensureMobileTurnBarTicker();
 
     for (let seat = 1; seat <= 5; seat++) {
     const el = root.querySelector(`[data-seat-pos="${seat}"]`);
@@ -1484,10 +1531,17 @@ const miniAnte = Number(
 
     const chips = Number(p.tableChips ?? p.stack ?? 0);
     const pts = Number(p.totalPoints ?? 0);
+    const isOffline = !!p.disconnected;
 
     const handCount = Number(p.handCount ?? 0);
+    const isCurrentTurn = Number(s.currentSeat) === Number(p.seat);
 
       el.innerHTML = `
+        ${isCurrentTurn && timerInfo.show ? `
+          <div class="mobile-seat-timebar">
+            <div class="mobile-seat-timebar-fill" data-mobile-turnbar-fill style="width:${timerInfo.pct}%"></div>
+          </div>
+        ` : ""}
         ${handCount > 0 ? `
           <div class="mobile-seat-cards">
             ${Array.from({ length: Math.min(handCount, 9) }).map(() => `
@@ -1501,7 +1555,13 @@ const miniAnte = Number(
         </div>
 
         <div>
-          <div class="mobile-seat-name">${p.name || "Jogador"}</div>
+          <div class="mobile-seat-name">
+          ${p.name || "Jogador"}
+
+          ${isOffline ? `
+            <span class="mobile-seat-offline">OFF</span>
+          ` : ""}
+        </div>
           <div class="mobile-seat-meta">${chips} · ${pts} pts</div>
         </div>
       `;
@@ -1722,22 +1782,33 @@ function renderMobileBottomHudClean(tableData, s) {
 
   const chips = Number(me.tableChips ?? me.stack ?? 0);
   const pts = Number(me.totalPoints ?? 0);
+  const isMyTurn = Number(s.currentSeat) === Number(s.mySeat);
+
+  const timerInfo = getMobileTurnTimerInfo(s);
+  ensureMobileTurnBarTicker();
 
   hud.innerHTML = `
     <div class="mobile-bottom-avatar">
       <img src="${avatar}">
     </div>
 
-    <div>
+    <div class="mobile-bottom-info">
       <div class="mobile-bottom-name">${me.name || "Você"}</div>
       <div class="mobile-bottom-meta">${chips} · ${pts} pts</div>
+
+      ${isMyTurn && timerInfo.show ? `
+        <div class="mobile-hud-timebar">
+          <div
+            class="mobile-hud-timebar-fill"
+            data-mobile-turnbar-fill
+            style="width:${timerInfo.pct}%"
+          ></div>
+        </div>
+      ` : ""}
     </div>
   `;
 
-  hud.classList.toggle(
-  "is-current-turn",
-  Number(s.currentSeat) === Number(s.mySeat)
-  );
+  hud.classList.toggle("is-current-turn", isMyTurn);
 }
 
 function moveMobileSortButtonsToDeckArea() {

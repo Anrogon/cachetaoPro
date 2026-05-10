@@ -272,7 +272,7 @@
   }
 
   body.mobile-table-mode #mobileBottomHud.is-current-turn {
-    border: 2px solid #ffd700 !important;
+    border: 1px solid #ffd700 !important;
     box-shadow:
       0 0 0 2px rgba(255, 215, 0, 0.35),
       0 0 14px rgba(255, 215, 0, 0.85) !important;
@@ -368,4 +368,70 @@
   body.mobile-table-mode .sb-mobile-bati-btn.is-disabled-ui {
     background: linear-gradient(180deg, #e53935, #b71c1c) !important;
   }
+
+  body.mobile-table-mode #mobileBottomHud {
+  overflow: visible !important;
+  }
+
+  body.mobile-table-mode #mobileBottomHud .mobile-bottom-info {
+    min-width: 0 !important;
+    flex: 1 1 auto !important;
+  }
+
+  body.mobile-table-mode .mobile-seat-timebar {
+  position: absolute !important;
+
+  left: 36px !important;
+  right: 10px !important;
+  bottom: 2px !important;
+
+  height: 3px !important;
+  border-radius: 999px !important;
+
+  background: rgba(255,255,255,0.22) !important;
+  overflow: hidden !important;
+
+  z-index: 5 !important;
+}
+
+  body.mobile-table-mode .mobile-seat-timebar-fill,
+  body.mobile-table-mode .mobile-hud-timebar-fill {
+    height: 100% !important;
+    border-radius: 999px !important;
+
+    /*background: linear-gradient(180deg, #e53935, #b71c1c) !important;*/
+    background: linear-gradient(90deg,#ffd700, #ffb300 );
+    transition: width 0.2s linear !important;
+  }
+
+  body.mobile-table-mode .mobile-hud-timebar {
+    width: 58px !important;
+    height: 5px !important;
+
+    margin-top: 4px !important;
+
+    border-radius: 999px !important;
+    background: rgba(255,255,255,0.22) !important;
+    overflow: hidden !important;
+  }
+
+  body.mobile-table-mode .mobile-seat-offline {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+
+  margin-left: 5px !important;
+  padding: 1px 4px !important;
+
+  border-radius: 999px !important;
+
+  background: rgba(220,40,40,0.95) !important;
+  color: #fff !important;
+
+  font-size: 8px !important;
+  font-weight: 900 !important;
+  line-height: 1 !important;
+
+  vertical-align: middle !important;
+}
 }

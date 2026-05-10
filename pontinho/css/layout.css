@@ -223,7 +223,7 @@ body{
 }
 .sb-turnbar-fill{
   height: 100% !important;
-  background: rgba(255,255,255,0.75) !important;
+  background: linear-gradient(90deg,#ffd700, #ffb300 );
   border-radius: 999px !important;
   transition: width 160ms linear !important;
 }

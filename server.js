@@ -517,6 +517,74 @@ function startCrazyBatidaAttemptForSeat(room, seat, ms = 25000) {
 }
 
 
+function getActivePlayers(room) {
+  return Array.isArray(room.playersBySeat)
+    ? room.playersBySeat.filter(Boolean)
+    : [];
+}
+
+function allPlayersOffline(room) {
+  const players = getActivePlayers(room);
+  if (!players.length) return false;
+
+  return players.every(p => !!p.disconnected);
+}
+
+function markRoomAbandonedIfNeeded(room) {
+  if (!room?.started || room.matchEnded) return false;
+
+  if (!allPlayersOffline(room)) {
+    room.abandonedAt = 0;
+    return false;
+  }
+
+  if (!room.abandonedAt) {
+    room.abandonedAt = Date.now();
+    console.log(`[ABANDONED] Mesa ${room.id}: todos offline. Iniciando janela de 3 minutos.`);
+  }
+
+  return true;
+}
+
+function shouldCloseAbandonedRoom(room) {
+  if (!markRoomAbandonedIfNeeded(room)) return false;
+
+  return Date.now() - Number(room.abandonedAt || 0) >= 180000;
+}
+
+function closeAbandonedRoom(room) {
+  console.log(`[ABANDONED] Mesa ${room.id}: fechando mesa abandonada.`);
+
+  room.started = false;
+  room.matchEnded = false;
+  room.roundEnded = false;
+
+  room.phase = "WAITING";
+  room.currentSeat = null;
+
+  room.deck = [];
+  room.discard = [];
+  room.tableMelds = [];
+
+  room.turnEndsAt = 0;
+  room.buyEndsAt = 0;
+  room.dealEndsAt = 0;
+
+  room.abandonedAt = 0;
+  room.startAt = 0;
+
+  room.playersBySeat = room.playersBySeat.map(() => null);
+
+  room.matchPot = 0;
+  room.roundNumber = 0;
+
+  room.crazyBatidaAttempt = null;
+  room.crazyBatidaBurnedBySeat = {};
+
+  broadcastLobbyTable(room);
+  sendState(room.id);
+}
+
 
 function canSeatActDuringCrazyBatidaAttempt(room, seat, actionType) {
   if (!isCrazyBatidaAttemptActive(room)) return false;
@@ -2746,6 +2814,10 @@ function ensureTurnDeadline(room) {
 
 
 function scheduleAutoTurn(room) {
+  if (shouldCloseAbandonedRoom(room)) {
+  closeAbandonedRoom(room);
+  return;
+  }
   if (!room || !room.started || room.roundEnded) return;
   if (room.phase === "DEALING") return;
 
@@ -4101,6 +4173,16 @@ wss.on("connection", (ws) => {
     }
 
     attachClientToExistingPlayer(existing, c, clientId, tableId, s);
+    existing.disconnected = false;
+    existing.disconnectDeadline = 0;
+    room.abandonedAt = 0;
+
+    if (existing.disconnectTimer) {
+      clearTimeout(existing.disconnectTimer);
+      existing.disconnectTimer = null;
+    }
+
+    sendState(room.id);
 
     send(ws, "joined", {
       tableId,
@@ -4125,6 +4207,16 @@ wss.on("connection", (ws) => {
     if (typeof c.chips !== "number") {
     c.chips = 200000;
   }
+
+  console.log("[JOIN CHECK]", {
+    tableId,
+    roomBuyIn: room.buyIn,
+    mesaStack,
+    clientChips: c.chips,
+    playerName: c.name
+  });
+
+
 
   const mesaStack = (Number(room.buyIn) || 0) * 10;
 
@@ -4318,71 +4410,30 @@ if (msg.type === "leaveTable") {
     broadcastRoomState(room);
   }
     
-    else {
-  // se a partida já começou, dá uma janela curta para reconexão
-  p.disconnected = true;
-  p.disconnectDeadline = Date.now() + 120000; // 120 segundos
+  else {
+    // se a partida já começou, mantém a lógica de reconexão
+    p.disconnected = true;
+    markRoomAbandonedIfNeeded(room);
+    p.disconnectDeadline = 0;
 
-  if (p.disconnectTimer) {
-    clearTimeout(p.disconnectTimer);
-    p.disconnectTimer = null;
-  }
-
-  p.disconnectTimer = setTimeout(() => {
-    const currentRoom = rooms.get(tableId);
-    if (!currentRoom) return;
-
-    const currentPlayer = currentRoom.playersBySeat?.[seat - 1];
-
-    // se reconectou ou o assento mudou, não faz nada
-    if (!currentPlayer || currentPlayer.clientId !== clientId) return;
-    if (!currentPlayer.disconnected) return;
-
-    console.log("[DISCONNECT] jogador não reconectou, removendo da mesa", {
-      tableId,
-      seat,
-      name: currentPlayer.name || currentPlayer.username || currentPlayer.email || "?"
-    });
-
-    removePlayerFromSeat(currentRoom, seat, clientId);
-
-    const activePlayers = (currentRoom.playersBySeat || []).filter(Boolean);
-
-    if (activePlayers.length <= 1) {
-      currentRoom.started = false;
-      currentRoom.phase = "WAITING";
-      currentRoom.roundEnded = false;
-      currentRoom.winnerSeat = null;
-      currentRoom.startAt = 0;
-      currentRoom.currentSeat = null;
-      currentRoom.turnEndsAt = 0;
-      currentRoom.buyEndsAt = 0;
-      currentRoom.deck = [];
-      currentRoom.discard = [];
-      currentRoom.tableMelds = [];
+    if (p.disconnectTimer) {
+      clearTimeout(p.disconnectTimer);
+      p.disconnectTimer = null;
     }
 
-    refreshStartCountdown(currentRoom);
-    broadcastRoomState(currentRoom);
-
-    if (currentRoom.id) {
-      sendState(currentRoom.id);
-    }
-  }, 60000);
-
-  if (room?.id) sendState(room.id);
-}
+    if (room?.id) sendState(room.id);
   }
-}
+    }
+  }
 
     clients.delete(clientId);
   });
 
-});
+  });
 
-server.listen(PORT, () => {
-  console.log(`🃏 Pontinho Play rodando em http://localhost:${PORT}`);
-});
+  server.listen(PORT, () => {
+    console.log(`🃏 Pontinho Play rodando em http://localhost:${PORT}`);
+  });
 
 
 
