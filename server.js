@@ -4220,23 +4220,21 @@ wss.on("connection", (ws) => {
     c.chips = 200000;
   }
 
-  console.log("[JOIN CHECK]", {
-    tableId,
-    roomBuyIn: room.buyIn,
-    mesaStack,
-    clientChips: c.chips,
-    playerName: c.name
-  });
-
-
-
   const mesaStack = (Number(room.buyIn) || 0) * 10;
 
-  if ((Number(c.chips) || 0) < mesaStack) {
-  return send(ws, "error", {
-    message: "Saldo insuficiente para entrar nesta mesa."
-  });
-  }
+    console.log("[JOIN CHECK]", {
+      tableId,
+      roomBuyIn: room.buyIn,
+      mesaStack,
+      clientChips: c.chips,
+      playerName: c.name
+    });
+
+    if ((Number(c.chips) || 0) < mesaStack) {
+      return send(ws, "error", {
+        message: "Saldo insuficiente para entrar nesta mesa."
+      });
+    }
 
 
   // ===== JOGADOR NOVO =====
