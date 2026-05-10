@@ -4173,9 +4173,21 @@ wss.on("connection", (ws) => {
     }
 
     attachClientToExistingPlayer(existing, c, clientId, tableId, s);
+
     existing.disconnected = false;
     existing.disconnectDeadline = 0;
-    room.abandonedAt = 0;
+
+    const room = rooms.get(tableId);
+
+    if (room) {
+      room.abandonedAt = 0;
+      sendState(room.id);
+    }
+
+    if (existing.disconnectTimer) {
+      clearTimeout(existing.disconnectTimer);
+      existing.disconnectTimer = null;
+    }
 
     if (existing.disconnectTimer) {
       clearTimeout(existing.disconnectTimer);
