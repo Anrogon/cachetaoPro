@@ -4216,6 +4216,33 @@ wss.on("connection", (ws) => {
     });
   }
 
+  const clientChips = Number(
+  c.chips ??
+  c.chipsBalance ??
+  c.chips_balance ??
+  c.user?.chipsBalance ??
+  c.user?.chips_balance ??
+  0
+);
+
+const mesaStack = (Number(room.buyIn) || 0) * 10;
+
+console.log("[JOIN CHECK]", {
+  tableId,
+  roomBuyIn: room.buyIn,
+  mesaStack,
+  clientChips,
+  rawChips: c.chips,
+  chipsBalance: c.chipsBalance,
+  chips_balance: c.chips_balance,
+  playerName: c.name
+});
+
+if (clientChips < mesaStack) {
+  return send(ws, "error", {
+    message: "Saldo insuficiente para entrar nesta mesa."
+  });
+}
 
   const mesaStack = (Number(room.buyIn) || 0) * 10;
 
