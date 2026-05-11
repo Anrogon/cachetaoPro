@@ -2381,6 +2381,26 @@ function isDiscardLockedForSeat(room, seat, topCard) {
   );
 }
 
+async function getAuthUserFromCookie(cookieHeader = "") {
+  try {
+    const baseUrl = process.env.AUTH_API_BASE || "http://localhost:3001";
+
+    const res = await fetch(`${baseUrl}/api/auth/me`, {
+      headers: {
+        cookie: cookieHeader
+      }
+    });
+
+    if (!res.ok) return null;
+
+    const data = await res.json();
+    return data?.user || null;
+  } catch (err) {
+    console.warn("[AUTH WS] Falha ao buscar /api/auth/me:", err.message);
+    return null;
+  }
+}
+
 function shouldForceBatida(room, player) {
   const hand = player.hand || [];
   if (hand.length === 0) return true;
@@ -4101,7 +4121,7 @@ wss.on("connection", (ws) => {
     online: clients.size,
   });
 
-  ws.on("message", (raw) => {
+ ws.on("message", async (raw) => {
 
     let msg;
     try { msg = JSON.parse(raw.toString()); } catch { return; }
@@ -4120,17 +4140,28 @@ wss.on("connection", (ws) => {
     return send(ws, "error", { message: "Mesa inválida." });
   }
 
-  if (name) {
-    c.name = String(name).slice(0, 20);
-  }
+  const authUser = await getAuthUserFromCookie(ws._upgradeReq?.headers?.cookie || "");
 
-  const chipsBalance = Number(msg.payload?.chipsBalance ?? 0);
+    if (!authUser) {
+      return send(ws, "error", {
+        message: "Você precisa estar logado para sentar em uma mesa."
+      });
+    }
 
+    const clientChips = Number(
+      authUser.chipsBalance ??
+      authUser.chips_balance ??
+      authUser.chips ??
+      0
+    );
 
-  if (typeof chipsBalance === "number") {
-    c.chips = Number(chipsBalance) || 0;
-    c.chipsBalance = c.chips;
-  }
+    c.chips = clientChips;
+    c.chipsBalance = clientChips;
+
+    if (name) {
+      c.name = String(name).slice(0, 20);
+    }
+
 
   // sai da mesa atual antes de entrar em outra
   leaveCurrentTable(clientId);
@@ -4241,16 +4272,6 @@ wss.on("connection", (ws) => {
   }
 */
 
-
-const clientChips = Number(
-  c.chips ??
-  c.chipsBalance ??
-  c.chips_balance ??
-  c.user?.chipsBalance ??
-  c.user?.chips_balance ??
-  0
-);
-
 const mesaStack = (Number(room.buyIn) || 0) * 10;
 
 console.log("[JOIN CHECK]", {
@@ -4258,9 +4279,6 @@ console.log("[JOIN CHECK]", {
   roomBuyIn: room.buyIn,
   mesaStack,
   clientChips,
-  rawChips: c.chips,
-  chipsBalance: c.chipsBalance,
-  chips_balance: c.chips_balance,
   playerName: c.name
 });
 
