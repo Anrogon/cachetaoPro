@@ -4216,9 +4216,6 @@ wss.on("connection", (ws) => {
     });
   }
 
-    if (typeof c.chips !== "number") {
-    c.chips = 200000;
-  }
 
   const mesaStack = (Number(room.buyIn) || 0) * 10;
 
