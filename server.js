@@ -4215,8 +4215,22 @@ wss.on("connection", (ws) => {
       message: "A rodada já começou. Entre apenas como espectador."
     });
   }
+/*
+    if (typeof c.chips !== "number") {
+    c.chips = 200000;
+    }
 
- const clientChips = Number(
+  const mesaStack = (Number(room.buyIn) || 0) * 10;
+
+  if ((Number(c.chips) || 0) < mesaStack) {
+  return send(ws, "error", {
+    message: "Saldo insuficiente para entrar nesta mesa."
+  });
+  }
+*/
+
+
+const clientChips = Number(
   c.chips ??
   c.chipsBalance ??
   c.chips_balance ??
@@ -4243,6 +4257,7 @@ if (clientChips < mesaStack) {
     message: "Saldo insuficiente para entrar nesta mesa."
   });
 }
+
 
 
   // ===== JOGADOR NOVO =====
