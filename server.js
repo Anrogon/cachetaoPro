@@ -4077,15 +4077,19 @@ wss.on("connection", (ws) => {
   const clientId = randomUUID();
 
   clients.set(clientId, {
-    ws,
-    name: "Visitante",
-    tableId: null,
-    seat: null,
-    mode: null,
+  ws,
+  name: "Visitante",
 
-    // segurança
-    lastActionAt: 0,
-    lastSeq: 0
+  chips: 0,
+  chipsBalance: 0,
+
+  tableId: null,
+  seat: null,
+  mode: null,
+
+  // segurança
+  lastActionAt: 0,
+  lastSeq: 0
   });
 
   send(ws, "hello", {
@@ -4118,6 +4122,14 @@ wss.on("connection", (ws) => {
 
   if (name) {
     c.name = String(name).slice(0, 20);
+  }
+
+  const chipsBalance = Number(msg.payload?.chipsBalance ?? 0);
+
+
+  if (typeof chipsBalance === "number") {
+    c.chips = Number(chipsBalance) || 0;
+    c.chipsBalance = c.chips;
   }
 
   // sai da mesa atual antes de entrar em outra

@@ -1761,6 +1761,15 @@ export function renderTablesScreen() {
 
     state.room = { id: t.id, buyIn: t.buyIn };
 
+    const authUser = JSON.parse(localStorage.getItem("pontinhoAuthUser") || "null");
+
+    const chipsBalance = Number(
+      authUser?.chipsBalance ??
+      authUser?.chips_balance ??
+      authUser?.chips ??
+      0
+    );
+
     socket.send(JSON.stringify({
       type: "joinTable",
       payload: {
@@ -1769,7 +1778,8 @@ export function renderTablesScreen() {
         mode: "player",
         name: nome,
         reconnectToken,
-        avatarUrl
+        avatarUrl,
+        chipsBalance
       }
     }));
 
