@@ -4216,16 +4216,7 @@ wss.on("connection", (ws) => {
     });
   }
 
-  const clientChips = Number(
-  c.chips ??
-  c.chipsBalance ??
-  c.chips_balance ??
-  c.user?.chipsBalance ??
-  c.user?.chips_balance ??
-  0
-);
-
-const clientChips = Number(
+ const clientChips = Number(
   c.chips ??
   c.chipsBalance ??
   c.chips_balance ??
