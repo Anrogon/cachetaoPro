@@ -1343,6 +1343,9 @@ async function refreshHomeUser() {
   }
 
   function setLoggedInHome(user) {
+    state.user = user;
+    state.currentUser = user;
+    window.currentUser = user;
     if (homeUserName) homeUserName.textContent = user.username || "Usuário";
     if (homeUserBalance) {
       homeUserBalance.textContent = `Saldo: ${(Number(user.chipsBalance) || 0).toLocaleString("pt-BR")}`;
@@ -1755,51 +1758,47 @@ export function renderTablesScreen() {
     return;
   }
 
-  // ✅ se o assento está ocupado, só tenta reconectar se eu tiver token salvo dele
-  if (player) {
-    if (!reconnectToken) return;
+const chipsBalance = Number(
+  state.user?.chipsBalance ??
+  state.user?.chips_balance ??
+  state.currentUser?.chipsBalance ??
+  state.currentUser?.chips_balance ??
+  window.currentUser?.chipsBalance ??
+  window.currentUser?.chips_balance ??
+  0
+);
 
-    state.room = { id: t.id, buyIn: t.buyIn };
+const joinPayload = {
+  tableId: t.id,
+  seat: s,
+  mode: "player",
+  name: nome,
+  reconnectToken,
+  avatarUrl,
+  chipsBalance
+};
 
-    const authUser = JSON.parse(localStorage.getItem("pontinhoAuthUser") || "null");
+// ✅ se o assento está ocupado, só tenta reconectar se eu tiver token salvo dele
+if (player) {
+  if (!reconnectToken) return;
 
-    const chipsBalance = Number(
-      authUser?.chipsBalance ??
-      authUser?.chips_balance ??
-      authUser?.chips ??
-      0
-    );
-
-    socket.send(JSON.stringify({
-      type: "joinTable",
-      payload: {
-        tableId: t.id,
-        seat: s,
-        mode: "player",
-        name: nome,
-        reconnectToken,
-        avatarUrl,
-        chipsBalance
-      }
-    }));
-
-    return;
-  }
-
-  // ✅ assento vazio: entra normalmente
   state.room = { id: t.id, buyIn: t.buyIn };
 
   socket.send(JSON.stringify({
     type: "joinTable",
-    payload: {
-      tableId: t.id,
-      seat: s,
-      mode: "player",
-      name: nome,
-      reconnectToken,
-      avatarUrl
-    }
+    payload: joinPayload
   }));
+
+  return;
+}
+
+// ✅ assento vazio: entra normalmente
+state.room = { id: t.id, buyIn: t.buyIn };
+
+socket.send(JSON.stringify({
+  type: "joinTable",
+  payload: joinPayload
+}));
   };
 
       seatsEl.appendChild(seatEl);

@@ -2381,25 +2381,7 @@ function isDiscardLockedForSeat(room, seat, topCard) {
   );
 }
 
-async function getAuthUserFromCookie(cookieHeader = "") {
-  try {
-    const baseUrl = process.env.AUTH_API_BASE || "http://localhost:3001";
 
-    const res = await fetch(`${baseUrl}/api/auth/me`, {
-      headers: {
-        cookie: cookieHeader
-      }
-    });
-
-    if (!res.ok) return null;
-
-    const data = await res.json();
-    return data?.user || null;
-  } catch (err) {
-    console.warn("[AUTH WS] Falha ao buscar /api/auth/me:", err.message);
-    return null;
-  }
-}
 
 function shouldForceBatida(room, player) {
   const hand = player.hand || [];
@@ -4140,23 +4122,10 @@ wss.on("connection", (ws) => {
     return send(ws, "error", { message: "Mesa inválida." });
   }
 
-  const authUser = await getAuthUserFromCookie(ws._upgradeReq?.headers?.cookie || "");
+  const clientChips = Number(msg.payload?.chipsBalance ?? 0);
 
-    if (!authUser) {
-      return send(ws, "error", {
-        message: "Você precisa estar logado para sentar em uma mesa."
-      });
-    }
-
-    const clientChips = Number(
-      authUser.chipsBalance ??
-      authUser.chips_balance ??
-      authUser.chips ??
-      0
-    );
-
-    c.chips = clientChips;
-    c.chipsBalance = clientChips;
+  c.chips = clientChips;
+  c.chipsBalance = clientChips;
 
     if (name) {
       c.name = String(name).slice(0, 20);
