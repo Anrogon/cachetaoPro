@@ -1868,6 +1868,16 @@ async function persistMatchStats(room) {
       const startChips = Number(p.matchStartChips);
       const endChips = Number(p.chips) || 0;
 
+      await pool.query(
+        `
+        UPDATE users
+        SET chips_balance = $1,
+            updated_at = NOW()
+        WHERE id = $2
+        `,
+        [endChips, p.userId]
+      );
+
       if (!Number.isFinite(startChips)) continue;
 
       const delta = endChips - startChips;
