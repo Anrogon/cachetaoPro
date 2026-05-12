@@ -1776,7 +1776,8 @@ const joinPayload = {
   name: nome,
   reconnectToken,
   avatarUrl,
-  chipsBalance
+  chipsBalance,
+  userId: state.user?.id || state.currentUser?.id || window.currentUser?.id || null,
 };
 
 // ✅ se o assento está ocupado, só tenta reconectar se eu tiver token salvo dele

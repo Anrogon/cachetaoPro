@@ -2199,15 +2199,16 @@ function createPlayerForSeat(room, seat, clientId, client, avatarUrl) {
   const mesaStack = buyIn * 10;
   const mesaStackLiquido = mesaStack - buyIn;
 
-  if (typeof client.chips !== "number") {
-    client.chips = 200000;
-  }
+  const saldoAtual = Number(client.chips ?? client.chipsBalance ?? 0);
 
   // cobra buy-in do saldo geral
-  client.chips -= buyIn;
+  client.chips = saldoAtual - buyIn;
+  client.chipsBalance = client.chips;
 
   room.playersBySeat[seat - 1] = {
     clientId,
+    userId: client.userId || client.user?.id || null,
+
     reconnectToken: makeReconnectToken(),
     name: client.name,
     avatarUrl: avatarUrl || "/assets/avatars/avatar-01.png",
@@ -2239,7 +2240,6 @@ function createPlayerForSeat(room, seat, clientId, client, avatarUrl) {
 
   return room.playersBySeat[seat - 1];
 }
-
 
 
 
@@ -4188,6 +4188,7 @@ if (msg.type === "leaveTable") {
 
   c.chips = clientChips;
   c.chipsBalance = clientChips;
+  c.userId = msg.payload?.userId || c.userId || null;
 
     if (name) {
       c.name = String(name).slice(0, 20);
