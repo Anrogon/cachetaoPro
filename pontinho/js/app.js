@@ -928,12 +928,13 @@ window.backToTables = function backToTables() {
   const tableId = state.room?.id;
 
   // ✅ avisa o servidor que saiu da mesa
-  if (socket && socket.readyState === 1 && tableId) {
-    socket.send(JSON.stringify({
-      type: "leaveTable",
-      payload: { tableId }
-    }));
+  socket.send(JSON.stringify({
+  type: "leaveTable",
+  payload: {
+    tableId,
+    reason: "back_to_tables"
   }
+  }));
 
   // limpa estado local
   state.room = null;

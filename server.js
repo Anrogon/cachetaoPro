@@ -4109,7 +4109,40 @@ wss.on("connection", (ws) => {
     try { msg = JSON.parse(raw.toString()); } catch { return; }
 
     const c = clients.get(clientId);
-    if (!c) return;
+if (!c) return;
+
+// -------------------------
+// LEAVE TABLE
+// -------------------------
+if (msg.type === "leaveTable") {
+  const tableId = msg.payload?.tableId || c.tableId;
+
+  if (tableId && rooms.has(tableId)) {
+    const room = rooms.get(tableId);
+    const seat = Number(c.seat);
+
+    if (seat >= 1 && seat <= 6) {
+      const p = room.playersBySeat?.[seat - 1];
+
+      if (p && p.clientId === clientId) {
+        if (!room.started || room.matchEnded) {
+          room.playersBySeat[seat - 1] = null;
+        } else {
+          p.disconnected = true;
+        }
+      }
+    }
+
+    broadcastLobbyTable(room);
+    sendState(room.id);
+  }
+
+  c.tableId = null;
+  c.seat = null;
+  c.mode = null;
+
+  return;
+}
 
     // -------------------------
     // JOIN TABLE
