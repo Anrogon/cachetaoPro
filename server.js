@@ -1863,6 +1863,16 @@ async function persistMatchStats(room) {
 
     for (let seat = 1; seat <= 6; seat++) {
       const p = room.playersBySeat[seat - 1];
+
+console.log("[PERSIST CHIPS]", {
+  seat,
+  name: p?.name,
+  userId: p?.userId,
+  startChips: p?.matchStartChips,
+  endChips: p?.chips
+});
+
+
       if (!p?.userId) continue;
 
       const startChips = Number(p.matchStartChips);
@@ -1877,6 +1887,15 @@ async function persistMatchStats(room) {
         `,
         [endChips, p.userId]
       );
+
+console.log("[CHIPS SAVED]", {
+  userId: p.userId,
+  endChips
+});
+
+
+
+
 
       if (!Number.isFinite(startChips)) continue;
 
