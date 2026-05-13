@@ -1,10 +1,4 @@
-// TODO futuro (não aplicado ainda):
-// rematchVotes -> rematchResponses
-// pendingRebuy -> awaitingRebuy
-// revisar reconexão/desconexão conforme regra do auto-turno + rebuy automático
-
-
-// server.js (Express + WS autoritativo no mesmo processo)
+require("dotenv").config();
 
 const pool = require("./pontinho/server/config/db");
 
