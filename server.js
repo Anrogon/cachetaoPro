@@ -1727,32 +1727,25 @@ function broadcastToRoom(roomId, type, payload) {
 function applyRoundPointPayments(room, winnerSeat) {
   const pointValue = getPointValue(room);
   const transfers = [];
-  const buyIn = Number(room?.buyIn) || 0;
-  const mesaStack = buyIn * 10;
-  const mesaStackLiquido = mesaStack - buyIn;
 
   const winner = room.playersBySeat?.[winnerSeat - 1];
   if (!winner) return transfers;
 
-  if (typeof winner.tableChips !== "number") {
-    winner.tableChips = mesaStackLiquido;
-  }
+  winner.chips = Number(winner.chips) || 0;
 
   for (let i = 0; i < (room.playersBySeat || []).length; i++) {
     const p = room.playersBySeat[i];
     if (!p) continue;
     if (i + 1 === winnerSeat) continue;
 
-    if (typeof p.tableChips !== "number") {
-      p.tableChips = mesaStackLiquido;
-    }
+    p.chips = Number(p.chips) || 0;
 
     const points = Number(p.lastRoundPoints) || 0;
-    const chips = points * pointValue;
-    const paid = Math.min(p.tableChips, chips);
+    const chipsToPay = points * pointValue;
+    const paid = Math.min(p.chips, chipsToPay);
 
-    p.tableChips -= paid;
-    winner.tableChips += paid;
+    p.chips -= paid;
+    winner.chips += paid;
 
     transfers.push({
       fromSeat: i + 1,
@@ -1943,7 +1936,6 @@ function finalizeMatchEconomy(room) {
   const payout = getWinnerPayout(room);
 
   winner.chips = Number(winner.chips) || 0;
-  winner.chips += payout;
   for (const p of room.playersBySeat || []) {
   if (!p) continue;
 
@@ -2199,14 +2191,9 @@ function attachClientToExistingPlayer(existing, client, clientId, tableId, seat)
 
 
 function createPlayerForSeat(room, seat, clientId, client, avatarUrl) {
-  const buyIn = Number(room?.buyIn) || 0;
-  const mesaStack = buyIn * 10;
-  const mesaStackLiquido = mesaStack - buyIn;
-
   const saldoAtual = Number(client.chips ?? client.chipsBalance ?? 0);
 
-  // cobra buy-in do saldo geral
-  client.chips = saldoAtual - mesaStack;
+  client.chips = Number(saldoAtual) || 0;
   client.chipsBalance = client.chips;
 
   room.playersBySeat[seat - 1] = {
@@ -2217,11 +2204,7 @@ function createPlayerForSeat(room, seat, clientId, client, avatarUrl) {
     name: client.name,
     avatarUrl: avatarUrl || "/assets/avatars/avatar-01.png",
 
-    // saldo geral já com buy-in descontado
     chips: client.chips,
-
-    // fichas da mesa
-    tableChips: mesaStackLiquido,
 
     hand: [],
 
