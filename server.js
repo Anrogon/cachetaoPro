@@ -1944,6 +1944,16 @@ function finalizeMatchEconomy(room) {
 
   winner.chips = Number(winner.chips) || 0;
   winner.chips += payout;
+  for (const p of room.playersBySeat || []) {
+  if (!p) continue;
+
+  p.chips = Number(p.chips) || 0;
+  p.tableChips = Number(p.tableChips) || 0;
+
+  // devolve para o saldo geral o que sobrou/ganhou na mesa
+  p.chips += p.tableChips;
+  p.tableChips = 0;
+  }
   persistMatchStats(room);
 
   room.economicLogs = room.economicLogs || [];
@@ -2196,7 +2206,7 @@ function createPlayerForSeat(room, seat, clientId, client, avatarUrl) {
   const saldoAtual = Number(client.chips ?? client.chipsBalance ?? 0);
 
   // cobra buy-in do saldo geral
-  client.chips = saldoAtual - buyIn;
+  client.chips = saldoAtual - mesaStack;
   client.chipsBalance = client.chips;
 
   room.playersBySeat[seat - 1] = {
