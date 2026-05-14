@@ -1936,16 +1936,8 @@ function finalizeMatchEconomy(room) {
   const payout = getWinnerPayout(room);
 
   winner.chips = Number(winner.chips) || 0;
-  for (const p of room.playersBySeat || []) {
-  if (!p) continue;
+  winner.chips -= rake;
 
-  p.chips = Number(p.chips) || 0;
-  p.tableChips = Number(p.tableChips) || 0;
-
-  // devolve para o saldo geral o que sobrou/ganhou na mesa
-  p.chips += p.tableChips;
-  p.tableChips = 0;
-  }
   persistMatchStats(room);
 
   room.economicLogs = room.economicLogs || [];
