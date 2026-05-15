@@ -1955,6 +1955,17 @@ function finalizeMatchEconomy(room) {
     p.tableChips = 0;
   }
 
+
+console.log("[FINAL ECONOMY]", (room.playersBySeat || []).map((p, idx) => p ? {
+  seat: idx + 1,
+  name: p.name,
+  chips: p.chips,
+  tableChips: p.tableChips,
+  finalExpected: (Number(p.chips) || 0) + (Number(p.tableChips) || 0)
+} : null));
+
+
+
   persistMatchStats(room);
 
   room.economicLogs = room.economicLogs || [];
@@ -2211,7 +2222,7 @@ function createPlayerForSeat(room, seat, clientId, client, avatarUrl) {
   client.chipsBalance = client.chips;
 
   room.matchPot = Number(room.matchPot) || 0;
-  room.matchPot -= buyIn;
+  room.matchPot += buyIn;
 
   room.playersBySeat[seat - 1] = {
     clientId,
@@ -4559,6 +4570,18 @@ function collectMiniAnte(room) {
 
     p.tableChips -= paid;
     collected += paid;
+
+
+console.log("[MINI ANTE]", {
+  roomId: room.id,
+  player: p.name,
+  before: p.tableChips + paid,
+  paid,
+  after: p.tableChips,
+  matchPotBefore: room.matchPot
+});
+
+
   }
 
   room.matchPot = Number(room.matchPot) || 0;
