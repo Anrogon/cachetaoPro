@@ -1727,24 +1727,32 @@ function broadcastToRoom(roomId, type, payload) {
 function applyRoundPointPayments(room, winnerSeat) {
   const pointValue = getPointValue(room);
   const transfers = [];
+  const buyIn = Number(room?.buyIn) || 0;
+  const mesaStack = buyIn * 10;
+  const mesaStackLiquido = mesaStack - buyIn;
 
   const winner = room.playersBySeat?.[winnerSeat - 1];
   if (!winner) return transfers;
 
-  winner.chips = Number(winner.chips) || 0;
+  if (typeof winner.tableChips !== "number") {
+    winner.tableChips = mesaStackLiquido;
+  }
 
   for (let i = 0; i < (room.playersBySeat || []).length; i++) {
     const p = room.playersBySeat[i];
-    if (!p || i + 1 === winnerSeat) continue;
+    if (!p) continue;
+    if (i + 1 === winnerSeat) continue;
 
-    p.chips = Number(p.chips) || 0;
+    if (typeof p.tableChips !== "number") {
+      p.tableChips = mesaStackLiquido;
+    }
 
     const points = Number(p.lastRoundPoints) || 0;
-    const chipsToPay = points * pointValue;
-    const paid = Math.min(p.chips, chipsToPay);
+    const chips = points * pointValue;
+    const paid = Math.min(p.tableChips, chips);
 
-    p.chips -= paid;
-    winner.chips += paid;
+    p.tableChips -= paid;
+    winner.tableChips += paid;
 
     transfers.push({
       fromSeat: i + 1,
@@ -1756,6 +1764,7 @@ function applyRoundPointPayments(room, winnerSeat) {
 
   return transfers;
 }
+
 
 
 function pushRoundEconomicLog(room, winnerSeat, pointTransfers, miniAnteCollected = 0, rebuys = []) {
@@ -1935,6 +1944,16 @@ function finalizeMatchEconomy(room) {
 
   winner.chips = Number(winner.chips) || 0;
   winner.chips += payout;
+
+  for (const p of room.playersBySeat || []) {
+    if (!p) continue;
+
+    p.chips = Number(p.chips) || 0;
+    p.tableChips = Number(p.tableChips) || 0;
+
+    p.chips += p.tableChips;
+    p.tableChips = 0;
+  }
 
   persistMatchStats(room);
 
@@ -2182,14 +2201,17 @@ function attachClientToExistingPlayer(existing, client, clientId, tableId, seat)
 
 function createPlayerForSeat(room, seat, clientId, client, avatarUrl) {
   const buyIn = Number(room?.buyIn) || 0;
-  const saldoAtual = Number(client.chips ?? client.chipsBalance ?? 0);
-  const paidStack = Math.min(saldoAtual, buyIn);
+  const mesaStack = buyIn * 10;
+  const mesaStackLiquido = mesaStack - buyIn;
 
-  client.chips = saldoAtual - paidStack;
+  const saldoAtual = Number(client.chips ?? client.chipsBalance ?? 0);
+
+  // cobra buy-in do saldo geral
+  client.chips = saldoAtual - mesaStack;
   client.chipsBalance = client.chips;
 
   room.matchPot = Number(room.matchPot) || 0;
-  room.matchPot += paidStack;
+  room.matchPot += buyIn;
 
   room.playersBySeat[seat - 1] = {
     clientId,
@@ -2199,7 +2221,11 @@ function createPlayerForSeat(room, seat, clientId, client, avatarUrl) {
     name: client.name,
     avatarUrl: avatarUrl || "/assets/avatars/avatar-01.png",
 
+    // saldo geral já com buy-in descontado
     chips: client.chips,
+
+    // fichas da mesa
+    tableChips: mesaStackLiquido,
 
     hand: [],
 
@@ -4516,16 +4542,22 @@ if (msg.type === "leaveTable") {
 
 function collectMiniAnte(room) {
   const miniAnte = getMiniAnte(room);
+  const buyIn = Number(room?.buyIn) || 0;
+  const mesaStack = buyIn * 10;
+  const mesaStackLiquido = mesaStack - buyIn;
   let collected = 0;
 
   for (const p of room.playersBySeat || []) {
-    if (!p || p.eliminated) continue;
+    if (!p) continue;
+    if (p.eliminated) continue;
 
-    p.chips = Number(p.chips) || 0;
+    if (typeof p.tableChips !== "number") {
+      p.tableChips = mesaStackLiquido;
+    }
 
-    const paid = Math.min(p.chips, miniAnte);
+    const paid = Math.min(p.tableChips, miniAnte);
 
-    p.chips -= paid;
+    p.tableChips -= paid;
     collected += paid;
   }
 

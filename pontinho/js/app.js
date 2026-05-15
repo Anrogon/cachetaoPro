@@ -293,13 +293,17 @@ if (pub.tableId) {
 
     const oldPlayer = state.players?.find(x => x.seat === idx + 1);
 
+    const buyInMesa = state.room?.buyIn ? state.room.buyIn : 0;
+    const mesaStack = buyInMesa * 10;
+    const mesaStackLiquido = mesaStack - buyInMesa;
+
     players.push({
       id: idx,
       seat: idx + 1,
       name: p.name || `Jogador ${idx + 1}`,
       avatarUrl: p.avatarUrl || null,
       chips: typeof p.chips === "number" ? p.chips : 0,
-      tableChips: typeof p.chips === "number" ? p.chips : 0,
+      tableChips: typeof p.tableChips === "number" ? p.tableChips : mesaStackLiquido,
 
       hand: oldPlayer?.hand || [],
 
