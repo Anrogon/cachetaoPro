@@ -1735,8 +1735,7 @@ function applyRoundPointPayments(room, winnerSeat) {
 
   for (let i = 0; i < (room.playersBySeat || []).length; i++) {
     const p = room.playersBySeat[i];
-    if (!p) continue;
-    if (i + 1 === winnerSeat) continue;
+    if (!p || i + 1 === winnerSeat) continue;
 
     p.chips = Number(p.chips) || 0;
 
@@ -1757,7 +1756,6 @@ function applyRoundPointPayments(room, winnerSeat) {
 
   return transfers;
 }
-
 
 
 function pushRoundEconomicLog(room, winnerSeat, pointTransfers, miniAnteCollected = 0, rebuys = []) {
@@ -1936,7 +1934,7 @@ function finalizeMatchEconomy(room) {
   const payout = getWinnerPayout(room);
 
   winner.chips = Number(winner.chips) || 0;
-  winner.chips -= rake;
+  winner.chips += payout;
 
   persistMatchStats(room);
 
@@ -2183,10 +2181,15 @@ function attachClientToExistingPlayer(existing, client, clientId, tableId, seat)
 
 
 function createPlayerForSeat(room, seat, clientId, client, avatarUrl) {
+  const buyIn = Number(room?.buyIn) || 0;
   const saldoAtual = Number(client.chips ?? client.chipsBalance ?? 0);
+  const paidStack = Math.min(saldoAtual, buyIn);
 
-  client.chips = Number(saldoAtual) || 0;
+  client.chips = saldoAtual - paidStack;
   client.chipsBalance = client.chips;
+
+  room.matchPot = Number(room.matchPot) || 0;
+  room.matchPot += paidStack;
 
   room.playersBySeat[seat - 1] = {
     clientId,
@@ -4513,22 +4516,16 @@ if (msg.type === "leaveTable") {
 
 function collectMiniAnte(room) {
   const miniAnte = getMiniAnte(room);
-  const buyIn = Number(room?.buyIn) || 0;
-  const mesaStack = buyIn * 10;
-  const mesaStackLiquido = mesaStack - buyIn;
   let collected = 0;
 
   for (const p of room.playersBySeat || []) {
-    if (!p) continue;
-    if (p.eliminated) continue;
+    if (!p || p.eliminated) continue;
 
-    if (typeof p.tableChips !== "number") {
-      p.tableChips = mesaStackLiquido;
-    }
+    p.chips = Number(p.chips) || 0;
 
-    const paid = Math.min(p.tableChips, miniAnte);
+    const paid = Math.min(p.chips, miniAnte);
 
-    p.tableChips -= paid;
+    p.chips -= paid;
     collected += paid;
   }
 
