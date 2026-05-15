@@ -2211,7 +2211,7 @@ function createPlayerForSeat(room, seat, clientId, client, avatarUrl) {
   client.chipsBalance = client.chips;
 
   room.matchPot = Number(room.matchPot) || 0;
-  room.matchPot += buyIn;
+  room.matchPot -= buyIn;
 
   room.playersBySeat[seat - 1] = {
     clientId,
