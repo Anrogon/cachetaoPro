@@ -2207,11 +2207,11 @@ function createPlayerForSeat(room, seat, clientId, client, avatarUrl) {
   const saldoAtual = Number(client.chips ?? client.chipsBalance ?? 0);
 
   // cobra buy-in do saldo geral
-  client.chips = saldoAtual;
+  client.chips = saldoAtual - mesaStack;
   client.chipsBalance = client.chips;
 
   room.matchPot = Number(room.matchPot) || 0;
-  room.matchPot += mesaStack;
+  room.matchPot += buyIn;
 
   room.playersBySeat[seat - 1] = {
     clientId,
