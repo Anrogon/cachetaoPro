@@ -2238,7 +2238,7 @@ function createPlayerForSeat(room, seat, clientId, client, avatarUrl) {
   const saldoAtual = Number(client.chips ?? client.chipsBalance ?? 0);
 
   // cobra buy-in do saldo geral
-  client.chips = saldoAtual - mesaStack;
+  client.chips = saldoAtual - mesaStackLiquido;
   client.chipsBalance = client.chips;
 
   room.matchPot = Number(room.matchPot) || 0;
