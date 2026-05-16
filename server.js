@@ -1727,38 +1727,44 @@ function broadcastToRoom(roomId, type, payload) {
 function applyRoundPointPayments(room, winnerSeat) {
   const pointValue = getPointValue(room);
   const transfers = [];
-  const buyIn = Number(room?.buyIn) || 0;
-  const mesaStack = buyIn * 10;
-  const mesaStackLiquido = mesaStack - buyIn;
 
   const winner = room.playersBySeat?.[winnerSeat - 1];
   if (!winner) return transfers;
 
-  if (typeof winner.tableChips !== "number") {
-    winner.tableChips = mesaStackLiquido;
-  }
+  winner.tableChips = Number(winner.tableChips) || 0;
 
   for (let i = 0; i < (room.playersBySeat || []).length; i++) {
     const p = room.playersBySeat[i];
     if (!p) continue;
     if (i + 1 === winnerSeat) continue;
+    if (p.eliminated) continue;
 
-    if (typeof p.tableChips !== "number") {
-      p.tableChips = mesaStackLiquido;
-    }
+    p.tableChips = Number(p.tableChips) || 0;
 
     const points = Number(p.lastRoundPoints) || 0;
-    const chips = points * pointValue;
-    const paid = Math.min(p.tableChips, chips);
+    const chipsToPay = points * pointValue;
+    const paid = Math.min(p.tableChips, chipsToPay);
 
     p.tableChips -= paid;
     winner.tableChips += paid;
+
+    if (p.tableChips <= 0) {
+      p.tableChips = 0;
+      p.eliminated = true;
+
+      if ((Number(p.rebuyCount) || 0) < 3) {
+        p.pendingRebuy = true;
+      } else {
+        p.rebuyDeclined = true;
+      }
+    }
 
     transfers.push({
       fromSeat: i + 1,
       toSeat: winnerSeat,
       points,
-      chips: paid
+      chips: paid,
+      fullyPaid: paid >= chipsToPay
     });
   }
 
@@ -4584,17 +4590,6 @@ function collectMiniAnte(room) {
 
     p.tableChips -= paid;
     collected += paid;
-
-
-console.log("[MINI ANTE]", {
-  roomId: room.id,
-  player: p.name,
-  before: p.tableChips + paid,
-  paid,
-  after: p.tableChips,
-  matchPotBefore: room.matchPot
-});
-
 
   }
 
