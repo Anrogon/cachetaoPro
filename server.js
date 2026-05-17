@@ -1324,7 +1324,7 @@ function canCardBeAddedToAnyMeld(room, card) {
   }
 
 
-function validateCrazyTrincaShape(cards, { initial = false } = {}) {
+function validateCrazyTrincaShape(cards, { initial = false, forBatida = false } = {}) {
   if (!Array.isArray(cards)) {
     return { ok: false, msg: "Trinca inválida." };
   }
@@ -1338,29 +1338,43 @@ function validateCrazyTrincaShape(cards, { initial = false } = {}) {
     };
   }
 
+  const jokers = cards.filter(isJoker);
+  const realCards = cards.filter(c => !isJoker(c));
+
   const suitCounts = {};
-  for (const c of cards) {
+  for (const c of realCards) {
     const s = getNaipe(c);
     if (!s) continue;
     suitCounts[s] = (suitCounts[s] || 0) + 1;
   }
 
-  const distinctSuitCount = Object.keys(suitCounts).length;
+  const distinctRealSuitCount = Object.keys(suitCounts).length;
+  const effectiveSuitCount = distinctRealSuitCount + jokers.length;
+
   const hasTooManySameSuit = Object.values(suitCounts).some(n => n > 2);
 
-  if (distinctSuitCount < 3) {
-    return {
-      ok: false,
-      msg: initial
-        ? "No crazy, a trinca inicial precisa ter pelo menos 3 naipes diferentes."
-        : "No crazy, a trinca precisa manter pelo menos 3 naipes diferentes."
-    };
+  if (forBatida) {
+    if (effectiveSuitCount < 3) {
+      return {
+        ok: false,
+        msg: "No crazy, para batida, a trinca precisa ter pelo menos 3 naipes diferentes. O coringa pode completar um naipe faltante."
+      };
+    }
+  } else {
+    if (distinctRealSuitCount < 3) {
+      return {
+        ok: false,
+        msg: initial
+          ? "No crazy, a trinca inicial precisa ter pelo menos 3 naipes reais diferentes."
+          : "No crazy, a trinca precisa manter pelo menos 3 naipes reais diferentes."
+      };
+    }
   }
 
   if (hasTooManySameSuit) {
     return {
       ok: false,
-      msg: "No crazy, só pode haver até 2 cartas do mesmo naipe na trinca."
+      msg: "No crazy, só pode haver até 2 cartas reais do mesmo naipe na trinca."
     };
   }
 
@@ -1864,15 +1878,6 @@ async function persistMatchStats(room) {
     for (let seat = 1; seat <= 6; seat++) {
       const p = room.playersBySeat[seat - 1];
 
-console.log("[PERSIST CHIPS]", {
-  seat,
-  name: p?.name,
-  userId: p?.userId,
-  startChips: p?.matchStartChips,
-  endChips: p?.chips
-});
-
-
       if (!p?.userId) continue;
 
       const startChips = Number(p.matchStartChips);
@@ -1887,14 +1892,6 @@ console.log("[PERSIST CHIPS]", {
         `,
         [endChips, p.userId]
       );
-
-console.log("[CHIPS SAVED]", {
-  userId: p.userId,
-  endChips
-});
-
-
-
 
 
       if (!Number.isFinite(startChips)) continue;
@@ -2238,6 +2235,7 @@ function createPlayerForSeat(room, seat, clientId, client, avatarUrl) {
   const saldoAtual = Number(client.chips ?? client.chipsBalance ?? 0);
 
   // cobra buy-in do saldo geral
+  /*client.chips = saldoAtual - mesaStack;*/ //caso queira cobrar o stack completo já no buy-in, use mesaStack ao invés de mesaStackLiquido/
   client.chips = saldoAtual - mesaStackLiquido;
   client.chipsBalance = client.chips;
 
@@ -3143,48 +3141,45 @@ function validateBatidaGroupSpecial(room, cards) {
     return { ok: false };
   }
 
+  const jokers = cards.filter(c => isJoker(c));
+  const nonJokers = cards.filter(c => !isJoker(c));
+
+  // 1) TRINCA CRAZY COM CORINGA — só para batida
+  // Ex:
+  // A♣ A♣ A♠ 🃏 => válido para batida
+  // 8♥ 8♦ 8♥ 8♦ 🃏 => válido para batida
+  if (isCrazy(room) && jokers.length >= 1 && nonJokers.length >= 1) {
+    const baseValor = getValor(nonJokers[0]);
+    const allSameValue = nonJokers.every(c => getValor(c) === baseValor);
+
+    if (allSameValue) {
+      const realSuits = nonJokers.map(c => getNaipe(c)).filter(Boolean);
+      const distinctRealSuits = [...new Set(realSuits)];
+
+      const effectiveSuitCount = distinctRealSuits.length + jokers.length;
+      const hasEnoughEffectiveSuits = effectiveSuitCount >= 3;
+
+      if (hasEnoughEffectiveSuits) {
+        return {
+          ok: true,
+          kind: "TRINCA"
+        };
+      }
+    }
+  }
+
   const normal = validateMeldCards(room, cards);
   if (normal.ok) {
     return normal;
   }
 
-  const jokers = cards.filter(c => isJoker(c));
-  const nonJokers = cards.filter(c => !isJoker(c));
-
-  // 1) dois coringas + uma carta
+  // 2) dois coringas + uma carta
   if (cards.length === 3 && jokers.length === 2 && nonJokers.length === 1) {
     return {
       ok: true,
       kind: "SEQUENCIA",
       aceHigh: false
     };
-  }
-
-  // 2) TRINCA COM CORINGA — só no CRAZY e só para batida
-  if (isCrazy(room)) {
-    if (
-      cards.length >= 3 &&
-      cards.length <= 4 &&
-      jokers.length >= 1 &&
-      nonJokers.length >= 1
-    ) {
-      const baseValor = getValor(nonJokers[0]);
-      const allSameValue = nonJokers.every(c => getValor(c) === baseValor);
-
-      if (allSameValue) {
-        const realSuits = nonJokers.map(c => getNaipe(c)).filter(Boolean);
-        const distinctRealSuits = [...new Set(realSuits)];
-        const noRepeatedRealSuit = distinctRealSuits.length === realSuits.length;
-        const totalSuitSlots = distinctRealSuits.length + jokers.length;
-
-        if (noRepeatedRealSuit && totalSuitSlots >= 3 && totalSuitSlots <= 4) {
-          return {
-            ok: true,
-            kind: "TRINCA"
-          };
-        }
-      }
-    }
   }
 
   // 3) SEQUÊNCIA DE BATIDA COM CORINGA NA PONTA
@@ -3364,7 +3359,9 @@ function canUseBatidaException(room, player, selectedCards, context = {}) {
   const willBatidaWithoutDiscard = handSizeBefore === usedCount;
   const willBatidaWithDiscard = handSizeBefore === usedCount + 1;
 
-  if (!willBatidaWithoutDiscard && !willBatidaWithDiscard) {
+  const forceBatidaAttempt = !!context.forceBatidaAttempt;
+
+  if (!forceBatidaAttempt && !willBatidaWithoutDiscard && !willBatidaWithDiscard) {
     return { ok: false };
   }
 
@@ -3396,7 +3393,7 @@ function canUseBatidaException(room, player, selectedCards, context = {}) {
       trincaJokers.length >= 1 &&
       trincaNonJokers.length >= 1 &&
       allTrincaCards.length >= 3 &&
-      allTrincaCards.length <= 4
+      allTrincaCards.length <= 8
     ) {
       const baseValor = getValor(trincaNonJokers[0]);
       const allSameValue = trincaNonJokers.every(c => getValor(c) === baseValor);
@@ -3404,10 +3401,9 @@ function canUseBatidaException(room, player, selectedCards, context = {}) {
       if (allSameValue) {
         const realSuits = trincaNonJokers.map(c => getNaipe(c)).filter(Boolean);
         const distinctRealSuits = [...new Set(realSuits)];
-        const noRepeatedRealSuit = distinctRealSuits.length === realSuits.length;
         const totalSuitSlots = distinctRealSuits.length + trincaJokers.length;
 
-        if (noRepeatedRealSuit && totalSuitSlots >= 3 && totalSuitSlots <= 4) {
+        if (totalSuitSlots >= 3 && totalSuitSlots <= 8) {
           return {
             ok: true,
             reason: "BATIDA_TRINCA_WITH_JOKER_CRAZY",
@@ -3509,7 +3505,8 @@ function handlePlayMeldAction(room, player, playerSeat, action) {
   // 1) EXCEÇÃO DE BATIDA — prioridade máxima
   if (willBatidaNow) {
     const batidaEx = canUseBatidaException(room, player, selected, {
-      mode: "playMeld"
+      mode: "playMeld",
+      forceBatidaAttempt: !!player.pendingBatidaAfterDiscard || !!room.pendingBatidaClaim
     });
 
     if (batidaEx.ok) {
@@ -4344,14 +4341,6 @@ if (msg.type === "leaveTable") {
 */
 
 const mesaStack = (Number(room.buyIn) || 0) * 10;
-
-console.log("[JOIN CHECK]", {
-  tableId,
-  roomBuyIn: room.buyIn,
-  mesaStack,
-  clientChips,
-  playerName: c.name
-});
 
 if (clientChips < mesaStack) {
   return send(ws, "error", {
