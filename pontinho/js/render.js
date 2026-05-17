@@ -1660,7 +1660,10 @@ function renderDesktopTableLayout() {
       </div>
 
       <div class="desktop-seat-info">
-        <div class="desktop-seat-name">${p.name || "Jogador"}</div>
+        <div class="desktop-seat-name">
+        ${(p.name || "Jogador")}
+        ${p.disconnected ? '<span class="desktop-offline">(Offline)</span>' : ""}
+      </div>
         <div class="desktop-seat-meta">${chips.toLocaleString("pt-BR")} · ${pts} pts</div>
 
         ${!isMe && handCount > 0 ? `
