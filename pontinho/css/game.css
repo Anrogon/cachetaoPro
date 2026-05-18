@@ -319,3 +319,12 @@
 .desktop-seat-cards .mini-card:nth-child(7) { transform: rotate(10deg) translateY(2px); }
 .desktop-seat-cards .mini-card:nth-child(8) { transform: rotate(16deg) translateY(4px); }
 .desktop-seat-cards .mini-card:nth-child(9) { transform: rotate(22deg) translateY(6px); }
+
+.desktop-offline{
+  color:#ff4d4f;
+  font-weight:700;
+  font-size:11px;
+  line-height:1;
+  margin-top:2px;
+  text-align:center;
+}
