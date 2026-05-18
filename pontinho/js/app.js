@@ -206,7 +206,6 @@ if (pub.tableId) {
   state.roundEnded = !!pub.roundEnded;
   state.winnerSeat = pub.winnerSeat ?? null;
   state.rematchVotes = pub.rematchVotes || {};
-  state.rematchRequestedBySeat = pub.rematchRequestedBySeat ?? null;
 
   if (state.roundEnded) {
     state.lastRoundSummary = {
@@ -736,7 +735,7 @@ function resetMatchState({ keepPlayers = true } = {}) {
     }
   }
 }
-// ✅ Revanche: permanece na mesma mesa (novo torneio, cobra buy-in de novo)
+// ✅ Revanche: volta para a sala de mesas mantendo o assento ocupado
 window.rematchSameTable = function rematchSameTable() {
   stopTurnTimer();
 
@@ -744,7 +743,10 @@ window.rematchSameTable = function rematchSameTable() {
   document.getElementById("rebuyOverlay")?.remove();
   document.getElementById("rebuy-box")?.remove();
 
-  // limpa flags locais antigas enquanto espera o estado novo do servidor
+  // mantém o jogador sentado na mesma mesa
+  // NÃO envia leaveTable
+  // NÃO fica aguardando votos de revanche
+
   state.partidaEncerrada = false;
   state.matchFinalized = false;
   state.rodadaEncerrada = false;
@@ -763,17 +765,25 @@ window.rematchSameTable = function rematchSameTable() {
   state.baixouComLixo = false;
   state.obrigacaoBaixar = false;
 
-  if (!socket || socket.readyState !== 1 || !state.room?.id) {
-  window.showGameNotice("Não foi possível iniciar a revanche.", "warn");
-    return;
-  }
+  state.matchEnded = false;
+  state.canRematch = false;
+  state.matchWinnerSeat = null;
+  state.winnerSeat = null;
+  state.rematchVotes = {};
+  state.rematchRequestedBySeat = null;
 
-  socket.send(JSON.stringify({
-    type: "rematch",
-    payload: { tableId: state.room.id }
-  }));
+  const tables = document.getElementById("tablesScreen");
+  const lobby = document.getElementById("lobby");
+  const game = document.getElementById("game");
 
-  renderAll();
+  if (tables) tables.style.display = "block";
+  if (lobby) lobby.style.display = "none";
+  if (game) game.style.display = "none";
+
+  try { renderTablesScreen(); } catch {}
+  updateSpectatorUI?.();
+
+  window.scrollTo?.(0, 0);
 };
 
 window.declineRematchSameTable = function declineRematchSameTable() {
@@ -924,16 +934,25 @@ window.backToTables = function backToTables() {
   document.getElementById("endMatchOverlay")?.remove();
   document.getElementById("rebuyOverlay")?.remove();
 
+  state.matchEnded = false;
+  state.canRematch = false;
+  state.matchWinnerSeat = null;
+  state.winnerSeat = null;
+  state.rematchVotes = {};
+  state.rematchRequestedBySeat = null;
+
   const tableId = state.room?.id;
 
   // ✅ avisa o servidor que saiu da mesa
+  if (socket && socket.readyState === 1) {
   socket.send(JSON.stringify({
-  type: "leaveTable",
-  payload: {
-    tableId,
-    reason: "back_to_tables"
-  }
+    type: "leaveTable",
+    payload: {
+      tableId,
+      reason: "back_to_tables"
+    }
   }));
+  }
 
   // limpa estado local
   state.room = null;

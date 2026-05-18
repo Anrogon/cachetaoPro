@@ -2078,16 +2078,6 @@ export function renderEndMatchOverlay() {
   const winnerPayout = Number(state.winnerPayout) || 0;
   const houseRakePct = Math.round((Number(state.houseRakePct) || 0) * 100);
 
-  const rematchVotes = state.rematchVotes || {};
-  const acceptedSeats = Object.keys(rematchVotes)
-    .filter(seat => rematchVotes[seat] === true)
-    .map(seat => Number(seat));
-
-  const acceptedNames = (state.players || [])
-    .filter(p => acceptedSeats.includes(p.seat))
-    .map(p => p.name)
-    .join(", ");
-
   ov.innerHTML = `
     <div class="endmatch-modal">
       <div class="endmatch-title">Fim da Partida!</div>
@@ -2108,19 +2098,14 @@ export function renderEndMatchOverlay() {
           Prêmio do vencedor: <b>${winnerPayout.toLocaleString("pt-BR")}</b>
         </div>
 
-        <div class="endmatch-sub" style="margin-top:10px;">
-          ${acceptedNames ? `Aceitaram a revanche: ${acceptedNames}` : "Aguardando votos para a revanche"}
-        </div>
-      </div>
-
       <div class="endmatch-actions" style="display:flex; gap:10px; justify-content:center; flex-wrap:wrap;">
-        <button id="btnRematch" class="endmatch-btn">Aceitar revanche</button>
+        <button id="btnRematch" class="endmatch-btn">Revanche</button>
         <button id="btnBackTables" class="endmatch-btn">Voltar às mesas</button>
       </div>
     </div>
   `;
 
-    const btnRematch = ov.querySelector("#btnRematch");
+  const btnRematch = ov.querySelector("#btnRematch");
   const btnBackTables = ov.querySelector("#btnBackTables");
 
   const handleRematch = (ev) => {
