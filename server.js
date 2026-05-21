@@ -1753,7 +1753,7 @@ function applyRoundPointPayments(room, winnerSeat) {
     const chipsToPay = points * pointValue;
     const paid = Math.min(p.tableChips, chipsToPay);
 
-    p.tableChips -= paid;
+    /*p.tableChips -= paid;
     winner.tableChips += paid;
 
     if (p.tableChips <= 0) {
@@ -1766,7 +1766,7 @@ function applyRoundPointPayments(room, winnerSeat) {
         p.rebuyDeclined = true;
       }
     }
-
+*/
     transfers.push({
       fromSeat: i + 1,
       toSeat: winnerSeat,
