@@ -2599,23 +2599,6 @@ function seatedCount(room) {
 
 
 function tryStartMatch(room) {
-  console.log("[START tryStartMatch INICIO]", {
-    tableId: room.id,
-    started: room.started,
-    matchEnded: room.matchEnded,
-    phase: room.phase,
-    startAt: room.startAt,
-    count: connectedSeatedCount(room),
-    min: room.minPlayersToStart,
-    seats: room.playersBySeat.map((x, i) => x ? {
-      seat: i + 1,
-      name: x.name,
-      disconnected: x.disconnected,
-      eliminated: x.eliminated,
-      nextMatchReady: x.nextMatchReady,
-      clientId: x.clientId
-    } : null)
-  });
 
   const minPlayers = Number(room.minPlayersToStart) || 2;
   const count = connectedSeatedCount(room);
@@ -2665,8 +2648,13 @@ room.tableMelds = [];
 room.mustUseJokerBySeat = {};
 room.mustUseDiscardCardBySeat = {};
 
+const stake = Number(room.stake) || 1000;
+const buyIn = getBuyIn(room);
+
 for (const p of room.playersBySeat || []) {
   if (!p) continue;
+
+  p.tableChips = Math.max(0, stake - buyIn);
 
   p.eliminated = false;
   p.pendingRebuy = false;
