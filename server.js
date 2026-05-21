@@ -2649,12 +2649,12 @@ room.mustUseJokerBySeat = {};
 room.mustUseDiscardCardBySeat = {};
 
 const stake = Number(room.stake) || 1000;
-const buyIn = getBuyIn(room);
+const initialTableChips = Math.max(0, stake - getBuyIn(room));
 
 for (const p of room.playersBySeat || []) {
   if (!p) continue;
 
-  p.tableChips = Math.max(0, stake - buyIn);
+  p.tableChips = initialTableChips;
 
   p.eliminated = false;
   p.pendingRebuy = false;
