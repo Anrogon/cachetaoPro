@@ -359,6 +359,7 @@ if (state.room?.id) {
   name: prev.name,
   buyIn: prev.buyIn,
   started: pub.started ?? prev.started ?? false,
+  matchEnded: !!pub.matchEnded,
   currentSeat: pub.currentSeat ?? prev.currentSeat ?? 1,
   phase: pub.phase ?? prev.phase ?? "WAITING",
   seats: mergedSeats,
@@ -430,15 +431,28 @@ if (state.room?.id) {
   }
 
   // ✅ só entra no jogo quando a mesa começou E não está em matchEnded
-  if (pub.started && !pub.matchEnded) {
-    showScreen("game");
-    renderAll();
-    playPendingHandToTableAnimation?.();
+if (pub.started && !pub.matchEnded) {
+  showScreen("game");
+  renderAll();
+  playPendingHandToTableAnimation?.();
 
-  // se ainda não começou, permanece na tela das mesas
+// se a partida acabou, mas estou na tela de mesas, NÃO reabre overlay
   } else {
     const tables = document.getElementById("tablesScreen");
-    if (tables && tables.style.display !== "none") {
+    const game = document.getElementById("game");
+
+    const isOnTables =
+      tables &&
+      tables.style.display !== "none" &&
+      (!game || game.style.display === "none");
+
+    if (isOnTables) {
+      state.matchEnded = false;
+      state.canRematch = false;
+      state.matchWinnerSeat = null;
+      state.winnerSeat = null;
+      document.getElementById("endMatchOverlay")?.remove();
+
       renderTablesScreen();
     }
   }
@@ -735,42 +749,28 @@ function resetMatchState({ keepPlayers = true } = {}) {
     }
   }
 }
-// ✅ Revanche: volta para a sala de mesas mantendo o assento ocupado
+// ✅ Revanche: este jogador mantém o assento e volta para a sala da própria mesa
 window.rematchSameTable = function rematchSameTable() {
   stopTurnTimer();
+
+  const tableId = state.room?.id;
+
+  if (socket && socket.readyState === 1 && tableId) {
+    socket.send(JSON.stringify({
+      type: "keepSeatForNextMatch",
+      payload: { tableId }
+    }));
+  }
 
   document.getElementById("endMatchOverlay")?.remove();
   document.getElementById("rebuyOverlay")?.remove();
   document.getElementById("rebuy-box")?.remove();
-
-  // mantém o jogador sentado na mesma mesa
-  // NÃO envia leaveTable
-  // NÃO fica aguardando votos de revanche
-
-  state.partidaEncerrada = false;
-  state.matchFinalized = false;
-  state.rodadaEncerrada = false;
-  state.pontuacaoAplicadaNaRodada = false;
-  state.turnoTravado = false;
-  state.jaComprouNoTurno = false;
-  state.faseTurno = "WAITING";
-
-  state.roundEnded = false;
-  state.winnerSeat = null;
-  state.rebuyDecisionUntil = 0;
 
   state.selectedCards = [];
   state.origemCompra = null;
   state.cartaDoLixo = null;
   state.baixouComLixo = false;
   state.obrigacaoBaixar = false;
-
-  state.matchEnded = false;
-  state.canRematch = false;
-  state.matchWinnerSeat = null;
-  state.winnerSeat = null;
-  state.rematchVotes = {};
-  state.rematchRequestedBySeat = null;
 
   const tables = document.getElementById("tablesScreen");
   const lobby = document.getElementById("lobby");
@@ -786,20 +786,15 @@ window.rematchSameTable = function rematchSameTable() {
   window.scrollTo?.(0, 0);
 };
 
+// ✅ Voltar às mesas: este jogador libera o assento e volta sem lugar marcado
 window.declineRematchSameTable = function declineRematchSameTable() {
-  if (!socket || socket.readyState !== 1 || !state.room?.id) {
-    window.showGameNotice("Não foi possível responder à revanche.", "warn");
-    return;
-  }
+  document.getElementById("endMatchOverlay")?.remove();
+  document.getElementById("rebuyOverlay")?.remove();
+  document.getElementById("rebuy-box")?.remove();
 
-  socket.send(JSON.stringify({
-    type: "rematch",
-    payload: {
-      tableId: state.room.id,
-      accept: false
-    }
-  }));
+  window.backToTables();
 };
+
 
 function updateLobbyCountdowns() {
   document.querySelectorAll(".table-start-wrap[data-start-at]").forEach((wrap) => {
@@ -1662,7 +1657,7 @@ export function renderTablesScreen() {
  let countdownHtml = "";
 
   const shouldShowTimer =
-  liveTable.started !== true &&
+  (liveTable.started !== true || liveTable.matchEnded === true) &&
   seatedCount >= minPlayersToStart &&
   Number(startAt) > 0;
 

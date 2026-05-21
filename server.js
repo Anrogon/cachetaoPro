@@ -1114,6 +1114,7 @@ function resetRoomForRematch(room) {
 
   room.matchEnded = false;
   room.matchWinnerSeat = null;
+  room.keepSeatVotes = {};
 
   room.deck = [];
   room.discard = [];
@@ -1124,6 +1125,7 @@ function resetRoomForRematch(room) {
 
   for (const p of room.playersBySeat || []) {
     if (!p) continue;
+    p.nextMatchReady = false;
 
     p.hand = [];
     p.totalPoints = 0;
@@ -2122,10 +2124,10 @@ function connectedSeatedCount(room) {
 
   return room.playersBySeat.filter(p => {
     if (!p) return false;
-    if (p.disconnected) return false;
-
-    const client = p.clientId ? clients.get(p.clientId) : null;
-    return !!(client && client.ws && client.ws.readyState === 1);
+    if (p.disconnected === true) return false;
+    if (p.eliminated === true) return false;
+    if (p.nextMatchReady === false) return false;
+    return true;
   }).length;
 }
 
@@ -2247,8 +2249,9 @@ function createPlayerForSeat(room, seat, clientId, client, avatarUrl) {
     pendingRebuy: false,
     rebuyDeclined: false,
     pendingBatidaAfterDiscard: false,
-
+    
     disconnected: false,
+    nextMatchReady: true,
     disconnectDeadline: 0,
     disconnectTimer: null,
 
@@ -2561,7 +2564,10 @@ function handleDiscardAction(room, player, playerSeat, action) {
 
 function refreshStartCountdown(room) {
   if (!room) return;
-  if (room.started) return;
+
+  // Só bloqueia se existe partida ativa.
+  // Se matchEnded === true, pode iniciar novo countdown.
+  if (room.started && !room.matchEnded) return;
 
   const minPlayers = Number(room.minPlayersToStart) || 2;
   const count = connectedSeatedCount(room);
@@ -2579,6 +2585,8 @@ function refreshStartCountdown(room) {
     room.startAt = Date.now() + 30000;
   }
 
+  broadcastRoomState(room);
+  broadcastLobbyTable(room);
   scheduleMatchStart(room);
 }
 
@@ -2586,118 +2594,202 @@ function seatedCount(room) {
   return room.playersBySeat.filter(Boolean).length;
 }
 
-function tryStartMatch(room) {
-  if (!room.started) {
-    const minPlayers = Number(room.minPlayersToStart) || 2;
-    const count = connectedSeatedCount(room);
 
-  // se caiu abaixo do mínimo, cancela countdown
-  if (count < minPlayers) {
-  resetStartCountdown(room);
-  broadcastRoomState(room);
-  return;
+
+
+
+function tryStartMatch(room) {
+  console.log("[START tryStartMatch INICIO]", {
+    tableId: room.id,
+    started: room.started,
+    matchEnded: room.matchEnded,
+    phase: room.phase,
+    startAt: room.startAt,
+    count: connectedSeatedCount(room),
+    min: room.minPlayersToStart,
+    seats: room.playersBySeat.map((x, i) => x ? {
+      seat: i + 1,
+      name: x.name,
+      disconnected: x.disconnected,
+      eliminated: x.eliminated,
+      nextMatchReady: x.nextMatchReady,
+      clientId: x.clientId
+    } : null)
+  });
+
+  const minPlayers = Number(room.minPlayersToStart) || 2;
+  const count = connectedSeatedCount(room);
+
+  if (room.started && !room.matchEnded) {
+    return;
   }
 
-  // se atingiu o mínimo e ainda não tem countdown, cria 30s
+  if (count < minPlayers) {
+    resetStartCountdown(room);
+    broadcastRoomState(room);
+    return;
+  }
+
   if (!room.startAt) {
     room.startAt = Date.now() + 30000;
     broadcastRoomState(room);
+    scheduleMatchStart(room);
+    return;
   }
 
-    const msLeft = room.startAt - Date.now();
+  const msLeft = room.startAt - Date.now();
 
-    // ainda aguardando o countdown
-    if (msLeft > 0) {
-      return;
-    }
-
-    // começou de fato
-resetStartCountdown(room);
-
-room.started = true;
-room.phase = "DEALING";
-
-// define currentSeat como primeiro assento ocupado
-for (let s = 1; s <= 6; s++) {
-  if (room.playersBySeat[s - 1]) {
-    room.currentSeat = s;
-    break;
+  if (msLeft > 0) {
+    scheduleMatchStart(room);
+    return;
   }
+
+  resetStartCountdown(room);
+
+// RESET COMPLETO DE NOVA PARTIDA
+room.matchEnded = false;
+room.roundEnded = false;
+room.matchWinnerSeat = null;
+room.winnerSeat = null;
+room.rebuyDecisionUntil = 0;
+room.lastAppliedRebuys = [];
+
+if (room.nextRoundTimeoutId) {
+  clearTimeout(room.nextRoundTimeoutId);
+  room.nextRoundTimeoutId = null;
 }
 
-room.turnEndsAt = 0;
-room.buyEndsAt = 0;
-room._autoTurnSeat = null;
-
-room.matchId = makeMatchId();
-room.roundNumber = 1;
-room.matchPot = 0;
-room.economicLogs = [];
-
-const buyIn = getBuyIn(room);
+room.deck = [];
+room.discard = [];
+room.tableMelds = [];
+room.mustUseJokerBySeat = {};
+room.mustUseDiscardCardBySeat = {};
 
 for (const p of room.playersBySeat || []) {
   if (!p) continue;
 
-  p.chips = Number(p.chips) || 0;
+  p.eliminated = false;
+  p.pendingRebuy = false;
+  p.rebuyDeclined = false;
+  p.pendingBatidaAfterDiscard = false;
+  p.rebuyCount = 0;
 
-  // snapshot do bankroll no início da partida
-  p.matchStartChips = Number(p.chips) || 0;
-
-  p.chips -= buyIn;
-  room.matchPot += buyIn;
-}
-
-// cria deck + embaralha + reseta lixo/mesa
-room.deck = shuffle(makeDeck());
-room.discard = [];
-room.tableMelds = [];
-
-// distribui 9 cartas para cada jogador sentado
-for (let s = 1; s <= 6; s++) {
-  const p = room.playersBySeat[s - 1];
-  if (!p) continue;
-
+  p.totalPoints = 0;
+  p.lastRoundPoints = 0;
   p.hand = [];
-  for (let i = 0; i < 9; i++) {
-    const card = room.deck.pop();
-    if (card) p.hand.push(card);
+  p.jogosBaixados = [];
+  p.obrigacaoBaixar = false;
+}
+
+
+
+
+  room.started = true;
+  room.matchEnded = false;
+  room.roundEnded = false;
+  room.matchWinnerSeat = null;
+  room.winnerSeat = null;
+  room.rebuyDecisionUntil = 0;
+
+  room.phase = "DEALING";
+  room.currentSeat = null;
+  room.turnEndsAt = 0;
+  room.buyEndsAt = 0;
+  room._autoTurnSeat = null;
+
+  room.deck = [];
+  room.discard = [];
+  room.tableMelds = [];
+
+  for (let s = 1; s <= 6; s++) {
+    if (room.playersBySeat[s - 1]) {
+      room.currentSeat = s;
+      break;
+    }
   }
-}
 
-// fase visual inicial de distribuição
-room.dealMs = Number(room.dealMs) > 0 ? Number(room.dealMs) : 2200;
-room.dealEndsAt = Date.now() + room.dealMs;
+  room.matchId = makeMatchId();
+  room.roundNumber = 1;
+  room.matchPot = 0;
+  room.economicLogs = [];
 
-broadcastRoomState(room);
+  const buyIn = getBuyIn(room);
 
-if (room._dealStartTimer) {
-  clearTimeout(room._dealStartTimer);
-  room._dealStartTimer = null;
-}
+  for (const p of room.playersBySeat || []) {
+    if (!p) continue;
 
-room._dealStartTimer = setTimeout(() => {
-  room._dealStartTimer = null;
+    p.nextMatchReady = true;
+    p.disconnected = false;
+    p.eliminated = false;
+    p.pendingRebuy = false;
+    p.rebuyDeclined = false;
+    p.pendingBatidaAfterDiscard = false;
+    p.jogosBaixados = [];
+    p.obrigacaoBaixar = false;
+    p.totalPoints = 0;
+    p.lastRoundPoints = 0;
 
-  if (!room || room.matchEnded || room.roundEnded) return;
+    p.chips = Number(p.chips) || 0;
+    p.matchStartChips = Number(p.chips) || 0;
 
-  room.phase = "COMPRAR";
-  room.dealEndsAt = 0;
+    p.chips -= buyIn;
+    room.matchPot += buyIn;
+  }
 
-  startTurnClock(room);
+  room.deck = shuffle(makeDeck());
+  room.discard = [];
+  room.tableMelds = [];
+
+  for (let s = 1; s <= 6; s++) {
+    const p = room.playersBySeat[s - 1];
+    if (!p) continue;
+
+    p.hand = [];
+
+    for (let i = 0; i < 9; i++) {
+      const card = room.deck.pop();
+      if (card) p.hand.push(card);
+    }
+  }
+
+  room.dealMs = Number(room.dealMs) > 0 ? Number(room.dealMs) : 2200;
+  room.dealEndsAt = Date.now() + room.dealMs;
+
   broadcastRoomState(room);
-  scheduleAutoTurn(room);
-}, room.dealMs);
+
+  if (room._dealStartTimer) {
+    clearTimeout(room._dealStartTimer);
+    room._dealStartTimer = null;
   }
+
+  room._dealStartTimer = setTimeout(() => {
+    room._dealStartTimer = null;
+
+    if (!room || room.matchEnded || room.roundEnded) return;
+
+    room.phase = "COMPRAR";
+    room.dealEndsAt = 0;
+
+    startTurnClock(room);
+    broadcastRoomState(room);
+    scheduleAutoTurn(room);
+  }, room.dealMs);
 }
+
 
 function scheduleMatchStart(room) {
-  if (!room || room.started) return;
+  if (!room) return;
+
+  // Só bloqueia se existe partida ativa.
+  // Se matchEnded === true, o countdown da revanche pode rodar.
+  if (room.started && !room.matchEnded) return;
+
   if (!room.startAt) return;
 
   const delay = Math.max(0, room.startAt - Date.now()) + 50;
 
   clearStartTimer(room);
+
   room._startTimerId = setTimeout(() => {
     tryStartMatch(room);
   }, delay);
@@ -3885,8 +3977,6 @@ case "cancelCrazyBatidaAttempt": {
 
 
 case "rebuy": {
-
-
   if (!player) {
     return { ok: false, msg: "Você não está sentado nesta mesa." };
   }
@@ -3900,12 +3990,13 @@ case "rebuy": {
   }
 
   if ((player.rebuyCount || 0) >= 3) {
-    return { ok: false, msg: "Você atingiu o limites de Rebuy." };
+    return { ok: false, msg: "Você atingiu o limite de Rebuy." };
   }
 
-  const buyIn = Number(room.buyIn) || 0;
-  if ((Number(player.chips) || 0) < buyIn) {
-  return { ok: false, msg: "Saldo insuficiente para Rebuy." };
+  const cost = Number(getRebuyCost(room, player)) || 0;
+
+  if ((Number(player.chips) || 0) < cost) {
+    return { ok: false, msg: "Saldo insuficiente para Rebuy." };
   }
 
   if (player.pendingRebuy === true) {
@@ -3918,6 +4009,34 @@ case "rebuy": {
 
   player.pendingRebuy = true;
   player.rebuyDeclined = false;
+
+  // Se não há mais ninguém precisando decidir, não espera o timer acabar.
+  if (!hasRebuyChoices(room)) {
+    if (room.nextRoundTimeoutId) {
+      clearTimeout(room.nextRoundTimeoutId);
+      room.nextRoundTimeoutId = null;
+    }
+
+    room.rebuyDecisionUntil = 0;
+
+    const rebuys = applyPendingRebuys(room);
+    room.lastAppliedRebuys = rebuys;
+
+    const aliveAfterRebuy = (room.playersBySeat || []).filter(pl => pl && !pl.eliminated);
+
+    if (aliveAfterRebuy.length <= 1) {
+      room.matchEnded = true;
+      room.matchWinnerSeat = room.playersBySeat.indexOf(aliveAfterRebuy[0]) + 1;
+
+      finalizeMatchEconomy(room);
+      if (room?.id) sendState(room.id);
+      return { ok: true };
+    }
+
+    startNewRound(room);
+    if (room?.id) sendState(room.id);
+    return { ok: true };
+  }
 
   break;
 }
@@ -4167,6 +4286,14 @@ if (msg.type === "leaveTable") {
       }
     }
 
+    const stillSeated = (room.playersBySeat || []).some(Boolean);
+
+    // se a partida acabou e ninguém ficou sentado, limpa a mesa
+    if (room.matchEnded && !stillSeated) {
+      resetRoomForRematch(room);
+      resetStartCountdown(room);
+    }
+
     broadcastLobbyTable(room);
     sendState(room.id);
   }
@@ -4177,7 +4304,6 @@ if (msg.type === "leaveTable") {
 
   return;
 }
-
     // -------------------------
     // JOIN TABLE
     // -------------------------
@@ -4273,8 +4399,10 @@ if (msg.type === "leaveTable") {
       clearTimeout(existing.disconnectTimer);
       existing.disconnectTimer = null;
     }
-
-    sendState(room.id);
+        
+    if (room.matchEnded) {
+      resetRoomForRematch(room);
+    }
 
     send(ws, "joined", {
       tableId,
@@ -4283,12 +4411,13 @@ if (msg.type === "leaveTable") {
       reconnectToken: existing.reconnectToken
     });
 
-    tryStartMatch(room);
+    refreshStartCountdown(room);
     scheduleMatchStart(room);
-    sendState(tableId);
+    broadcastRoomState(room);
+    broadcastLobbyTable(room);
+
     return;
   }
-
   // ===== BLOQUEIO: jogador novo não pode entrar com a mesa já iniciada =====
   if (room.started && !room.matchEnded) {
     return send(ws, "error", {
@@ -4351,10 +4480,164 @@ if (msg.type === "leaveTable") {
   leaveCurrentTable(clientId);
   return;
 }
+/*
+if (msg.type === "keepSeatForNextMatch") {
+  const { tableId } = msg.payload || {};
+  const room = rooms.get(tableId);
+
+  if (!room) {
+    return send(ws, "error", { message: "Mesa inválida." });
+  }
+
+  if (c.tableId !== tableId || c.mode !== "player" || !c.seat) {
+    return send(ws, "error", { message: "Jogador inválido na mesa." });
+  }
+
+  const seat = Number(c.seat);
+  const p = room.playersBySeat?.[seat - 1];
+
+  if (!p || p.clientId !== clientId) {
+    return send(ws, "error", { message: "Jogador inválido na mesa." });
+  }
+
+  p.nextMatchReady = true;
+  p.disconnected = false;
+  p.eliminated = false;
+
+  // decisão INDIVIDUAL
+  p.keepSeatForNextMatch = true;
+  p.disconnected = false;
+
+  // limpa somente este jogador
+  p.eliminated = false;
+  p.pendingRebuy = false;
+  p.rebuyDeclined = false;
+  p.pendingBatidaAfterDiscard = false;
+  p.hand = [];
+  p.jogosBaixados = [];
+  p.obrigacaoBaixar = false;
+  p.totalPoints = 0;
+  p.lastRoundPoints = 0;
+
+  const minPlayers = Number(room.minPlayersToStart) || 2;
+
+  const readyCount = (room.playersBySeat || []).filter(player =>
+    player &&
+    player.keepSeatForNextMatch === true &&
+    !player.disconnected
+  ).length;
+
+  // ainda não tem jogadores suficientes que escolheram revanche
+  if (readyCount < minPlayers) {
+    broadcastRoomState(room);
+    broadcastLobbyTable(room);
+    return;
+  }
+
+  // agora sim: prepara a nova partida só com quem escolheu revanche
+  for (let i = 0; i < room.playersBySeat.length; i++) {
+    const player = room.playersBySeat[i];
+
+    if (!player) continue;
+
+    if (player.keepSeatForNextMatch !== true) {
+      room.playersBySeat[i] = null;
+      continue;
+    }
+
+    player.keepSeatForNextMatch = false;
+    player.hand = [];
+    player.jogosBaixados = [];
+    player.eliminated = false;
+    player.pendingRebuy = false;
+    player.rebuyDeclined = false;
+    player.pendingBatidaAfterDiscard = false;
+    player.obrigacaoBaixar = false;
+    player.totalPoints = 0;
+    player.lastRoundPoints = 0;
+  }
+
+  resetRoomForRematch(room);
+
+  room.started = false;
+  room.phase = "WAITING";
+  room.startAt = Date.now() + 30000;
+
+  scheduleMatchStart(room);
+  broadcastRoomState(room);
+  broadcastLobbyTable(room);
+  return;
+}
+*/
+
+
+if (msg.type === "keepSeatForNextMatch") {
+  const { tableId } = msg.payload || {};
+  const room = rooms.get(tableId);
+
+  if (!room) {
+    return send(ws, "error", { message: "Mesa inválida." });
+  }
+
+  if (c.tableId !== tableId || c.mode !== "player" || !c.seat) {
+    return send(ws, "error", { message: "Jogador inválido na mesa." });
+  }
+
+  const seat = Number(c.seat);
+  const p = room.playersBySeat?.[seat - 1];
+
+  if (!p || p.clientId !== clientId) {
+    return send(ws, "error", { message: "Jogador inválido na mesa." });
+  }
+
+  // Este jogador escolheu ficar sentado para a próxima.
+  // Não mexe na mesa inteira e não mexe nos outros jogadores.
+  p.nextMatchReady = true;
+  p.disconnected = false;
+  p.eliminated = false;
+  p.pendingRebuy = false;
+  p.rebuyDeclined = false;
+  p.pendingBatidaAfterDiscard = false;
+  p.hand = [];
+  p.jogosBaixados = [];
+  p.obrigacaoBaixar = false;
+  p.totalPoints = 0;
+  p.lastRoundPoints = 0;
+
+
+
+console.log("[REVANCHE keepSeatForNextMatch]", {
+  tableId,
+  seat,
+  player: p.name,
+  roomStarted: room.started,
+  matchEnded: room.matchEnded,
+  phase: room.phase,
+  startAt: room.startAt,
+  seats: room.playersBySeat.map((x, i) => x ? {
+    seat: i + 1,
+    name: x.name,
+    disconnected: x.disconnected,
+    eliminated: x.eliminated,
+    nextMatchReady: x.nextMatchReady,
+    clientId: x.clientId
+  } : null)
+});
+
+
+
+
+  refreshStartCountdown(room);
+
+  broadcastRoomState(room);
+  broadcastLobbyTable(room);
+  return;
+}
+
 // -------------------------
 // REMATCH - REVANCHE
 // -------------------------
-if (msg.type === "rematch") {
+/*if (msg.type === "rematch") {
   const { tableId } = msg.payload || {};
   const room = rooms.get(tableId);
 
@@ -4415,7 +4698,7 @@ if (msg.type === "rematch") {
   return;
 }
 
-
+*/
 
     // -------------------------
     // LEAVE - DEIXAR
