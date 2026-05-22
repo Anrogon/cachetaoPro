@@ -785,7 +785,7 @@ function endRoundByEmptyDeck(room) {
     const p = room.playersBySeat[i];
     if (!p) continue;
 
-    if (p.totalPoints >= 100) {
+    if (p.totalPoints > 100) {
       const wasEliminated = !!p.eliminated;
 
       p.eliminated = true;
@@ -874,7 +874,7 @@ function endRound(room, winnerSeat) {
     if (!p) continue;
     if (i + 1 === winnerSeat) continue;
 
-    if (p.totalPoints >= 100) {
+    if (p.totalPoints > 100) {
       const wasEliminated = !!p.eliminated;
       const seat = i + 1;
 
@@ -1753,20 +1753,12 @@ function applyRoundPointPayments(room, winnerSeat) {
     const chipsToPay = points * pointValue;
     const paid = Math.min(p.tableChips, chipsToPay);
 
-    /*p.tableChips -= paid;
+    // paga os pontos da mão para o vencedor
+    p.tableChips -= paid;
     winner.tableChips += paid;
 
-    if (p.tableChips <= 0) {
-      p.tableChips = 0;
-      p.eliminated = true;
+    // NÃO elimina por tableChips zerado aqui
 
-      if ((Number(p.rebuyCount) || 0) < 3) {
-        p.pendingRebuy = true;
-      } else {
-        p.rebuyDeclined = true;
-      }
-    }
-*/
     transfers.push({
       fromSeat: i + 1,
       toSeat: winnerSeat,
