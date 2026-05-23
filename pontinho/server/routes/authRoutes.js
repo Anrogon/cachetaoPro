@@ -514,6 +514,86 @@ router.post("/me/change-password", requireAuth, async (req, res) => {
   }
 });
 
+router.post("/change-password-required", requireAuth, async (req, res) => {
+  try {
+    const newPassword = String(req.body?.newPassword || "").trim();
+    const confirmPassword = String(req.body?.confirmPassword || "").trim();
+
+    if (!newPassword || !confirmPassword) {
+      return res.status(400).json({
+        ok: false,
+        message: "Preencha a nova senha e a confirmação.",
+      });
+    }
+
+    if (newPassword.length < 4) {
+      return res.status(400).json({
+        ok: false,
+        message: "A nova senha deve ter pelo menos 4 caracteres.",
+      });
+    }
+
+    if (newPassword !== confirmPassword) {
+      return res.status(400).json({
+        ok: false,
+        message: "A confirmação da nova senha não confere.",
+      });
+    }
+
+    const resultUser = await pool.query(
+      `
+      SELECT id, must_reset_password
+      FROM users
+      WHERE id = $1
+      LIMIT 1
+      `,
+      [req.auth.userId]
+    );
+
+    const user = resultUser.rows[0];
+
+    if (!user) {
+      return res.status(404).json({
+        ok: false,
+        message: "Usuário não encontrado.",
+      });
+    }
+
+    if (user.must_reset_password !== true) {
+      return res.status(403).json({
+        ok: false,
+        message: "Troca obrigatória de senha não está ativa para este usuário.",
+      });
+    }
+
+    const newPasswordHash = await bcrypt.hash(newPassword, 10);
+
+    await pool.query(
+      `
+      UPDATE users
+      SET
+        password_hash = $2,
+        must_reset_password = false,
+        session_version = COALESCE(session_version, 1) + 1,
+        updated_at = NOW()
+      WHERE id = $1
+      `,
+      [req.auth.userId, newPasswordHash]
+    );
+
+    return res.json({
+      ok: true,
+      message: "Senha alterada com sucesso. Faça login novamente.",
+    });
+  } catch (err) {
+    console.error("POST /change-password-required error:", err);
+    return res.status(500).json({
+      ok: false,
+      message: "Erro ao alterar senha.",
+    });
+  }
+});
+
 router.get("/admin/users", requireAuth, requireAdmin, async (req, res) => {
   try {
     const result = await require("../config/db").query(`
