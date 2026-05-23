@@ -248,7 +248,7 @@ function startNewRound(room) {
     }
   }
 
-  room.currentSeat = aliveSeats[0];
+  advanceDealerAndCurrentSeat(room);
   room.started = true;
 
   // fase visual entre rodadas
@@ -2643,23 +2643,23 @@ room.mustUseDiscardCardBySeat = {};
 const stake = Number(room.stake) || 1000;
 const initialTableChips = Math.max(0, stake - getBuyIn(room));
 
-for (const p of room.playersBySeat || []) {
-  if (!p) continue;
+  for (const p of room.playersBySeat || []) {
+    if (!p) continue;
 
-  p.tableChips = initialTableChips;
+    p.tableChips = initialTableChips;
 
-  p.eliminated = false;
-  p.pendingRebuy = false;
-  p.rebuyDeclined = false;
-  p.pendingBatidaAfterDiscard = false;
-  p.rebuyCount = 0;
+    p.eliminated = false;
+    p.pendingRebuy = false;
+    p.rebuyDeclined = false;
+    p.pendingBatidaAfterDiscard = false;
+    p.rebuyCount = 0;
 
-  p.totalPoints = 0;
-  p.lastRoundPoints = 0;
-  p.hand = [];
-  p.jogosBaixados = [];
-  p.obrigacaoBaixar = false;
-}
+    p.totalPoints = 0;
+    p.lastRoundPoints = 0;
+    p.hand = [];
+    p.jogosBaixados = [];
+    p.obrigacaoBaixar = false;
+  }
 
 
 
@@ -2681,12 +2681,10 @@ for (const p of room.playersBySeat || []) {
   room.discard = [];
   room.tableMelds = [];
 
-  for (let s = 1; s <= 6; s++) {
-    if (room.playersBySeat[s - 1]) {
-      room.currentSeat = s;
-      break;
-    }
-  }
+  // dealer rotativo: quem compra primeiro é o próximo jogador ativo depois do dealer
+  room.dealerSeat = getNextDealerSeat(room);
+
+  advanceDealerAndCurrentSeat(room);
 
   room.matchId = makeMatchId();
   room.roundNumber = 1;
@@ -2781,6 +2779,26 @@ function isPlayersTurn(room, clientId) {
   return currentPlayer?.clientId === clientId;
 }
 
+function getNextDealerSeat(room) {
+  const players = room.playersBySeat || [];
+
+  if (!players.some(Boolean)) return null;
+
+  const lastDealer = Number(room.dealerSeat) || 0;
+
+  for (let step = 1; step <= players.length; step++) {
+    const seat = ((lastDealer - 1 + step) % players.length) + 1;
+    const p = players[seat - 1];
+
+    if (p && !p.eliminated) {
+      return seat;
+    }
+  }
+
+  return null;
+}
+
+
 function nextOccupiedSeat(room, fromSeat) {
   const total = room.playersBySeat.length;
 
@@ -2798,6 +2816,34 @@ function nextOccupiedSeat(room, fromSeat) {
 
   return fromSeat;
 }
+
+function getNextDealerSeat(room) {
+  const players = room.playersBySeat || [];
+  const total = players.length || 6;
+  const lastDealer = Number(room.dealerSeat) || 0;
+
+  for (let step = 1; step <= total; step++) {
+    const seat = ((lastDealer - 1 + step) % total) + 1;
+    const p = players[seat - 1];
+
+    if (p && !p.eliminated) {
+      return seat;
+    }
+  }
+
+  return null;
+}
+
+function advanceDealerAndCurrentSeat(room) {
+  room.dealerSeat = getNextDealerSeat(room);
+
+  if (room.dealerSeat) {
+    room.currentSeat = nextOccupiedSeat(room, room.dealerSeat);
+  } else {
+    room.currentSeat = null;
+  }
+}
+
 
 function getCardRankValue(card) {
   const rank = String(card?.rank || "");
@@ -4460,95 +4506,6 @@ if (msg.type === "leaveTable") {
   leaveCurrentTable(clientId);
   return;
 }
-/*
-if (msg.type === "keepSeatForNextMatch") {
-  const { tableId } = msg.payload || {};
-  const room = rooms.get(tableId);
-
-  if (!room) {
-    return send(ws, "error", { message: "Mesa inválida." });
-  }
-
-  if (c.tableId !== tableId || c.mode !== "player" || !c.seat) {
-    return send(ws, "error", { message: "Jogador inválido na mesa." });
-  }
-
-  const seat = Number(c.seat);
-  const p = room.playersBySeat?.[seat - 1];
-
-  if (!p || p.clientId !== clientId) {
-    return send(ws, "error", { message: "Jogador inválido na mesa." });
-  }
-
-  p.nextMatchReady = true;
-  p.disconnected = false;
-  p.eliminated = false;
-
-  // decisão INDIVIDUAL
-  p.keepSeatForNextMatch = true;
-  p.disconnected = false;
-
-  // limpa somente este jogador
-  p.eliminated = false;
-  p.pendingRebuy = false;
-  p.rebuyDeclined = false;
-  p.pendingBatidaAfterDiscard = false;
-  p.hand = [];
-  p.jogosBaixados = [];
-  p.obrigacaoBaixar = false;
-  p.totalPoints = 0;
-  p.lastRoundPoints = 0;
-
-  const minPlayers = Number(room.minPlayersToStart) || 2;
-
-  const readyCount = (room.playersBySeat || []).filter(player =>
-    player &&
-    player.keepSeatForNextMatch === true &&
-    !player.disconnected
-  ).length;
-
-  // ainda não tem jogadores suficientes que escolheram revanche
-  if (readyCount < minPlayers) {
-    broadcastRoomState(room);
-    broadcastLobbyTable(room);
-    return;
-  }
-
-  // agora sim: prepara a nova partida só com quem escolheu revanche
-  for (let i = 0; i < room.playersBySeat.length; i++) {
-    const player = room.playersBySeat[i];
-
-    if (!player) continue;
-
-    if (player.keepSeatForNextMatch !== true) {
-      room.playersBySeat[i] = null;
-      continue;
-    }
-
-    player.keepSeatForNextMatch = false;
-    player.hand = [];
-    player.jogosBaixados = [];
-    player.eliminated = false;
-    player.pendingRebuy = false;
-    player.rebuyDeclined = false;
-    player.pendingBatidaAfterDiscard = false;
-    player.obrigacaoBaixar = false;
-    player.totalPoints = 0;
-    player.lastRoundPoints = 0;
-  }
-
-  resetRoomForRematch(room);
-
-  room.started = false;
-  room.phase = "WAITING";
-  room.startAt = Date.now() + 30000;
-
-  scheduleMatchStart(room);
-  broadcastRoomState(room);
-  broadcastLobbyTable(room);
-  return;
-}
-*/
 
 
 if (msg.type === "keepSeatForNextMatch") {
@@ -4584,29 +4541,6 @@ if (msg.type === "keepSeatForNextMatch") {
   p.totalPoints = 0;
   p.lastRoundPoints = 0;
 
-
-
-console.log("[REVANCHE keepSeatForNextMatch]", {
-  tableId,
-  seat,
-  player: p.name,
-  roomStarted: room.started,
-  matchEnded: room.matchEnded,
-  phase: room.phase,
-  startAt: room.startAt,
-  seats: room.playersBySeat.map((x, i) => x ? {
-    seat: i + 1,
-    name: x.name,
-    disconnected: x.disconnected,
-    eliminated: x.eliminated,
-    nextMatchReady: x.nextMatchReady,
-    clientId: x.clientId
-  } : null)
-});
-
-
-
-
   refreshStartCountdown(room);
 
   broadcastRoomState(room);
@@ -4614,71 +4548,6 @@ console.log("[REVANCHE keepSeatForNextMatch]", {
   return;
 }
 
-// -------------------------
-// REMATCH - REVANCHE
-// -------------------------
-/*if (msg.type === "rematch") {
-  const { tableId } = msg.payload || {};
-  const room = rooms.get(tableId);
-
-  if (!room) {
-    return send(ws, "error", { message: "Mesa inválida." });
-  }
-
-  if (c.tableId !== tableId || c.mode !== "player" || !c.seat) {
-    return send(ws, "error", { message: "Apenas jogadores da mesa podem continuar na revanche." });
-  }
-
-  if (!room.matchEnded) {
-    return send(ws, "error", { message: "A partida ainda não terminou." });
-  }
-
-  const seat = c.seat;
-  const p = room.playersBySeat?.[seat - 1];
-
-  if (!p || p.clientId !== clientId) {
-    return send(ws, "error", { message: "Jogador inválido na mesa." });
-  }
-
-  // Limpa estado individual do jogador, mas mantém assento.
-  p.eliminated = false;
-  p.pendingRebuy = false;
-  p.rebuyDeclined = false;
-  p.pendingBatidaAfterDiscard = false;
-  p.hand = [];
-  p.jogosBaixados = [];
-  p.obrigacaoBaixar = false;
-  p.totalPoints = 0;
-  p.lastRoundPoints = 0;
-
-  // Mantém a mesa encerrada até ter jogadores suficientes novamente.
-  room.started = false;
-  room.matchEnded = false;
-  room.phase = "WAITING";
-
-  room.deck = [];
-  room.discard = [];
-  room.tableMelds = [];
-  room.currentSeat = null;
-  room.winnerSeat = null;
-  room.matchWinnerSeat = null;
-
-  const minPlayers = Number(room.minPlayersToStart) || 2;
-  const count = connectedSeatedCount(room);
-
-  if (count >= minPlayers) {
-    room.startAt = Date.now() + 30000;
-    scheduleMatchStart(room);
-  } else {
-    resetStartCountdown(room);
-  }
-
-  broadcastRoomState(room);
-  broadcastLobbyTable(room);
-  return;
-}
-
-*/
 
     // -------------------------
     // LEAVE - DEIXAR

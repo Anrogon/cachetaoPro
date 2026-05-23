@@ -215,7 +215,7 @@ async function handleResetPassword(userId, username) {
 
   try {
     setMsg("Redefinindo senha...");
-    const data = await adminPost(`${API_BASE}/auth/admin/users/${userId}/reset-password`, {
+    const data = await adminPost(`${API_BASE}/admin/users/${userId}/reset-password`, {
       newPassword: newPassword.trim(),
     });
     setMsg(`${data.message || "Senha redefinida com sucesso."} Senha temporária definida.`);

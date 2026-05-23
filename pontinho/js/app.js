@@ -245,12 +245,23 @@ if (pub.tableId) {
   state.selectedCards = [];
 
   // lixo / mesa / deck
-  state.lixo = pub.discardTop ? [pub.discardTop] : [];
-  state.table = Array.isArray(pub.tableMelds)
-    ? pub.tableMelds.map(m => ({ cards: m.cards || [] }))
-    : [];
-  state.deckCount = pub.deckCount ?? 0;
+const oldDiscardId = state.lixo?.[0]?.id ? String(state.lixo[0].id) : null;
+const newDiscardId = pub.discardTop?.id ? String(pub.discardTop.id) : null;
 
+if (newDiscardId && oldDiscardId !== newDiscardId) {
+  state.pendingDiscardFlyAnim = {
+    card: pub.discardTop,
+    fromSeat: pub.lastDiscardSeat || pub.currentSeat || null
+  };
+}
+
+state.lixo = pub.discardTop ? [pub.discardTop] : [];
+
+state.table = Array.isArray(pub.tableMelds)
+  ? pub.tableMelds.map(m => ({ cards: m.cards || [] }))
+  : [];
+
+state.deckCount = pub.deckCount ?? 0;
 
 /*----------------------------*/
   state.roundAnnouncement = String(pub.roundAnnouncement || "");

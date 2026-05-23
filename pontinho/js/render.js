@@ -612,48 +612,51 @@ export function renderTable() {
   }
 
   // 👇 BANNER DE RODADA (ex: baralho acabou)
-let roundBanner = document.getElementById("roundBanner");
+  let roundBanner = document.getElementById("roundBanner");
 
-const shouldShowRoundBanner =
-  !!state.roundAnnouncement &&
-  Number(state.roundAnnouncementEndsAt || 0) > Date.now();
+  const shouldShowRoundBanner =
+    !!state.roundAnnouncement &&
+    Number(state.roundAnnouncementEndsAt || 0) > Date.now();
 
-if (!shouldShowRoundBanner) {
-  if (roundBanner) {
-    roundBanner.remove();
+  if (!shouldShowRoundBanner) {
+    if (roundBanner) {
+      roundBanner.remove();
+    }
+
+    if (window.__roundBannerHideTimer) {
+      clearTimeout(window.__roundBannerHideTimer);
+      window.__roundBannerHideTimer = null;
+    }
+  } else {
+    if (!roundBanner) {
+      roundBanner = document.createElement("div");
+      roundBanner.id = "roundBanner";
+      document.body.appendChild(roundBanner);
+    }
+
+    if (roundBanner.textContent !== state.roundAnnouncement) {
+      roundBanner.textContent = state.roundAnnouncement;
+    }
+
+    const msLeft = Math.max(
+      0,
+      Number(state.roundAnnouncementEndsAt || 0) - Date.now()
+    );
+
+    if (window.__roundBannerHideTimer) {
+      clearTimeout(window.__roundBannerHideTimer);
+      window.__roundBannerHideTimer = null;
+    }
+
+    window.__roundBannerHideTimer = setTimeout(() => {
+      const current = document.getElementById("roundBanner");
+      if (current) current.remove();
+      window.__roundBannerHideTimer = null;
+    }, msLeft);
   }
 
-  if (window.__roundBannerHideTimer) {
-    clearTimeout(window.__roundBannerHideTimer);
-    window.__roundBannerHideTimer = null;
-  }
-} else {
-  if (!roundBanner) {
-    roundBanner = document.createElement("div");
-    roundBanner.id = "roundBanner";
-    document.body.appendChild(roundBanner);
-  }
+  playPendingHandToTableAnimation();
 
-  if (roundBanner.textContent !== state.roundAnnouncement) {
-    roundBanner.textContent = state.roundAnnouncement;
-  }
-
-  const msLeft = Math.max(
-    0,
-    Number(state.roundAnnouncementEndsAt || 0) - Date.now()
-  );
-
-  if (window.__roundBannerHideTimer) {
-    clearTimeout(window.__roundBannerHideTimer);
-    window.__roundBannerHideTimer = null;
-  }
-
-  window.__roundBannerHideTimer = setTimeout(() => {
-    const current = document.getElementById("roundBanner");
-    if (current) current.remove();
-    window.__roundBannerHideTimer = null;
-  }, msLeft);
-}
 }
 
 let pendingDrawAnimTimer = null;
@@ -1047,9 +1050,7 @@ export function renderScoreboard() {
   if (!el) return;
   
   if (state.spectator) {
-  el.innerHTML = "";
-  el.style.display = "none";
-  return;
+  el.style.display = "";
   }
 
   el.style.display = "";
