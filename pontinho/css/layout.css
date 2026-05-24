@@ -102,7 +102,7 @@ body{
   display: flex;
   justify-content: center;
   align-items: center;
-  gap: 16px;
+  gap: 18px;
   margin: 10px 0;
 }
 
@@ -166,7 +166,7 @@ body{
   flex-wrap: nowrap !important;
   overflow-x: auto !important;
   padding: 6px 8px !important;
-  transform: translateY(-8px) !important; /* Sobe a mão - ajuste fino: -12px a -30px */
+  transform: translateY(-16px) !important; /* Sobe a mão - ajuste fino: -12px a -30px */
 }
 
 
@@ -192,21 +192,16 @@ body{
 #scoreboard{
   position: absolute !important;
 
-  /* ✅ ajuste fino de posição (aproxima e sobe) */
-  right: 10px !important;          /* menor = mais perto da borda direita */
-  bottom: 40px !important;         /* maior = mais pra cima */
+  right: 15px !important;/* menor = mais perto da borda direita */
+  bottom: 30px !important; /* maior = mais pra cima */
+
   width: 290px !important;
-  height: 200px !important;
-  overflow-y: auto !important;
+  height: auto !important;
+  max-height: 145px !important;
+
+  overflow-y: hidden !important;
   overflow-x: hidden !important;
   z-index: 50 !important;
-}
-
-#scoreboard::-webkit-scrollbar{ width: 10px; }
-#scoreboard::-webkit-scrollbar-thumb{
-  background: rgba(255,255,255,0.18);
-  border-radius: 999px;
-  border: 1px solid rgba(255,255,255,0.10);
 }
 
 /* =============================
@@ -1395,15 +1390,26 @@ html, body {
 
 /* Botão Valor/Naipe*/
 .sort-btn{
+  position: absolute;
+
+  bottom: 30px;
+  left: 20px;
+
   background: transparent;
   border: none;
   padding: 4px;
   cursor: pointer;
+
+  z-index: 30;
+}
+
+.sort-btn + .sort-btn{
+  left: 70px;
 }
 
 .sort-btn img{
-  width: 28px;
-  height: 28px;
+  width: 35px;
+  height: 35px;
   display: block;
 }
 /* Termina aqui*/
@@ -1697,7 +1703,7 @@ html, body {
   align-items: center;
   gap: 12px;
 
-  padding: 12px 14px;
+  padding: 2px 14px;
   border-radius: 14px;
 
   background: rgba(0, 0, 0, 0.35);

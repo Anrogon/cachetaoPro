@@ -1527,11 +1527,11 @@ export function requestStartCrazyBatidaAttempt() {
     currentSeat: state.currentSeat,
     variant: state.room?.variant || state.variant
   });
-
+/*
   if (typeof showGameNotice === "function") {
     showGameNotice("Solicitando BATI...");
   }
-
+*/
   window.wsSendAction({ type: "startCrazyBatidaAttempt" });
   return true;
 }

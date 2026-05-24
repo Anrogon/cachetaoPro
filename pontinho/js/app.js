@@ -1650,6 +1650,19 @@ export function renderTablesScreen() {
   return variant === selectedVariant;
   });
 
+
+  console.log("[TABLES SCREEN]", {
+  tableListLength: tables.length,
+  selectedVariant,
+  visibleTablesLength: visibleTables.length,
+  tableList: tables.map(t => ({
+    id: t.id,
+    name: t.name,
+    variant: t.variant,
+    buyIn: t.buyIn
+  }))
+});
+
   visibleTables.forEach((t) => {
     const card = document.createElement("div");
     card.className = "table-card";

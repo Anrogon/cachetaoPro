@@ -1361,7 +1361,7 @@ function validateCrazyTrincaShape(cards, { initial = false, forBatida = false } 
       return {
         ok: false,
         msg: initial
-          ? "No crazy, a trinca inicial precisa ter pelo menos 3 naipes reais diferentes."
+          ? "A trinca inicial precisa ter pelo menos 3 naipes reais diferentes. Para bater, selecione TODAS as cartas da mão e abaixe os jogos juntos."
           : "No crazy, a trinca precisa manter pelo menos 3 naipes reais diferentes."
       };
     }
@@ -2680,9 +2680,17 @@ const initialTableChips = Math.max(0, stake - getBuyIn(room));
   room.deck = [];
   room.discard = [];
   room.tableMelds = [];
-
+/*
   // dealer rotativo: quem compra primeiro é o próximo jogador ativo depois do dealer
-  room.dealerSeat = getNextDealerSeat(room);
+  room.dealerSeat = getNextDealerSeat(room);*/
+
+
+   for (let s = 1; s <= 6; s++) {
+    if (room.playersBySeat[s - 1]) {
+      room.currentSeat = s;
+      break;
+    }
+  }
 
   advanceDealerAndCurrentSeat(room);
 
@@ -2779,6 +2787,9 @@ function isPlayersTurn(room, clientId) {
   return currentPlayer?.clientId === clientId;
 }
 
+
+
+/*
 function getNextDealerSeat(room) {
   const players = room.playersBySeat || [];
 
@@ -2797,7 +2808,7 @@ function getNextDealerSeat(room) {
 
   return null;
 }
-
+*/
 
 function nextOccupiedSeat(room, fromSeat) {
   const total = room.playersBySeat.length;

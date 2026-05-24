@@ -1099,9 +1099,18 @@ export function renderScoreboard() {
  const batiUi = getCrazyBatidaUi();
   el.innerHTML = `
         <div class="sb-title">
-      <span>${mesaTitulo}</span>
+        <span>${mesaTitulo}</span>
 
-      <span style="display:flex; gap:8px; align-items:center;">
+        ${!isMobilePortrait && batiUi.show ? `
+          <button
+            type="button"
+            class="sb-pill sb-bati-btn ${batiUi.mine ? "is-active" : ""} ${batiUi.disabled ? "is-disabled-ui" : ""}"
+            data-disabled-ui="${batiUi.disabled ? "1" : "0"}"
+          >${batiUi.label}</button>
+        ` : ""}
+
+        <span style="display:flex; gap:8px; align-items:center;">
+
         ${isMobilePortrait && batiUi.show ? `
           <button
             type="button"
@@ -1135,16 +1144,8 @@ export function renderScoreboard() {
           </div>
 
           <div class="sb-sub-row">
-            ${!isMobilePortrait ? (
-              batiUi.show ? `
-                <button
-                  type="button"
-                  class="sb-pill sb-bati-btn ${batiUi.mine ? "is-active" : ""} ${batiUi.disabled ? "is-disabled-ui" : ""}"
-                  data-disabled-ui="${batiUi.disabled ? "1" : "0"}"
-                >${batiUi.label}</button>
-              ` : `<span class="sb-pill sb-bati-placeholder" aria-hidden="true"></span>`
-            ) : ""}
-          </div>
+          ${!isMobilePortrait ? `<span class="sb-pill sb-bati-placeholder" aria-hidden="true"></span>` : ""}
+        </div>
         </div>
       </div>
     </div>
