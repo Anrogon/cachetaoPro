@@ -1139,7 +1139,9 @@ function resetRoomForRematch(room) {
 
     p.jogosBaixados = [];
     p.obrigacaoBaixar = false;
+    
   }
+  cleanupEmptyRoomInstances();
 }
 
 
@@ -1617,12 +1619,70 @@ for (const t of TABLES) {
   rooms.set(t.id, makeRoom(t));
 }
 
+const roomInstanceCounters = new Map();
+
+for (const t of TABLES) {
+  roomInstanceCounters.set(t.id, 1);
+}
+
+function getBaseTableConfig(tableGroupId) {
+  return TABLES.find(t => String(t.id) === String(tableGroupId)) || null;
+}
+
+function hasFreeSeat(room, seat) {
+  const s = Number(seat);
+  return s >= 1 && s <= 6 && !room.playersBySeat?.[s - 1];
+}
+
+function findOrCreateRoomForGroup(tableGroupId, seat) {
+  const groupId = String(tableGroupId);
+
+  for (const room of rooms.values()) {
+    const sameGroup = String(room.tableGroupId || room.id) === groupId;
+    if (!sameGroup) continue;
+
+    const canJoin =
+      !room.started &&
+      !room.matchEnded &&
+      hasFreeSeat(room, seat);
+
+    if (canJoin) {
+      return room;
+    }
+  }
+
+  const base = getBaseTableConfig(groupId);
+  if (!base) return null;
+
+  const nextNo = (Number(roomInstanceCounters.get(groupId)) || 1) + 1;
+  roomInstanceCounters.set(groupId, nextNo);
+
+  const newRoomId = `${groupId}#${nextNo}`;
+
+  const room = makeRoom({
+    ...base,
+    id: newRoomId
+  });
+
+  room.tableGroupId = groupId;
+  room.baseTableId = groupId;
+  room.instanceNo = nextNo;
+
+  rooms.set(newRoomId, room);
+  return room;
+}
+
 const clients = new Map(); // clientId -> { ws, name, tableId, seat, mode }
 const RECONNECT_GRACE_MS = 20000;
 
 function makeRoom(t) {
   return {
     id: t.id,
+
+    tableGroupId: t.tableGroupId || t.baseTableId || t.id,
+    baseTableId: t.baseTableId || t.tableGroupId || t.id,
+    instanceNo: Number(t.instanceNo) || 1,
+
     name: t.name,
     buyIn: Math.floor((Number(t.buyIn) || 1000) * 0.10), // 10% da mesa
 
@@ -1842,15 +1902,73 @@ function roomSnapshotPublic(room) {
 
 
 function broadcastLobbyTable(room) {
-  const snapshot = roomSnapshotPublic(room);
+  const groupId = String(room.tableGroupId || room.baseTableId || room.id);
+  const lobbyRoom = getLobbyRoomForGroup(groupId) || room;
+
+  const snapshot = roomSnapshotPublic(lobbyRoom);
+
+  // importante: no lobby, o card continua sendo o id base: C1, C2...
+  snapshot.id = groupId;
+  snapshot.realRoomId = lobbyRoom.id;
 
   for (const [, client] of clients) {
     if (!client?.ws || client.ws.readyState !== 1) continue;
+
+    // Não manda snapshot de lobby para quem está dentro de uma room real diferente.
+    // Isso evita misturar C1 com C1#2 durante o jogo.
+    if (
+        client.tableId &&
+        client.tableId !== snapshot.realRoomId
+      ) {
+      continue;
+    }
 
     client.ws.send(JSON.stringify({
       type: "table_public",
       payload: snapshot
     }));
+  }
+}
+
+function getLobbyRoomForGroup(tableGroupId) {
+  const groupId = String(tableGroupId);
+
+  // prioridade 1: room do grupo que ainda não começou
+  for (const room of rooms.values()) {
+    if (String(room.tableGroupId || room.id) !== groupId) continue;
+
+    if (!room.started && !room.matchEnded) {
+      return room;
+    }
+  }
+
+  // prioridade 2: se todas começaram, cria nova instância vazia
+  const base = getBaseTableConfig(groupId);
+  if (!base) return rooms.get(groupId) || null;
+
+  return findOrCreateRoomForGroup(groupId, 1);
+}
+
+function isBaseRoom(room) {
+  return String(room.id) === String(room.baseTableId || room.tableGroupId || room.id);
+}
+
+function isRoomEmpty(room) {
+  const hasPlayers = (room.playersBySeat || []).some(Boolean);
+  const hasSpectators = room.spectators && room.spectators.size > 0;
+
+  return !hasPlayers && !hasSpectators;
+}
+
+function cleanupEmptyRoomInstances() {
+  for (const [roomId, room] of rooms.entries()) {
+    if (!room) continue;
+    if (isBaseRoom(room)) continue;
+    if (room.started && !room.matchEnded) continue;
+    if (!isRoomEmpty(room)) continue;
+
+    rooms.delete(roomId);
+    console.log("[ROOM CLEANUP] removida instância vazia:", roomId);
   }
 }
 
@@ -2665,13 +2783,14 @@ const initialTableChips = Math.max(0, stake - getBuyIn(room));
 
 
   room.started = true;
+  room.phase = "DEALING";
+  broadcastLobbyTable(room);
+
   room.matchEnded = false;
   room.roundEnded = false;
   room.matchWinnerSeat = null;
   room.winnerSeat = null;
   room.rebuyDecisionUntil = 0;
-
-  room.phase = "DEALING";
   room.currentSeat = null;
   room.turnEndsAt = 0;
   room.buyEndsAt = 0;
@@ -4170,6 +4289,7 @@ function leaveCurrentTable(clientId) {
 
   refreshStartCountdown(room);
   broadcastRoomState(room);
+  cleanupEmptyRoomInstances();
 }
 
 
@@ -4341,6 +4461,56 @@ if (msg.type === "leaveTable") {
 
   return;
 }
+
+
+// -------------------------
+// JOIN TABLE GROUP
+// Escolhe/cria uma instância real da mesa antes de entrar.
+// Ex: cliente pede C1, servidor pode colocar em C1 ou C1#2.
+// -------------------------
+if (msg.type === "joinTableGroup") {
+
+
+console.log("[JOIN TABLE GROUP RECEBIDO]", msg.payload);
+
+  const payload = msg.payload || {};
+  const tableGroupId = payload.tableId;
+  const seat = Number(payload.seat);
+
+  if (!getBaseTableConfig(tableGroupId)) {
+    return send(ws, "error", { message: "Mesa inválida." });
+  }
+
+  if (!(seat >= 1 && seat <= 6)) {
+    return send(ws, "error", { message: "Assento inválido." });
+  }
+
+  const realRoom = findOrCreateRoomForGroup(tableGroupId, seat);
+
+  if (!realRoom) {
+    return send(ws, "error", {
+      message: "Não foi possível encontrar uma mesa disponível."
+    });
+  }
+
+ console.log("[JOIN TABLE GROUP REAL ROOM]", {
+    requested: tableGroupId,
+    realRoomId: realRoom.id,
+    started: realRoom.started
+  });
+
+  // reaproveita o fluxo antigo, mas agora com o tableId real
+  msg.type = "joinTable";
+  msg.payload = {
+    ...payload,
+    tableId: realRoom.id
+  };
+
+  // deixa cair no joinTable abaixo
+}
+
+
+
     // -------------------------
     // JOIN TABLE
     // -------------------------

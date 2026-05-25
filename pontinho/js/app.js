@@ -144,14 +144,14 @@ if (msg.type === "joined") {
   console.log("[WS] joined", { tableId, mode, seat, reconnectToken });
 
   // jogador fica aguardando no lobby; espectador pode ver a mesa
-  if (mode === "spectator") {
-  showScreen("game");
-  updateSpectatorUI();
-} else {
-  showScreen("tables");
-  renderTablesScreen();
-  updateSpectatorUI();
-}
+    if (mode === "spectator") {
+    showScreen("game");
+    updateSpectatorUI();
+  } else {
+    showScreen("tables");
+    renderTablesScreen();
+    updateSpectatorUI();
+  }
 
   return;
 }
@@ -1824,8 +1824,8 @@ if (player) {
   state.room = { id: t.id, buyIn: t.buyIn };
 
   socket.send(JSON.stringify({
-    type: "joinTable",
-    payload: joinPayload
+  type: reconnectToken ? "joinTable" : "joinTableGroup",
+  payload: joinPayload
   }));
 
   return;
@@ -1835,7 +1835,7 @@ if (player) {
 state.room = { id: t.id, buyIn: t.buyIn };
 
 socket.send(JSON.stringify({
-  type: "joinTable",
+  type: "joinTableGroup",
   payload: joinPayload
 }));
   };
