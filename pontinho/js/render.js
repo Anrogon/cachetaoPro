@@ -1649,13 +1649,6 @@ function renderDesktopTableLayout() {
     (Array.isArray(p.hand) ? p.hand.length : 0)
   );
 
-    console.log("PLAYER DEBUG", {
-      seat: p.seat,
-      hand: p.hand,
-      handCount,
-      raw: p
-    });
-
     el.innerHTML = `
       <div class="desktop-seat-avatar">
         <img src="${avatar}">

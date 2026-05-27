@@ -6,6 +6,7 @@ const { findUserByEmail, findUserById, createUser, logAdminAction } = require(".
 const { requireAuth, requireAdmin } = require("../middleware/auth");
 const router = express.Router();
 
+
 function sanitizeUser(user) {
   return {
     id: user.id,

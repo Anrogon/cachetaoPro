@@ -818,7 +818,7 @@ function endRoundByEmptyDeck(room) {
   );
 
   // 5) abre janela de rebuy / próxima rodada
-  scheduleNextRoundWithRebuy(room, 15000);
+  scheduleNextRoundWithRebuy(room, 10000);
 
   // 6) avisa o cliente agora
   if (room?.id) sendState(room.id);
@@ -829,6 +829,12 @@ function endRound(room, winnerSeat) {
   if (room.roundEnded) return;
   room.roundEnded = true;
   room.winnerSeat = winnerSeat;
+
+  for (let i = 0; i < room.playersBySeat.length; i++) {
+    const p = room.playersBySeat[i];
+    if (!p) continue;
+
+  }
 
   clearCrazyBatidaAttempt(room, { restoreSnapshot: false, resumeTurn: false });
   room._crazyBatidaSnapshot = null;
@@ -1145,7 +1151,7 @@ function resetRoomForRematch(room) {
 }
 
 
-function scheduleNextRoundWithRebuy(room, ms = 15000) {
+function scheduleNextRoundWithRebuy(room, ms = 20000) {
   room.rebuyDecisionUntil = 0;
   room.lastAppliedRebuys = [];
 
@@ -1205,7 +1211,16 @@ function scheduleNextRoundWithRebuy(room, ms = 15000) {
       return;
     }
 
-    startNewRound(room);
+    room.rebuyDecisionUntil = Date.now() + ms;
+
+    room.nextRoundTimeoutId = setTimeout(() => {
+      room.nextRoundTimeoutId = null;
+      room.rebuyDecisionUntil = 0;
+
+      startNewRound(room);
+      if (room?.id) sendState(room.id);
+    }, ms);
+
     if (room?.id) sendState(room.id);
     return;
   }
@@ -1789,6 +1804,47 @@ function broadcastToRoom(roomId, type, payload) {
     }
   }
 }
+
+
+function getOnlineStatusSnapshot() {
+  let onlinePlayers = 0;
+
+  for (const [, client] of clients) {
+    if (client?.ws?.readyState === 1) {
+      onlinePlayers++;
+    }
+  }
+
+  let openTables = 0;
+
+  for (const room of rooms.values()) {
+    const hasPlayers = (room.playersBySeat || []).some(Boolean);
+    const hasSpectators = room.spectators && room.spectators.size > 0;
+
+    if (hasPlayers || hasSpectators || room.started) {
+      openTables++;
+    }
+  }
+
+  return {
+    onlinePlayers,
+    openTables
+  };
+}
+
+function broadcastOnlineStatus() {
+  const snapshot = getOnlineStatusSnapshot();
+
+  for (const [, client] of clients) {
+    if (!client?.ws || client.ws.readyState !== 1) continue;
+
+    client.ws.send(JSON.stringify({
+      type: "online_status",
+      payload: snapshot
+    }));
+  }
+}
+
 
 
 
@@ -4290,6 +4346,7 @@ function leaveCurrentTable(clientId) {
   refreshStartCountdown(room);
   broadcastRoomState(room);
   cleanupEmptyRoomInstances();
+  broadcastOnlineStatus();
 }
 
 
@@ -4404,6 +4461,8 @@ wss.on("connection", (ws) => {
   lastSeq: 0
   });
 
+  broadcastOnlineStatus();
+
   send(ws, "hello", {
     clientId,
     tables: TABLES.map(t => {
@@ -4471,8 +4530,6 @@ if (msg.type === "leaveTable") {
 if (msg.type === "joinTableGroup") {
 
 
-console.log("[JOIN TABLE GROUP RECEBIDO]", msg.payload);
-
   const payload = msg.payload || {};
   const tableGroupId = payload.tableId;
   const seat = Number(payload.seat);
@@ -4492,12 +4549,6 @@ console.log("[JOIN TABLE GROUP RECEBIDO]", msg.payload);
       message: "Não foi possível encontrar uma mesa disponível."
     });
   }
-
- console.log("[JOIN TABLE GROUP REAL ROOM]", {
-    requested: tableGroupId,
-    realRoomId: realRoom.id,
-    started: realRoom.started
-  });
 
   // reaproveita o fluxo antigo, mas agora com o tableId real
   msg.type = "joinTable";
@@ -4680,7 +4731,8 @@ if (clientChips < mesaStack) {
 
   tryStartMatch(room);
   scheduleMatchStart(room);
-  sendState(tableId);
+  sendState(room.id);
+  broadcastOnlineStatus();
   return;
 }
 if (msg.type === "leaveTable") {
@@ -4807,6 +4859,7 @@ if (msg.type === "keepSeatForNextMatch") {
     removePlayerFromSeat(room, seat, clientId);
     refreshStartCountdown(room);
     broadcastRoomState(room);
+    broadcastOnlineStatus();
   }
     
   else {

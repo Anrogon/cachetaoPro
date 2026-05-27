@@ -7,6 +7,7 @@ const authRoutes = require("./routes/authRoutes");
 const pool = require("./config/db");
 
 const app = express();
+const walletRoutes = require("./routes/wallet");
 
 app.use(cors({
   origin: true,
@@ -15,6 +16,7 @@ app.use(cors({
 
 app.use(express.json());
 app.use(cookieParser());
+app.use("/api/wallet", walletRoutes);
 
 app.get("/api/health", async (req, res) => {
   try {

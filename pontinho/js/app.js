@@ -159,7 +159,6 @@ if (msg.type === "joined") {
 // 3) state_public
 if (msg.type === "state_public") {
   const pub = msg.payload || {};
-  console.log("PUB SEATS DEBUG", pub.seats);
   state.tableId = pub.tableId || state.tableId;
   state.matchPot = Number(pub.matchPot) || state.matchPot || 0;
 
@@ -1649,19 +1648,6 @@ export function renderTablesScreen() {
 
   return variant === selectedVariant;
   });
-
-
-  console.log("[TABLES SCREEN]", {
-  tableListLength: tables.length,
-  selectedVariant,
-  visibleTablesLength: visibleTables.length,
-  tableList: tables.map(t => ({
-    id: t.id,
-    name: t.name,
-    variant: t.variant,
-    buyIn: t.buyIn
-  }))
-});
 
   visibleTables.forEach((t) => {
     const card = document.createElement("div");
