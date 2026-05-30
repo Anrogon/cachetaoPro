@@ -2250,3 +2250,103 @@ HOME - CARTEIRA PIX
   font-weight: 700;
 }
 
+
+/* Admin Financeiro*/
+
+.admin-page{
+  margin: 0;
+  min-height: 100vh;
+  background: linear-gradient(180deg, #0b3c66, #071d31);
+  color: #fff;
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+.admin-wrap{
+  max-width: 1150px;
+  margin: 0 auto;
+  padding: 28px;
+}
+
+.admin-actions{
+  display: flex;
+  gap: 10px;
+  margin-bottom: 18px;
+}
+
+.admin-actions button{
+  border: 0;
+  border-radius: 10px;
+  padding: 10px 14px;
+  font-weight: 800;
+  cursor: pointer;
+  background: #1e88e5;
+  color: #fff;
+}
+
+.admin-message{
+  margin-bottom: 16px;
+  color: #ffd54a;
+  font-weight: 700;
+}
+
+.finance-cards{
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 14px;
+  margin-bottom: 24px;
+}
+
+.finance-card{
+  background: rgba(255,255,255,.10);
+  border: 1px solid rgba(255,255,255,.16);
+  border-radius: 16px;
+  padding: 18px;
+  display: grid;
+  gap: 8px;
+}
+
+.finance-card span{
+  opacity: .8;
+  font-size: 14px;
+}
+
+.finance-card strong{
+  font-size: 26px;
+}
+
+.finance-table-wrap{
+  overflow-x: auto;
+  background: rgba(255,255,255,.08);
+  border: 1px solid rgba(255,255,255,.14);
+  border-radius: 16px;
+}
+
+.finance-table{
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 850px;
+}
+
+.finance-table th,
+.finance-table td{
+  padding: 12px;
+  border-bottom: 1px solid rgba(255,255,255,.12);
+  text-align: left;
+  font-size: 14px;
+}
+
+.finance-table th{
+  color: #ffd54a;
+}
+
+@media (max-width: 800px){
+  .finance-cards{
+    grid-template-columns: 1fr;
+  }
+
+  .admin-wrap{
+    padding: 18px;
+  }
+}
+
+/* Termina aqui*/

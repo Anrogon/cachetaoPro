@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Pontinho Play - Admin Financeiro</title>
+  <link rel="stylesheet" href="./css/layout.css">
+</head>
+<body class="admin-page">
+
+  <div class="admin-wrap">
+    <h1>💰 Admin Financeiro</h1>
+
+    <div class="admin-actions">
+      <button onclick="window.location.href='./admin-home.html'">
+        Voltar ao painel
+      </button>
+
+      <button onclick="loadFinance()">
+        Atualizar
+      </button>
+    </div>
+
+    <div id="financeMessage" class="admin-message">
+      Carregando financeiro...
+    </div>
+
+    <div class="finance-cards">
+      <div class="finance-card">
+        <span>Total arrecadado</span>
+        <strong id="financeTotalAmount">R$ 0,00</strong>
+      </div>
+
+      <div class="finance-card">
+        <span>Fichas vendidas</span>
+        <strong id="financeTotalChips">0</strong>
+      </div>
+
+      <div class="finance-card">
+        <span>Depósitos aprovados</span>
+        <strong id="financeApprovedCount">0</strong>
+      </div>
+
+      <div class="finance-card">
+        <span>Depósitos pendentes</span>
+        <strong id="financePendingCount">0</strong>
+      </div>
+    </div>
+
+    <h2>Últimas transações</h2>
+
+    <div class="finance-table-wrap">
+      <table class="finance-table">
+        <thead>
+          <tr>
+            <th>Data</th>
+            <th>Usuário</th>
+            <th>E-mail</th>
+            <th>Valor</th>
+            <th>Fichas</th>
+            <th>Status</th>
+            <th>Pagamento</th>
+          </tr>
+        </thead>
+        <tbody id="financeTableBody">
+          <tr>
+            <td colspan="7">Carregando...</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <script src="./js/admin-finance.js"></script>
+</body>
+</html>
