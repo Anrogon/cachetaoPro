@@ -12,6 +12,8 @@ function showMessage(text, isError = false) {
 
 let signupBusy = false;
 
+
+
 async function doSignup() {
   if (signupBusy) return;
   signupBusy = true;
@@ -25,9 +27,17 @@ async function doSignup() {
   const email = document.getElementById("signupEmail")?.value?.trim() || "";
   const password = document.getElementById("signupPassword")?.value || "";
   const avatarUrl = document.getElementById("signupAvatarUrl")?.value?.trim() || "";
+  const acceptTerms = document.getElementById("acceptTerms");
 
   if (!username || !email || !password) {
     showMessage("Preencha nome, e-mail e senha.", true);
+    signupBusy = false;
+    if (btn) btn.disabled = false;
+    return;
+  }
+
+  if (!acceptTerms?.checked) {
+    showMessage("Você precisa aceitar os Termos de Uso e a Política de Privacidade.", true);
     signupBusy = false;
     if (btn) btn.disabled = false;
     return;
@@ -47,6 +57,7 @@ async function doSignup() {
         email,
         password,
         avatarUrl,
+        acceptedTerms: true,
       }),
     });
 
@@ -73,6 +84,8 @@ async function doSignup() {
     if (btn) btn.disabled = false;
   }
 }
+
+
 
 window.doSignup = doSignup;
 

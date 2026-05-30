@@ -34,17 +34,9 @@
     .profile-top {
       display: grid;
       place-items: center;
-      gap: 12px;
-      margin-bottom: 18px;
-    }
-
-    .profile-avatar {
-      width: 110px;
-      height: 110px;
-      border-radius: 50%;
-      object-fit: cover;
-      border: 2px solid rgba(255,255,255,0.18);
-      background: rgba(255,255,255,0.08);
+      margin-bottom: 10px;
+      font-size: 22px;
+      font-weight: 700;
     }
 
     .carousel-wrap,
@@ -160,6 +152,65 @@
       border: 1px solid rgba(255,255,255,0.16);
     }
 
+      .wallet-history-list {
+        display: grid;
+        gap: 8px;
+        max-height: 220px;
+        overflow-y: auto;
+        padding-right: 4px;
+      }
+
+      .wallet-history-item {
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+        align-items: center;
+
+        background: rgba(255,255,255,0.08);
+        border: 1px solid rgba(255,255,255,0.12);
+        border-radius: 12px;
+        padding: 10px;
+      }
+
+      .wallet-history-item div {
+        display: grid;
+        gap: 3px;
+      }
+
+      .wallet-history-item span,
+      .wallet-history-item small {
+        font-size: 12px;
+        opacity: .86;
+      }
+
+      .wallet-status {
+        font-weight: 800;
+        border-radius: 999px;
+        padding: 3px 8px;
+        text-align: center;
+      }
+
+      .wallet-status.approved {
+        background: rgba(58, 220, 118, .22);
+        color: #77ff9e;
+      }
+
+      .wallet-status.pending {
+        background: rgba(255, 213, 74, .18);
+        color: #ffd54a;
+      }
+
+      .wallet-status.other {
+        background: rgba(255,255,255,.14);
+        color: #fff;
+      }
+
+      .wallet-history-empty {
+        opacity: .8;
+        font-size: 13px;
+        padding: 8px 2px;
+      }
+
     .msg {
       min-height: 22px;
       text-align: center;
@@ -173,7 +224,6 @@
     <h1>♠  Perfil  ♠</h1>
 
     <div class="profile-top">
-      <img id="profileAvatar" class="profile-avatar" src="/assets/avatars/avatar-01.png" alt="Avatar">
       <div id="profileUsername">Carregando...</div>
     </div>
 
@@ -219,7 +269,12 @@
   <div class="profile-line"><strong>Lucro / Prejuízo:</strong> <span id="profileProfitLoss">—</span></div>
 </div>
 
-
+<div class="password-wrap" style="margin-top:18px;">
+  <div class="password-title">Histórico financeiro</div>
+  <div id="profileWalletHistory" class="wallet-history-list">
+    Carregando histórico...
+  </div>
+</div>
 
 
     <div class="password-wrap">

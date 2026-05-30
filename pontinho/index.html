@@ -45,6 +45,11 @@
           <span class="btn-text">Perfil</span>
         </button>
 
+        <button type="button" id="btnBuyChips" class="primary" style="display:none;">
+          <span class="btn-icon">💰</span>
+          <span class="btn-text">Comprar fichas</span>
+        </button>
+
         <button type="button" id="btnClassic" class="primary" style="display:none;">
           <span class="btn-icon">♠</span>
           <span class="btn-text">Jogar Pontinho Clássico</span>
@@ -100,8 +105,12 @@
     
   
     <div class="home-footer">
-  ♦ ♣ Pontinho Play ♠ ♥
-</div>
+      <a href="./terms.html">Termos de Uso</a>
+
+      <span>© Pontinho Play</span>
+
+      <a href="./privacy.html">Política de Privacidade</a>
+    </div>
   </div>
 
   
@@ -155,6 +164,34 @@
       </button>
     </div>
   </div>
+
+
+  <div id="walletModal" class="wallet-modal hidden">
+    <div class="wallet-card">
+      <button id="walletCloseBtn" class="wallet-close" type="button">×</button>
+
+      <h2>Comprar fichas</h2>
+      <p class="wallet-subtitle">Escolha um pacote e pague via PIX.</p>
+
+      <div id="walletPackages" class="wallet-packages"></div>
+
+      <div id="walletPixArea" class="wallet-pix-area hidden">
+        <h3>PIX gerado</h3>
+
+        <img id="walletPixQrImg" class="wallet-pix-qr" alt="QR Code PIX" />
+
+        <textarea id="walletPixCode" readonly></textarea>
+
+        <button id="walletCopyPixBtn" class="wallet-copy-btn" type="button">
+          Copiar código PIX
+        </button>
+      </div>
+
+      <div id="walletMsg" class="wallet-msg"></div>
+    </div>
+  </div>
+
+
 
   <script type="module" src="./js/app.js"></script>
 

@@ -1171,6 +1171,162 @@ function requireAuthOrRedirect() {
 }
 
 
+async function openWalletModal() {
+  const walletModal = document.getElementById("walletModal");
+  const walletPackages = document.getElementById("walletPackages");
+  const walletMsg = document.getElementById("walletMsg");
+  const walletPixArea = document.getElementById("walletPixArea");
+  const walletPixQrImg = document.getElementById("walletPixQrImg");
+  const walletPixCode = document.getElementById("walletPixCode");
+  const walletCopyPixBtn = document.getElementById("walletCopyPixBtn");
+  const walletHistoryList = document.getElementById("walletHistoryList");
+
+  walletModal?.classList.remove("hidden");
+
+  if (walletPackages) walletPackages.innerHTML = "";
+  if (walletPixArea) walletPixArea.classList.add("hidden");
+  if (walletPixQrImg) walletPixQrImg.removeAttribute("src");
+  if (walletPixCode) walletPixCode.value = "";
+  if (walletMsg) walletMsg.textContent = "Carregando pacotes...";
+  
+
+  try {
+    const res = await fetch(`${API_BASE}/wallet/packages`, {
+      credentials: "include",
+    });
+
+    const data = await res.json();
+
+    if (!data.ok) {
+      throw new Error(data.message || "Erro ao carregar pacotes.");
+    }
+
+    if (walletMsg) walletMsg.textContent = "";
+
+    walletPackages.innerHTML = data.packages.map(p => `
+      <button class="wallet-package-btn" type="button" data-package-id="${p.id}">
+        <span>${p.label}</span>
+        <span>R$ ${(p.priceCents / 100).toFixed(2).replace(".", ",")}</span>
+      </button>
+    `).join("");
+
+    walletPackages.querySelectorAll(".wallet-package-btn").forEach(btn => {
+      btn.onclick = async () => {
+        const packageId = btn.dataset.packageId;
+
+        if (walletMsg) walletMsg.textContent = "Gerando PIX...";
+        if (walletPixArea) walletPixArea.classList.add("hidden");
+
+        try {
+          const depRes = await fetch(`${API_BASE}/wallet/deposit`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            credentials: "include",
+            body: JSON.stringify({ packageId }),
+          });
+
+          const depData = await depRes.json();
+
+          if (!depData.ok) {
+            throw new Error(depData.message || "Erro ao gerar PIX.");
+          }
+
+          if (walletPixQrImg && depData.qrCodeBase64) {
+            walletPixQrImg.src = `data:image/png;base64,${depData.qrCodeBase64}`;
+          }
+
+          if (walletPixCode) {
+            walletPixCode.value = depData.qrCode || "";
+          }
+
+          if (walletPixArea) {
+            walletPixArea.classList.remove("hidden");
+          }
+
+          if (walletMsg) {
+            walletMsg.textContent = `PIX de R$ ${Number(depData.amount).toFixed(2).replace(".", ",")} gerado.`;
+          }
+
+          const transactionId = depData.transactionId;
+
+          const pollInterval = setInterval(async () => {
+            try {
+              const statusRes = await fetch(
+                `${API_BASE}/wallet/deposit/${transactionId}/status`,
+                {
+                  credentials: "include",
+                }
+              );
+
+              const statusData = await statusRes.json();
+
+              console.log("[PIX STATUS]", statusData);
+
+              if (statusData.status === "approved") {
+                clearInterval(pollInterval);
+
+                if (walletMsg) {
+                  walletMsg.textContent =
+                    `Pagamento aprovado. ${statusData.chips} fichas creditadas.`;
+                }
+
+                if (walletPixArea) {
+                  walletPixArea.classList.add("hidden");
+                }
+
+                try {
+                  const meRes = await fetch(`${API_BASE}/auth/me`, {
+                    credentials: "include",
+                  });
+
+                  const meData = await meRes.json();
+
+                  if (meData.ok && meData.user) {
+                    localStorage.setItem("pontinhoAuthUser", JSON.stringify(meData.user));
+                    updateAuthUI(meData.user);
+                  }
+                } catch (err) {
+                  console.error("Erro ao atualizar saldo após PIX:", err);
+                }
+              }
+
+            } catch (err) {
+              console.error(err);
+            }
+          }, 5000);
+
+
+        } catch (err) {
+          if (walletMsg) walletMsg.textContent = err.message;
+        }
+      };
+    });
+
+    if (walletCopyPixBtn) {
+      walletCopyPixBtn.onclick = async () => {
+        const code = walletPixCode?.value || "";
+        if (!code) return;
+
+        try {
+          await navigator.clipboard.writeText(code);
+          if (walletMsg) walletMsg.textContent = "Código PIX copiado.";
+        } catch {
+          walletPixCode?.select();
+          document.execCommand("copy");
+          if (walletMsg) walletMsg.textContent = "Código PIX copiado.";
+        }
+      };
+    }
+
+  } catch (err) {
+    if (walletMsg) walletMsg.textContent = err.message;
+  }
+}
+
+
+
 function bindHomeButtons() {
   const btnLogin = document.getElementById("btnLogin");
   if (btnLogin) {
@@ -1193,6 +1349,27 @@ function bindHomeButtons() {
     };
   }
 
+  const btnBuyChips = document.getElementById("btnBuyChips");
+  if (btnBuyChips) {
+    const loggedUser = localStorage.getItem("pontinhoAuthUser");
+
+    btnBuyChips.style.display = loggedUser ? "flex" : "none";
+
+    btnBuyChips.onclick = () => {
+      if (!requireAuthOrRedirect()) return;
+      openWalletModal();
+    };
+  }
+
+  const walletCloseBtn = document.getElementById("walletCloseBtn");
+  const walletModal = document.getElementById("walletModal");
+
+  if (walletCloseBtn) {
+    walletCloseBtn.onclick = () => {
+      walletModal?.classList.add("hidden");
+    };
+  }
+
   const btnSettings = document.getElementById("btnSettings");
   if (btnSettings) {
     btnSettings.onclick = () => {
@@ -1201,22 +1378,20 @@ function bindHomeButtons() {
   }
 
   const btnClassic = document.getElementById("btnClassic");
-    if (btnClassic) {
-      btnClassic.onclick = () => {
-        if (!requireAuthOrRedirect()) return;
+  if (btnClassic) {
+    btnClassic.onclick = () => {
+      if (!requireAuthOrRedirect()) return;
+      openTablesFromHome("CLASSIC");
+    };
+  }
 
-        openTablesFromHome("CLASSIC");
-      };
-    }
-
-    const btnCrazy = document.getElementById("btnCrazy");
-    if (btnCrazy) {
-      btnCrazy.onclick = () => {
-        if (!requireAuthOrRedirect()) return;
-
-        openTablesFromHome("CRAZY");
-      };
-    }
+  const btnCrazy = document.getElementById("btnCrazy");
+  if (btnCrazy) {
+    btnCrazy.onclick = () => {
+      if (!requireAuthOrRedirect()) return;
+      openTablesFromHome("CRAZY");
+    };
+  }
 
   const btnLogout = document.getElementById("btnLogout");
   if (btnLogout) {
@@ -1238,6 +1413,7 @@ function bindHomeButtons() {
     };
   }
 }
+
 
 function renderHomeLiveTables() {
   const el = document.getElementById("homeLiveTables");
@@ -1349,6 +1525,10 @@ async function refreshHomeUser() {
   const btnSettings = document.getElementById("btnSettings");
   const btnProfile = document.getElementById("btnTrain");
   const btnClassic = document.getElementById("btnClassic");
+
+  const btnBuyChips = document.getElementById("btnBuyChips");
+  const walletModal = document.getElementById("walletModal");
+  const walletCloseBtn = document.getElementById("walletCloseBtn");
   const btnCrazy = document.getElementById("btnCrazy");
 
   function setLoggedOutHome() {
@@ -1362,6 +1542,30 @@ async function refreshHomeUser() {
     if (btnLogout) btnLogout.style.display = "none";
     if (btnSettings) btnSettings.style.display = "none";
     if (btnProfile) btnProfile.style.display = "none";
+    if (btnBuyChips) {
+      btnBuyChips.onclick = async () => {
+        walletModal?.classList.remove("hidden");
+
+        try {
+          const res = await fetch("http://localhost:3001/api/wallet/packages", {
+            credentials: "include"
+          });
+
+          const data = await res.json();
+
+          console.log("[WALLET PACKAGES]", data);
+
+        } catch (err) {
+          console.error(err);
+        }
+      };
+    }
+
+    if (walletCloseBtn) {
+      walletCloseBtn.onclick = () => {
+        walletModal?.classList.add("hidden");
+      };
+    }
     if (btnClassic) btnClassic.style.display = "none";
     if (btnCrazy) btnCrazy.style.display = "none";
   }

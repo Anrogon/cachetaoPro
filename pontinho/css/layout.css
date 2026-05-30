@@ -1854,16 +1854,27 @@ html, body {
   border: none !important;
 }
 
-.home-footer {
-  width: min(1120px, 96vw);
-  margin: 2px auto 0;
-  padding: 18px 12px;
-  text-align: center;
-  font-size: 14px;
-  font-weight: 900;
-  color: #fff;
-  background: rgba(0,0,0,0.15);
-  border-radius: 18px;
+.home-footer{
+  width: 100%;
+  margin-top: 24px;
+
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+
+  color: rgba(255,255,255,.75);
+  font-size: 13px;
+}
+
+.home-footer a{
+  color: #dbeafe;
+  text-decoration: none;
+  font-weight: 700;
+}
+
+.home-footer a:hover{
+  text-decoration: underline;
 }
 
 /* MOBILE */
@@ -1880,8 +1891,10 @@ html, body {
     padding: 12px;
   }
 
-  .home-footer {
-    font-size: 16px;
+  .home-footer{
+    flex-direction: column;
+    gap: 8px;
+    text-align: center;
   }
 }
 
@@ -2122,3 +2135,118 @@ html, body {
     min-height: 245px;
   }
 }
+
+/*============================================================
+HOME - CARTEIRA PIX
+=============================================================*/
+.wallet-modal.hidden,
+.wallet-pix-area.hidden{
+  display: none !important;
+}
+
+.wallet-modal{
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: rgba(0,0,0,.65);
+  display: grid;
+  place-items: center;
+  padding: 20px;
+}
+
+.wallet-card{
+  width: min(520px, 94vw);
+  max-height: 90vh;
+  overflow-y: auto;
+  background: #0b3d2e;
+  border: 1px solid rgba(255,255,255,.18);
+  border-radius: 18px;
+  padding: 22px;
+  color: #fff;
+  box-shadow: 0 18px 50px rgba(0,0,0,.45);
+  position: relative;
+}
+
+.wallet-close{
+  position: absolute;
+  right: 14px;
+  top: 10px;
+  border: 0;
+  background: transparent;
+  color: #fff;
+  font-size: 30px;
+  cursor: pointer;
+}
+
+.wallet-card h2{
+  margin: 0 0 6px;
+  font-size: 24px;
+}
+
+.wallet-subtitle{
+  margin: 0 0 16px;
+  opacity: .85;
+}
+
+.wallet-packages{
+  display: grid;
+  gap: 10px;
+}
+
+.wallet-package-btn{
+  border: 1px solid rgba(255,255,255,.2);
+  background: linear-gradient(135deg, #19b85a, #127cdb);
+  color: #fff;
+  border-radius: 14px;
+  padding: 12px 14px;
+  cursor: pointer;
+  font-weight: 800;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.wallet-package-btn:hover{
+  filter: brightness(1.08);
+}
+
+.wallet-pix-area{
+  margin-top: 18px;
+  display: grid;
+  gap: 10px;
+}
+
+.wallet-pix-qr{
+  width: 180px;
+  max-width: 70vw;
+  justify-self: center;
+  background: #fff;
+  padding: 8px;
+  border-radius: 10px;
+}
+
+#walletPixCode{
+  width: 100%;
+  min-height: 90px;
+  resize: vertical;
+  border-radius: 10px;
+  padding: 10px;
+}
+
+.wallet-copy-btn{
+  border: 0;
+  border-radius: 12px;
+  padding: 12px;
+  cursor: pointer;
+  font-weight: 800;
+  background: #ffd54a;
+  color: #222;
+}
+
+.wallet-msg{
+  margin-top: 12px;
+  min-height: 20px;
+  color: #ffd54a;
+  font-weight: 700;
+}
+

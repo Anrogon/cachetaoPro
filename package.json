@@ -18,6 +18,7 @@
     "expres": "^0.0.5",
     "express": "^5.2.1",
     "jsonwebtoken": "^9.0.3",
+    "mercadopago": "^3.0.0",
     "pg": "^8.20.0",
     "ws": "^8.20.1"
   },

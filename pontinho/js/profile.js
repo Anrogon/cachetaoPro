@@ -140,6 +140,8 @@ async function loadProfile() {
     updateCarouselUI();
 
     await loadProfileStats();
+    await loadWalletHistory();
+
     setMsg("Perfil carregado com sucesso.");
   } catch (err) {
     console.error("Erro ao carregar perfil:", err);
@@ -190,6 +192,87 @@ async function loadProfileStats() {
   }
 }
 
+function formatMoneyFromCents(cents) {
+  return (Number(cents || 0) / 100).toLocaleString("pt-BR", {
+    style: "currency",
+    currency: "BRL",
+  });
+}
+
+function getWalletStatusLabel(status) {
+  const s = String(status || "").toLowerCase();
+
+  if (s === "approved") return "Aprovado";
+  if (s === "pending") return "Pendente";
+  if (s === "cancelled" || s === "canceled") return "Cancelado";
+  if (s === "rejected") return "Recusado";
+
+  return status || "—";
+}
+
+async function loadWalletHistory() {
+  const el = document.getElementById("profileWalletHistory");
+  if (!el) return;
+
+  el.innerHTML = `<div class="wallet-history-empty">Carregando histórico...</div>`;
+
+  try {
+    const res = await fetch(`${API_BASE}/wallet/history`, {
+      method: "GET",
+      credentials: "include",
+    });
+
+    const data = await res.json().catch(() => null);
+
+    if (!res.ok || !data?.ok) {
+      el.innerHTML = `<div class="wallet-history-empty">Não foi possível carregar o histórico.</div>`;
+      return;
+    }
+
+    const transactions = Array.isArray(data.transactions)
+      ? data.transactions
+      : [];
+
+    if (!transactions.length) {
+      el.innerHTML = `<div class="wallet-history-empty">Nenhuma transação financeira ainda.</div>`;
+      return;
+    }
+
+    el.innerHTML = transactions.map(t => {
+      const status = String(t.status || "").toLowerCase();
+
+      const statusClass =
+        status === "approved" ? "approved" :
+        status === "pending" ? "pending" :
+        "other";
+
+      const typeLabel =
+        t.type === "deposit" ? "Depósito PIX" :
+        t.type === "withdraw" ? "Saque" :
+        t.type || "Transação";
+
+      return `
+        <div class="wallet-history-item">
+          <div>
+            <strong>${typeLabel}</strong>
+            <span>${Number(t.chips_amount || 0).toLocaleString("pt-BR")} fichas</span>
+          </div>
+
+          <div>
+            <span class="wallet-status ${statusClass}">
+              ${getWalletStatusLabel(t.status)}
+            </span>
+            <small>${formatMoneyFromCents(t.amount_cents)} · ${formatDate(t.created_at)}</small>
+          </div>
+        </div>
+      `;
+    }).join("");
+
+  } catch (err) {
+    console.error("Erro ao carregar histórico financeiro:", err);
+    el.innerHTML = `<div class="wallet-history-empty">Erro ao carregar histórico financeiro.</div>`;
+  }
+}
 
 async function saveAvatar() {
   const selectedAvatarUrl = AVATAR_LIST[currentAvatarIndex] || AVATAR_LIST[0];
