@@ -173,6 +173,10 @@ function bindEvents() {
     window.location.href = "./admin-dashboard.html";
   });
 
+  document.getElementById("btnGoFinance")?.addEventListener("click", () => {
+    window.location.href = "./admin-finance.html";
+  });
+
   document.getElementById("btnLogout")?.addEventListener("click", doLogout);
   document.getElementById("btnLogoutBottom")?.addEventListener("click", doLogout);
 }
