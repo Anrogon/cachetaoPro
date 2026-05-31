@@ -51,10 +51,15 @@ async function loadFinance() {
     }
 
     const summary = data.summary || {};
+    const today = data.today || {};
+    const revenue = data.revenue || {};
+
     const transactions = Array.isArray(data.transactions)
       ? data.transactions
       : [];
 
+    setText("financeTodayAmount", moneyFromCents(today.today_amount_cents));
+    setText("financeRevenueAmount", moneyFromCents(revenue.total_amount_cents));
     setText("financeTotalAmount", moneyFromCents(summary.approved_amount_cents));
     setText("financeTotalChips", Number(summary.approved_chips || 0).toLocaleString("pt-BR"));
     setText("financeApprovedCount", Number(summary.approved_deposits || 0).toLocaleString("pt-BR"));

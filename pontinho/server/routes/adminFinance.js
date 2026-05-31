@@ -26,6 +26,14 @@ router.get("/summary", requireAuth, requireAdmin, async (req, res) => {
         AND created_at::date = CURRENT_DATE
     `);
 
+    const totalRevenueResult = await pool.query(`
+        SELECT
+            COALESCE(SUM(amount_cents), 0) AS total_amount_cents
+        FROM wallet_transactions
+        WHERE type = 'deposit'
+            AND status = 'approved'
+    `);
+
     const recentResult = await pool.query(`
       SELECT
         wt.id,
@@ -47,10 +55,11 @@ router.get("/summary", requireAuth, requireAdmin, async (req, res) => {
     `);
 
     return res.json({
-      ok: true,
-      summary: summaryResult.rows[0],
-      today: todayResult.rows[0],
-      transactions: recentResult.rows,
+        ok: true,
+        summary: summaryResult.rows[0],
+        today: todayResult.rows[0],
+        revenue: totalRevenueResult.rows[0],
+        transactions: recentResult.rows,
     });
   } catch (err) {
     console.error("GET /admin/finance/summary error:", err);
