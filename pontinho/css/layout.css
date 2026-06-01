@@ -2350,3 +2350,64 @@ HOME - CARTEIRA PIX
 }
 
 /* Termina aqui*/
+
+/* =========================
+   MENU TOPO - LOGO + LINKS
+========================= */
+
+.top-nav{
+  display:flex;
+  justify-content:flex-end;
+  align-items:center;
+  padding:14px 34px;
+  background:rgba(0,0,0,.16);
+}
+
+.top-nav-right{
+  display:flex;
+  align-items:center;
+  gap:34px;
+}
+
+.top-nav-right a{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  color:#fff;
+  text-decoration:none;
+  font-size:14px;
+  font-weight:800;
+  text-shadow:0 2px 5px rgba(0,0,0,.6);
+}
+
+.top-nav-right a:hover{
+  color:#ffd54a;
+}
+
+.nav-icon{
+  font-size:23px;
+  line-height:1;
+}
+
+@media (max-width: 640px){
+  .top-nav{
+    padding:10px 12px;
+    justify-content:center;
+  }
+
+  .top-nav-right{
+    gap:14px;
+    flex-wrap:wrap;
+    justify-content:center;
+  }
+
+  .top-nav-right a{
+    font-size:14px;
+  }
+
+  .nav-icon{
+    font-size:18px;
+  }
+}
+
+/* Termina aqui*/

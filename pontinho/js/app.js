@@ -1393,6 +1393,41 @@ function bindHomeButtons() {
     };
   }
 
+  const navHome = document.getElementById("navHome");
+  if (navHome) {
+    navHome.onclick = (e) => {
+      e.preventDefault();
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    };
+  }
+
+  const navBuyChips = document.getElementById("navBuyChips");
+  if (navBuyChips) {
+    navBuyChips.onclick = (e) => {
+      e.preventDefault();
+      document.getElementById("btnBuyChips")?.click();
+    };
+  }
+
+  const navProfile = document.getElementById("navProfile");
+  if (navProfile) {
+    navProfile.onclick = (e) => {
+      e.preventDefault();
+      document.getElementById("btnTrain")?.click();
+    };
+  }
+
+  const navLogout = document.getElementById("navLogout");
+  if (navLogout) {
+    navLogout.onclick = (e) => {
+      e.preventDefault();
+      document.getElementById("btnLogout")?.click();
+    };
+  }
+
+
+
+
   const btnLogout = document.getElementById("btnLogout");
   if (btnLogout) {
     btnLogout.onclick = async () => {
@@ -1519,6 +1554,8 @@ async function refreshHomeUser() {
   const homeUserBalance = document.getElementById("homeUserBalance");
   const homeUserAvatar = document.getElementById("homeUserAvatar");
 
+  const topNav = document.getElementById("topNav");
+
   const btnLogin = document.getElementById("btnLogin");
   const btnSignup = document.getElementById("btnSignup");
   const btnLogout = document.getElementById("btnLogout");
@@ -1536,36 +1573,22 @@ async function refreshHomeUser() {
     if (homeUserBalance) homeUserBalance.textContent = "Saldo: —";
     if (homeUserAvatar) homeUserAvatar.src = "/assets/avatars/avatar-01.png";
 
+    if (topNav) topNav.style.display = "none";
+
     if (btnLogin) btnLogin.style.display = "";
     if (btnSignup) btnSignup.style.display = "";
 
     if (btnLogout) btnLogout.style.display = "none";
     if (btnSettings) btnSettings.style.display = "none";
     if (btnProfile) btnProfile.style.display = "none";
-    if (btnBuyChips) {
-      btnBuyChips.onclick = async () => {
-        walletModal?.classList.remove("hidden");
-
-        try {
-          const res = await fetch("http://localhost:3001/api/wallet/packages", {
-            credentials: "include"
-          });
-
-          const data = await res.json();
-
-          console.log("[WALLET PACKAGES]", data);
-
-        } catch (err) {
-          console.error(err);
-        }
-      };
-    }
+    if (btnBuyChips) btnBuyChips.style.display = "none";
 
     if (walletCloseBtn) {
       walletCloseBtn.onclick = () => {
         walletModal?.classList.add("hidden");
       };
     }
+
     if (btnClassic) btnClassic.style.display = "none";
     if (btnCrazy) btnCrazy.style.display = "none";
   }
@@ -1574,20 +1597,26 @@ async function refreshHomeUser() {
     state.user = user;
     state.currentUser = user;
     window.currentUser = user;
+
     if (homeUserName) homeUserName.textContent = user.username || "Usuário";
+
     if (homeUserBalance) {
       homeUserBalance.textContent = `Saldo: ${(Number(user.chipsBalance) || 0).toLocaleString("pt-BR")}`;
     }
+
     if (homeUserAvatar) {
       homeUserAvatar.src = user.avatarUrl || "/assets/avatars/avatar-01.png";
     }
+
+    if (topNav) topNav.style.display = "flex";
 
     if (btnLogin) btnLogin.style.display = "none";
     if (btnSignup) btnSignup.style.display = "none";
 
     if (btnLogout) btnLogout.style.display = "";
-    if (btnSettings) btnSettings.style.display = "";
+    if (btnSettings) btnSettings.style.display = "none";
     if (btnProfile) btnProfile.style.display = "";
+    if (btnBuyChips) btnBuyChips.style.display = "";
     if (btnClassic) btnClassic.style.display = "";
     if (btnCrazy) btnCrazy.style.display = "";
   }
