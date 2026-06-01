@@ -3024,7 +3024,7 @@ function advanceDealerAndCurrentSeat(room) {
   room.dealerSeat = getNextDealerSeat(room);
 
   if (room.dealerSeat) {
-    room.currentSeat = nextOccupiedSeat(room, room.dealerSeat);
+    room.currentSeat = room.dealerSeat;
   } else {
     room.currentSeat = null;
   }

@@ -1370,12 +1370,12 @@ function bindHomeButtons() {
     };
   }
 
-  const btnSettings = document.getElementById("btnSettings");
+  /*const btnSettings = document.getElementById("btnSettings");
   if (btnSettings) {
     btnSettings.onclick = () => {
       window.location.href = "./settings.html";
     };
-  }
+  }*/
 
   const btnClassic = document.getElementById("btnClassic");
   if (btnClassic) {
