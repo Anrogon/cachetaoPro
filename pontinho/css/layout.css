@@ -1855,14 +1855,16 @@ html, body {
 }
 
 .home-footer{
-  width: 100%;
-  margin-top: 24px;
+  width: 86%;
+  margin-top: 30px;
 
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-
+  padding: 12px 18px;
+  background: rgba(0,0,0,.18);
+  border-radius: 0 0 8px 8px;
   color: rgba(255,255,255,.75);
   font-size: 13px;
 }
@@ -2356,57 +2358,57 @@ HOME - CARTEIRA PIX
 ========================= */
 
 .top-nav{
-  display:flex;
-  justify-content:flex-end;
-  align-items:center;
-  padding:14px 34px;
-  background:rgba(0,0,0,.16);
+  width: 85%;
+  max-width: 1200px;
+  margin: 0 auto 16px;
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  padding: 12px 18px;
+  background: rgba(0,0,0,.18);
+  border-radius: 0 0 8px 8px;
 }
 
 .top-nav-right{
-  display:flex;
-  align-items:center;
-  gap:34px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 30px;
 }
 
 .top-nav-right a{
-  display:flex;
-  align-items:center;
-  gap:8px;
-  color:#fff;
-  text-decoration:none;
-  font-size:14px;
-  font-weight:800;
-  text-shadow:0 2px 5px rgba(0,0,0,.6);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #fff;
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 800;
+  text-shadow: 0 2px 5px rgba(0,0,0,.6);
 }
 
 .top-nav-right a:hover{
-  color:#ffd54a;
+  color: #ffd54a;
 }
 
 .nav-icon{
-  font-size:23px;
-  line-height:1;
+  font-size: 22px;
+  line-height: 1;
 }
 
 @media (max-width: 640px){
-  .top-nav{
-    padding:10px 12px;
-    justify-content:center;
+  #topNav{
+    display:none !important;
   }
+}
 
-  .top-nav-right{
-    gap:14px;
-    flex-wrap:wrap;
-    justify-content:center;
-  }
+.mobile-only-home-btn{
+  display: none !important;
+}
 
-  .top-nav-right a{
-    font-size:14px;
-  }
-
-  .nav-icon{
-    font-size:18px;
+@media (max-width: 640px){
+  .home-menu .mobile-only-home-btn{
+    display: flex !important;
   }
 }
 

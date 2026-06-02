@@ -1192,38 +1192,38 @@ function scheduleNextRoundWithRebuy(room, ms = 20000) {
     room.nextRoundTimeoutId = null;
   }
 
-  // Se só há rebuys automáticos de desconectados, não espera.
-  if (!hasConnectedChoices) {
-    room.rebuyDecisionUntil = 0;
+    // Se não há jogador conectado precisando decidir rebuy,
+    // não usa o tempo completo da janela de rebuy.
+    if (!hasConnectedChoices) {
+      room.rebuyDecisionUntil = 0;
 
-    const rebuys = applyPendingRebuys(room);
-    room.lastAppliedRebuys = rebuys;
+      const rebuys = applyPendingRebuys(room);
+      room.lastAppliedRebuys = rebuys;
 
-    // Recalcula vivos após aplicar os rebuys
-    const aliveAfterRebuy = (room.playersBySeat || []).filter(pl => pl && !pl.eliminated);
-    if (aliveAfterRebuy.length <= 1) {
-      room.matchEnded = true;
-      room.matchWinnerSeat = room.playersBySeat.indexOf(aliveAfterRebuy[0]) + 1;
+      // Recalcula vivos após aplicar os rebuys automáticos
+      const aliveAfterRebuy = (room.playersBySeat || []).filter(pl => pl && !pl.eliminated);
+      if (aliveAfterRebuy.length <= 1) {
+        room.matchEnded = true;
+        room.matchWinnerSeat = room.playersBySeat.indexOf(aliveAfterRebuy[0]) + 1;
 
+        finalizeMatchEconomy(room);
+        if (room?.id) sendState(room.id);
+        return;
+      }
 
-      finalizeMatchEconomy(room);
+      const nextRoundDelayMs = 1000;
+
+      room.nextRoundTimeoutId = setTimeout(() => {
+        room.nextRoundTimeoutId = null;
+        room.rebuyDecisionUntil = 0;
+
+        startNewRound(room);
+        if (room?.id) sendState(room.id);
+      }, nextRoundDelayMs);
+
       if (room?.id) sendState(room.id);
       return;
     }
-
-    room.rebuyDecisionUntil = Date.now() + ms;
-
-    room.nextRoundTimeoutId = setTimeout(() => {
-      room.nextRoundTimeoutId = null;
-      room.rebuyDecisionUntil = 0;
-
-      startNewRound(room);
-      if (room?.id) sendState(room.id);
-    }, ms);
-
-    if (room?.id) sendState(room.id);
-    return;
-  }
 
     room.rebuyDecisionUntil = Date.now() + ms;
 

@@ -1151,6 +1151,7 @@ async function validateCurrentSession() {
 // ===== BOTÕES DA HOME =====
 function openTablesFromHome(variant) {
   state.selectedVariant = variant;
+
   renderTablesScreen();
 
   document.getElementById("homeScreen").style.display = "none";
@@ -1426,7 +1427,19 @@ function bindHomeButtons() {
   }
 
 
+  const btnHowToPlay = document.getElementById("btnHowToPlay");
+  if (btnHowToPlay) {
+    btnHowToPlay.onclick = () => {
+      window.location.href = "./how-to-play.html";
+    };
+  }
 
+  const btnContact = document.getElementById("btnContact");
+  if (btnContact) {
+    btnContact.onclick = () => {
+      window.location.href = "./contact.html";
+    };
+  }
 
   const btnLogout = document.getElementById("btnLogout");
   if (btnLogout) {

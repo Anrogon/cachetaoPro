@@ -96,7 +96,7 @@ function ensureHomeStatusFeed() {
 }
 
 // Feed termina aqui
-
+/*
 export function showScreen(idToShow) {
   const screenMap = {
     home: "homeScreen",
@@ -114,6 +114,35 @@ export function showScreen(idToShow) {
 
     el.style.display = id === targetId ? "" : "none";
   });
+
+  if (targetId === "homeScreen") {
+    if (typeof ensureHomeStatusFeed === "function") {
+      setTimeout(() => ensureHomeStatusFeed(), 50);
+    }
+  }
+}*/
+
+export function showScreen(idToShow) {
+  const screenMap = {
+    home: "homeScreen",
+    tables: "tablesScreen",
+    game: "game",
+    homeScreen: "homeScreen",
+    tablesScreen: "tablesScreen",
+  };
+
+  const targetId = screenMap[idToShow] || idToShow;
+
+  ["homeScreen", "tablesScreen", "game"].forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+
+    el.style.display = id === targetId ? "" : "none";
+  });
+
+  if (typeof setTopNavVisible === "function") {
+    setTopNavVisible(targetId === "homeScreen");
+  }
 
   if (targetId === "homeScreen") {
     if (typeof ensureHomeStatusFeed === "function") {
