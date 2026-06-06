@@ -814,7 +814,9 @@ body{
   border-color: rgba(255,255,255,0.28);
 }
 
-.rebuy-btn:active, .rebuy-skip:active{ transform: translateY(1px); }
+.rebuy-btn:active, .rebuy-skip:active{
+  transform: translateY(1px);
+}
 
 .rebuy-foot{
   margin-top: 10px;

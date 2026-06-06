@@ -3,7 +3,7 @@ import { toggleSelectCard, comprarDoMonte, discardSelectedCard, layDownSelectedS
 import { addCardToTableGame, onClickLixo, reorderHandByIds, getRebuyCost, requestRebuy, playVictorySound } from "./actions.js";
 import { handPoints } from "./endgame.js"; 
 import { state, currentPlayer } from "./state.js";
-import { swapJokerOnTable, requestCancelCrazyBatidaAttempt, requestStartCrazyBatidaAttempt } from "./actions.js";
+import { swapJokerOnTable, requestCancelCrazyBatidaAttempt, requestStartCrazyBatidaAttempt, declineRebuy } from "./actions.js";
 
 // =============================
 // RESOLVER IMAGEM DA CARTA
@@ -1967,8 +1967,11 @@ export function renderRebuyOverlay() {
     return;
   }
 
+  const mySeat = Number(state.mySeat || 0);
+
   const eligible = (state.players || []).filter(pl =>
     pl &&
+    Number(pl.seat) === mySeat &&
     pl.eliminated === true &&
     pl.pendingRebuy !== true &&
     pl.rebuyDeclined !== true &&
@@ -2014,9 +2017,15 @@ export function renderRebuyOverlay() {
                 </div>
               </div>
 
-              <div class="rebuy-actions">
-                <button class="rebuy-btn" data-rebuy-id="${pl.id}">Rebuy</button>
-              </div>
+            <div class="rebuy-actions">
+              <button class="rebuy-btn" data-rebuy-id="${pl.id}">
+                Rebuy
+              </button>
+
+              <button class="rebuy-skip" data-decline-id="${pl.id}">
+                Cancelar
+              </button>
+            </div>
             </div>
           `;
         }).join("")}
@@ -2045,6 +2054,33 @@ export function renderRebuyOverlay() {
   window.renderAll?.();
   };
   });
+
+  overlay.querySelectorAll("[data-decline-id]").forEach(btn => {
+  btn.onclick = () => {
+    console.log("[CLIENT] clique no botão Cancelar Rebuy");
+
+    btn.disabled = true;
+
+    if (typeof declineRebuy !== "function") {
+      console.error("[CLIENT] declineRebuy não existe neste escopo");
+      btn.disabled = false;
+      return;
+    }
+
+    const ok = declineRebuy();
+
+    console.log("[CLIENT] resultado declineRebuy:", ok);
+
+    if (!ok) {
+      btn.disabled = false;
+      return;
+    }
+
+    btn.textContent = "Cancelado";
+
+    window.renderAll?.();
+  };
+});
 }
 
 export function renderEndMatchOverlay() {

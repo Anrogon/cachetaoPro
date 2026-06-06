@@ -1467,11 +1467,11 @@ function renderHomeLiveTables() {
   const el = document.getElementById("homeLiveTables");
   if (!el) return;
 
-  /*const tables = Object.values(state.tables || {}).slice(0, 3);*/
+  const tables = Object.values(state.tables || {}).slice(0, 3);
   // Mudar para mesas reais
 
 //delete esse bloco depois
-  let tables = Object.values(state.tables || {}).slice(0, 3);
+  /*let tables = Object.values(state.tables || {}).slice(0, 3);
 
   if (!tables.length) {
     tables = [
@@ -1479,7 +1479,7 @@ function renderHomeLiveTables() {
       { name: "Mesa 2", seatedCount: 3, maxSeats: 6, stake: 5000, variant: "CLASSIC" },
       { name: "Mesa 3", seatedCount: 1, maxSeats: 6, stake: 10000, variant: "CRAZY" }
     ];
-  }
+  }*/
   //até aqui
   
 

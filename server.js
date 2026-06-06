@@ -2320,6 +2320,7 @@ function getClientPlayer(room, client) {
 function isOutOfTurnAllowed(actionType) {
   return (
     actionType === "rebuy" ||
+    actionType === "declineRebuy" ||
     actionType === "startCrazyBatidaAttempt" ||
     actionType === "cancelCrazyBatidaAttempt"
   );
@@ -4251,6 +4252,62 @@ case "rebuy": {
   }
 
   break;
+}
+
+case "declineRebuy": {
+
+  console.log("[SERVER] declineRebuy recebido", {
+  player: player?.name,
+  seat: player?.seat,
+  tableId: room?.id
+});
+
+  if (!player) {
+    return { ok: false, msg: "Você não está sentado nesta mesa." };
+  }
+
+  if (!player.eliminated) {
+    return { ok: false, msg: "Você não está eliminado." };
+  }
+
+  if (!room.rebuyDecisionUntil || Date.now() > room.rebuyDecisionUntil) {
+    return { ok: false, msg: "Janela de Rebuy encerrada." };
+  }
+
+  player.pendingRebuy = false;
+  player.rebuyDeclined = true;
+
+  // Se não há mais ninguém precisando decidir, não espera o timer acabar.
+  if (!hasRebuyChoices(room)) {
+    if (room.nextRoundTimeoutId) {
+      clearTimeout(room.nextRoundTimeoutId);
+      room.nextRoundTimeoutId = null;
+    }
+
+    room.rebuyDecisionUntil = 0;
+
+    const rebuys = applyPendingRebuys(room);
+    room.lastAppliedRebuys = rebuys;
+
+    const aliveAfterRebuy = (room.playersBySeat || []).filter(pl => pl && !pl.eliminated);
+
+    if (aliveAfterRebuy.length <= 1) {
+      room.matchEnded = true;
+      room.matchWinnerSeat = room.playersBySeat.indexOf(aliveAfterRebuy[0]) + 1;
+
+      finalizeMatchEconomy(room);
+      if (room?.id) sendState(room.id);
+      return { ok: true };
+    }
+
+    startNewRound(room);
+    if (room?.id) sendState(room.id);
+    return { ok: true };
+  }
+
+  if (room?.id) sendState(room.id);
+
+  return { ok: true };
 }
 
 

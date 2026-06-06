@@ -1591,6 +1591,19 @@ showGameNotice("Rebuy só está disponível no modo online.");
   return false;
 }
 
+export function declineRebuy() {
+  console.log("[CLIENT] declineRebuy() chamada");
+
+  if (state?.room?.id && typeof window.wsSendAction === "function") {
+    window.wsSendAction({ type: "declineRebuy" });
+    console.log("[CLIENT] declineRebuy enviado via WS");
+    return true;
+  }
+
+  showGameNotice("Cancelar Rebuy só está disponível no modo online.");
+  return false;
+}
+
 // aplica rebuys pendentes no início da rodada (antes de ante/deal)
 export function applyPendingRebuys() {
   // garante que existe pot numérico
