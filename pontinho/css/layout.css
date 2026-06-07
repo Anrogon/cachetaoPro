@@ -1040,7 +1040,7 @@ body{
 
   /* hero: logo | menu | status */
   #homeScreen .home-shell{
-    width: min(1120px, 96vw);
+    width: min(95%, 96vw);
     display: grid;
     grid-template-columns: 1.2fr 0.7fr 0.6fr; /* logo | botões | status */
     gap: 18px;
@@ -1109,7 +1109,7 @@ body{
 
   /* banner */
   .home-banner {
-  width: min(1120px, 96vw);
+  width: min(95%, 96vw);
   height: 120px;
   margin: 14px auto;
   padding: 18px 28px;
@@ -1857,7 +1857,7 @@ html, body {
 }
 
 .home-footer{
-  width: 86%;
+  width: 95%;
   margin-top: 30px;
 
   display: flex;
@@ -1907,7 +1907,7 @@ html, body {
 ========================================================= */
 
 .home-live-section {
-  width: min(1120px, 96vw);
+  width: min(95%, 96vw);
   margin: 12px auto 0;
   padding: 16px;
   border-radius: 18px;
@@ -2360,8 +2360,8 @@ HOME - CARTEIRA PIX
 ========================= */
 
 .top-nav{
-  width: 85%;
-  max-width: 1200px;
+  width: 95%;
+  max-width: 1300px;
   margin: 0 auto 16px;
   display: flex;
   justify-content: flex-end;
