@@ -2105,32 +2105,6 @@ function finalizeMatchEconomy(room) {
   const rake = getHouseRake(room);
 const payout = getWinnerPayout(room);
 
-console.log("[AUDIT ECONOMIA FINAL]", {
-  matchPot: Number(room.matchPot) || 0,
-  rake,
-  payout,
-
-  totalTableChips: (room.playersBySeat || []).reduce(
-    (sum, p) => sum + (Number(p?.tableChips) || 0),
-    0
-  ),
-
-  totalChipsAntesDevolverMesa: (room.playersBySeat || []).reduce(
-    (sum, p) => sum + (Number(p?.chips) || 0),
-    0
-  ),
-
-  seats: (room.playersBySeat || []).map((p, idx) =>
-    p ? {
-      seat: idx + 1,
-      name: p.name,
-      chips: Number(p.chips) || 0,
-      tableChips: Number(p.tableChips) || 0,
-      total: (Number(p.chips) || 0) + (Number(p.tableChips) || 0)
-    } : null
-  )
-});
-
 winner.chips += payout;
 
   for (const p of room.playersBySeat || []) {

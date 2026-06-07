@@ -1954,6 +1954,18 @@ function buildChipStackHTML(potValue) {
 
 export function renderRebuyOverlay() {
   const gameEl = document.getElementById("game");
+  if (state.rebuyDecisionUntil && !window.rebuyOverlayTimer) {
+  window.rebuyOverlayTimer = setInterval(() => {
+    if (!state.rebuyDecisionUntil || Date.now() > state.rebuyDecisionUntil) {
+      clearInterval(window.rebuyOverlayTimer);
+      window.rebuyOverlayTimer = null;
+      document.getElementById("rebuyOverlay")?.remove();
+      return;
+    }
+
+    renderRebuyOverlay();
+  }, 1000);
+}
   if (!gameEl) return;
   if (state.matchEnded) {
     document.getElementById("rebuyOverlay")?.remove();
@@ -1978,9 +1990,45 @@ export function renderRebuyOverlay() {
     (pl.rebuyCount || 0) < 3
   );
 
+  const waitingRebuyPlayers = (state.players || []).filter(pl =>
+    pl &&
+    pl.eliminated === true &&
+    pl.pendingRebuy !== true &&
+    pl.rebuyDeclined !== true &&
+    (pl.rebuyCount || 0) < 3
+  );
+
   let overlay = document.getElementById("rebuyOverlay");
+
   if (!eligible.length) {
-    if (overlay) overlay.remove();
+
+    if (!waitingRebuyPlayers.length) {
+      if (overlay) overlay.remove();
+      return;
+    }
+
+    const secondsLeft = Math.max(
+      0,
+      Math.ceil((state.rebuyDecisionUntil - Date.now()) / 1000)
+    );
+
+    if (!overlay) {
+      overlay = document.createElement("div");
+      overlay.id = "rebuyOverlay";
+      overlay.className = "rebuy-overlay";
+      gameEl.appendChild(overlay);
+    }
+
+    overlay.innerHTML = `
+      <div class="rebuy-modal">
+        <div class="rebuy-title">Aguardando Rebuy...</div>
+
+        <div class="rebuy-sub">
+          Próxima rodada em <b>${secondsLeft}</b>s
+        </div>
+      </div>
+    `;
+
     return;
   }
 
