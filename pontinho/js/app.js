@@ -1828,7 +1828,7 @@ export function renderTablesScreen() {
           class="tables-back-btn"
           type="button"
         >
-          ← Voltar
+          ←
         </button>
       </div>
 
