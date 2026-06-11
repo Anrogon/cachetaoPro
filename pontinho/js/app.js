@@ -95,6 +95,39 @@ if (msg.type === "hello") {
   return;
 }
 
+async function sendWhenWsReady(message, options = {}) {
+  const timeoutMs = options.timeoutMs || 2500;
+  const label = options.label || "ação";
+
+  if (socket && socket.readyState === WebSocket.OPEN) {
+    socket.send(JSON.stringify(message));
+    return true;
+  }
+
+  console.warn(`[WS] não estava conectado para ${label}. Tentando reconectar...`);
+  showGameNotice("Reconectando...");
+
+  try {
+    connectWS?.();
+  } catch (err) {
+    console.error("[WS] erro ao tentar reconectar:", err);
+  }
+
+  const startedAt = Date.now();
+
+  while (Date.now() - startedAt < timeoutMs) {
+    if (socket && socket.readyState === WebSocket.OPEN) {
+      socket.send(JSON.stringify(message));
+      console.log(`[WS] ${label} enviada após reconexão`);
+      return true;
+    }
+
+    await new Promise(resolve => setTimeout(resolve, 100));
+  }
+
+  showGameNotice("Não foi possível reconectar. Tente novamente.");
+  return false;
+}
 
 // 1.5) table_public
 if (msg.type === "table_public") {
@@ -157,8 +190,20 @@ if (msg.type === "joined") {
 }
 
 // 3) state_public
+// 3) state_public
 if (msg.type === "state_public") {
   const pub = msg.payload || {};
+
+  if (
+    ignoredRoomAfterSpectatorExit &&
+    pub.tableId === ignoredRoomAfterSpectatorExit &&
+    state.room === null &&
+    state.spectator === false
+  ) {
+    console.log("[CLIENT] ignorando state_public após sair do espectador:", pub.tableId);
+    return;
+  }
+
   state.tableId = pub.tableId || state.tableId;
   state.matchPot = Number(pub.matchPot) || state.matchPot || 0;
 
@@ -931,13 +976,40 @@ function bindGameControls() {
 
 }
 
-// ✅ Voltar às mesas: sai da partida e volta pra lista de mesas
+
+let ignoredRoomAfterSpectatorExit = null;
+
+// ✅ Voltar às mesas: sai do modo espectador e volta pra lista de mesas
 window.backToTables = function backToTables() {
   stopTurnTimer();
 
-  // remove overlays visuais, se existirem
+  const tableId = state.room?.id;
+  ignoredRoomAfterSpectatorExit = tableId;
+
+  // remove overlays visuais
   document.getElementById("endMatchOverlay")?.remove();
   document.getElementById("rebuyOverlay")?.remove();
+  document.getElementById("btnExitSpectatorMode")?.remove();
+
+  // avisa o servidor
+  if (tableId && socket && socket.readyState === WebSocket.OPEN) {
+    socket.send(JSON.stringify({
+      type: "leaveTable",
+      payload: {
+        tableId,
+        reason: "exit_spectator"
+      }
+    }));
+  }
+
+  // limpa estado local
+  state.room = null;
+  state.selectedSeat = null;
+  state.mySeat = null;
+  state.spectator = false;
+  state.hand = [];
+  state.players = [];
+  state.private = null;
 
   state.matchEnded = false;
   state.canRematch = false;
@@ -946,38 +1018,31 @@ window.backToTables = function backToTables() {
   state.rematchVotes = {};
   state.rematchRequestedBySeat = null;
 
-  const tableId = state.room?.id;
-
-  // ✅ avisa o servidor que saiu da mesa
-  if (socket && socket.readyState === 1) {
-  socket.send(JSON.stringify({
-    type: "leaveTable",
-    payload: {
-      tableId,
-      reason: "back_to_tables"
-    }
-  }));
-  }
-
-  // limpa estado local
-  state.room = null;
-  state.selectedSeat = null;
-  state.mySeat = null;
-  state.spectator = false;
-
-  // reseta o estado do match/jogo
   resetMatchState({ keepPlayers: false });
+
+  // força sair da tela do jogo
+  document.getElementById("game")?.classList.remove("active");
+  document.getElementById("gameScreen")?.classList.remove("active");
+  document.getElementById("lobby")?.classList.remove("active");
+  document.getElementById("tablesScreen")?.classList.add("active");
 
   const tables = document.getElementById("tablesScreen");
   const lobby = document.getElementById("lobby");
   const game = document.getElementById("game");
+  const gameScreen = document.getElementById("gameScreen");
 
   if (tables) tables.style.display = "block";
   if (lobby) lobby.style.display = "none";
   if (game) game.style.display = "none";
+  if (gameScreen) gameScreen.style.display = "none";
 
-  try { renderTablesScreen(); } catch {}
   updateSpectatorUI();
+
+  try {
+    renderTablesScreen();
+  } catch (err) {
+    console.error("[CLIENT] erro ao renderizar mesas:", err);
+  }
 
   window.scrollTo?.(0, 0);
 };
@@ -1997,12 +2062,7 @@ export function renderTablesScreen() {
         seatEl.classList.add("empty");
         seatEl.title = `Assento ${s}`;
       }
-
-  seatEl.onclick = () => {
-  if (!socket || socket.readyState !== 1) {
-    showGameNotice("WS ainda não conectou. Atualize a página.");
-    return;
-  }
+seatEl.onclick = () => {
 
   const nome = getLoggedPlayerName();
   const avatarUrl =
@@ -2070,7 +2130,7 @@ socket.send(JSON.stringify({
   type: "joinTableGroup",
   payload: joinPayload
 }));
-  };
+};
 
       seatsEl.appendChild(seatEl);
     }
@@ -2084,19 +2144,19 @@ socket.send(JSON.stringify({
   }
 
     card.querySelector(`[data-watch="${t.id}"]`).onclick = () => {
-      if (!socket || socket.readyState !== 1) {
-        showGameNotice("WS ainda não conectou. Atualize a página.");
-        return;
-      }
-
-      const nome = getLoggedPlayerName();
-      state.room = { id: t.id, buyIn: t.buyIn };
-
-      socket.send(JSON.stringify({
-        type: "joinTable",
-        payload: { tableId: t.id, mode: "spectator", name: nome }
-      }));
-    };
+          if (!socket || socket.readyState !== 1) {
+            showGameNotice("WS ainda não conectou. Atualize a página.");
+            return;
+          }
+    
+          const nome = getLoggedPlayerName();
+          state.room = { id: t.id, buyIn: t.buyIn };
+    
+          socket.send(JSON.stringify({
+            type: "joinTable",
+            payload: { tableId: t.id, mode: "spectator", name: nome }
+          }));
+        };
 
     grid.appendChild(card);
   });
