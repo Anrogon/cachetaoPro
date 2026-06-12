@@ -1608,6 +1608,26 @@ const app = express();
 const server = http.createServer(app);
 const wss = new WebSocketServer({ server });
 
+function heartbeat() {
+  this.isAlive = true;
+}
+
+const wsHeartbeatInterval = setInterval(() => {
+  wss.clients.forEach((ws) => {
+    if (ws.isAlive === false) {
+      console.log("[WS] conexão morta encerrada pelo heartbeat");
+      return ws.terminate();
+    }
+
+    ws.isAlive = false;
+    ws.ping();
+  });
+}, 30000);
+
+wss.on("close", () => {
+  clearInterval(wsHeartbeatInterval);
+});
+
 const PORT = 3000;
 app.use(express.static("pontinho"));
 
@@ -4529,6 +4549,9 @@ function sanitizeRoom(room) {
 
 
 wss.on("connection", async (ws, req) => {
+
+  ws.isAlive = true;
+  ws.on("pong", heartbeat);
 
   const clientId = randomUUID();
   const authUser = await getAuthUserFromWsRequest(req);
