@@ -2394,11 +2394,10 @@ function removePlayerFromSeat(room, seat, clientId) {
   const p = room.playersBySeat?.[seat - 1];
   if (!p || p.clientId !== clientId) return false;
 
-  // Se a partida ainda não começou, devolve todo o stack reservado
+  // Se a partida ainda não começou, devolve somente as fichas reservadas da mesa
   if (!room.started && !room.matchEnded) {
-    const buyIn = Number(room.buyIn) || 0;
     const tableChips = Number(p.tableChips) || 0;
-    const refund = tableChips + buyIn;
+    const refund = tableChips;
 
     p.chips = Number(p.chips) || 0;
     p.chips += refund;
@@ -2410,8 +2409,6 @@ function removePlayerFromSeat(room, seat, clientId) {
       client.chips += refund;
       client.chipsBalance = client.chips;
     }
-
-    room.matchPot = Math.max(0, (Number(room.matchPot) || 0) - buyIn);
   }
 
   room.playersBySeat[seat - 1] = null;
