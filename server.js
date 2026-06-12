@@ -2394,13 +2394,22 @@ function removePlayerFromSeat(room, seat, clientId) {
   const p = room.playersBySeat?.[seat - 1];
   if (!p || p.clientId !== clientId) return false;
 
-  // Se a partida ainda não começou, devolve a reserva da mesa
+  // Se a partida ainda não começou, devolve todo o stack reservado
   if (!room.started && !room.matchEnded) {
     const buyIn = Number(room.buyIn) || 0;
     const tableChips = Number(p.tableChips) || 0;
+    const refund = tableChips + buyIn;
 
     p.chips = Number(p.chips) || 0;
-    p.chips += tableChips + buyIn;
+    p.chips += refund;
+    p.tableChips = 0;
+
+    const client = clients.get(clientId);
+    if (client) {
+      client.chips = Number(client.chips) || 0;
+      client.chips += refund;
+      client.chipsBalance = client.chips;
+    }
 
     room.matchPot = Math.max(0, (Number(room.matchPot) || 0) - buyIn);
   }
