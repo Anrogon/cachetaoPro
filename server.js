@@ -4808,6 +4808,15 @@ if (msg.type === "joinTableGroup") {
 
 const mesaStack = (Number(room.buyIn) || 0) * 10;
 
+console.log("[JOIN CHIPS CHECK]", {
+  player: c.name,
+  userId: c.userId,
+  tableId,
+  buyIn: room.buyIn,
+  clientChips,
+  mesaStack
+});
+
 if (clientChips < mesaStack) {
   return send(ws, "error", {
     message: "Saldo insuficiente para entrar nesta mesa."
