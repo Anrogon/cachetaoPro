@@ -4629,7 +4629,7 @@ if (msg.type === "leaveTable") {
 
       if (p && p.clientId === clientId) {
         if (!room.started || room.matchEnded) {
-          room.playersBySeat[seat - 1] = null;
+          removePlayerFromSeat(room, seat, clientId);
         } else {
           p.disconnected = true;
         }
