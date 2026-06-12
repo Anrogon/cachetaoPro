@@ -2179,9 +2179,9 @@ function finalizeMatchEconomy(room) {
   if (!winner) return;
 
   const rake = getHouseRake(room);
-const payout = getWinnerPayout(room);
+  const payout = getWinnerPayout(room);
 
-winner.chips += payout;
+  winner.chips += payout;
 
   for (const p of room.playersBySeat || []) {
     if (!p) continue;
@@ -2393,6 +2393,17 @@ function removePlayerFromSeat(room, seat, clientId) {
 
   const p = room.playersBySeat?.[seat - 1];
   if (!p || p.clientId !== clientId) return false;
+
+  // Se a partida ainda não começou, devolve a reserva da mesa
+  if (!room.started && !room.matchEnded) {
+    const buyIn = Number(room.buyIn) || 0;
+    const tableChips = Number(p.tableChips) || 0;
+
+    p.chips = Number(p.chips) || 0;
+    p.chips += tableChips + buyIn;
+
+    room.matchPot = Math.max(0, (Number(room.matchPot) || 0) - buyIn);
+  }
 
   room.playersBySeat[seat - 1] = null;
   return true;
