@@ -1,6 +1,12 @@
 require("dotenv").config();
 
+const jwt = require("jsonwebtoken");
 const pool = require("./pontinho/server/config/db");
+
+const express = require("express");
+const http = require("http");
+const { WebSocketServer } = require("ws");
+const { randomUUID } = require("crypto");
 
 
 function isJoker(card) {
@@ -1594,11 +1600,6 @@ function sortSequenceCards(cards, aceHigh) {
   return ordered;
 }
 
-const express = require("express");
-const http = require("http");
-const { WebSocketServer } = require("ws");
-const { randomUUID } = require("crypto");
-
 function makeReconnectToken() {
   return randomUUID();
 }
@@ -1609,6 +1610,61 @@ const wss = new WebSocketServer({ server });
 
 const PORT = 3000;
 app.use(express.static("pontinho"));
+
+function getCookieFromHeader(cookieHeader, name) {
+  if (!cookieHeader) return null;
+
+  const cookies = String(cookieHeader).split(";");
+
+  for (const cookie of cookies) {
+    const [rawKey, ...rest] = cookie.trim().split("=");
+    if (rawKey === name) {
+      return decodeURIComponent(rest.join("="));
+    }
+  }
+
+  return null;
+}
+
+async function getAuthUserFromWsRequest(req) {
+  try {
+    const token = getCookieFromHeader(req.headers.cookie, "pontinho_token");
+
+    if (!token) return null;
+
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+
+    const result = await pool.query(
+      `
+      SELECT id, username, email, chips_balance, is_admin, is_blocked, session_version
+      FROM users
+      WHERE id = $1
+      LIMIT 1
+      `,
+      [decoded.userId]
+    );
+
+    const user = result.rows[0];
+    if (!user) return null;
+    if (user.is_blocked === true) return null;
+
+    const tokenSessionVersion = Number(decoded.sessionVersion || 1);
+    const dbSessionVersion = Number(user.session_version || 1);
+
+    if (tokenSessionVersion !== dbSessionVersion) return null;
+
+    return {
+      id: user.id,
+      username: user.username,
+      email: user.email,
+      chipsBalance: Number(user.chips_balance) || 0,
+      isAdmin: user.is_admin === true || user.is_admin === 1,
+    };
+  } catch (err) {
+    console.error("[WS AUTH] sessão inválida:", err.message);
+    return null;
+  }
+}
 
 // --------------------
 // Config de mesas
@@ -4472,16 +4528,20 @@ function sanitizeRoom(room) {
 }
 
 
-wss.on("connection", (ws) => {
+wss.on("connection", async (ws, req) => {
 
   const clientId = randomUUID();
+  const authUser = await getAuthUserFromWsRequest(req);
 
   clients.set(clientId, {
   ws,
-  name: "Visitante",
+  name: authUser?.username || "Visitante",
 
-  chips: 0,
-  chipsBalance: 0,
+  userId: authUser?.id || null,
+  email: authUser?.email || null,
+
+  chips: authUser?.chipsBalance || 0,
+  chipsBalance: authUser?.chipsBalance || 0,
 
   tableId: null,
   seat: null,
@@ -4490,7 +4550,7 @@ wss.on("connection", (ws) => {
   // segurança
   lastActionAt: 0,
   lastSeq: 0
-  });
+});
 
   broadcastOnlineStatus();
 
@@ -4604,11 +4664,7 @@ if (msg.type === "joinTableGroup") {
     return send(ws, "error", { message: "Mesa inválida." });
   }
 
-  const clientChips = Number(msg.payload?.chipsBalance ?? 0);
-
-  c.chips = clientChips;
-  c.chipsBalance = clientChips;
-  c.userId = msg.payload?.userId || c.userId || null;
+  const clientChips = Number(c.chipsBalance ?? c.chips ?? 0);
 
     if (name) {
       c.name = String(name).slice(0, 20);
