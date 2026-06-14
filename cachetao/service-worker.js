@@ -1,4 +1,4 @@
-const CACHE_NAME = "pontinho-play-pwa-v1";
+const CACHE_NAME = "cachetao-pro-pwa-v1";
 
 self.addEventListener("install", (event) => {
   console.log("[PWA] Service Worker instalado");

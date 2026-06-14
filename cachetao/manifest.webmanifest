@@ -1,7 +1,7 @@
 {
   "name": "Cachetão Pro",
-  "short_name": "Pontinho",
-  "description": "Jogo online de Pontinho Classic e Crazy",
+  "short_name": "Cachetão",
+  "description": "Jogo online de Cachetão Pro",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",

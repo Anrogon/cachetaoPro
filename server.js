@@ -1,7 +1,7 @@
 require("dotenv").config();
 
 const jwt = require("jsonwebtoken");
-const pool = require("./pontinho/server/config/db");
+const pool = require("./cachetao/server/config/db");
 
 const express = require("express");
 const http = require("http");
@@ -1667,7 +1667,7 @@ wss.on("close", () => {
 });
 
 const PORT = 3000;
-app.use(express.static("pontinho"));
+app.use(express.static("cachetao"));
 
 function getCookieFromHeader(cookieHeader, name) {
   if (!cookieHeader) return null;
