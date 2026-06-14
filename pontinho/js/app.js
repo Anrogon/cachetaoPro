@@ -156,11 +156,31 @@ if (msg.type === "joined") {
 
   const { tableId, mode, seat, reconnectToken } = msg.payload || {};
 
+  // ✅ Se estava tentando assistir outra mesa e chegou joined antigo, ignora
+  if (
+    mode === "spectator" &&
+    pendingSpectatorJoinTableId &&
+    tableId !== pendingSpectatorJoinTableId &&
+    !String(tableId || "").startsWith(String(pendingSpectatorJoinTableId) + "#")
+  ) {
+    console.log("[WS] joined spectator ignorado:", {
+      pending: pendingSpectatorJoinTableId,
+      received: tableId
+    });
+    return;
+  }
+
   state.room = state.room || {};
   state.room.id = tableId;
 
   state.spectator = (mode === "spectator");
   state.mySeat = seat ?? null;
+
+  // ✅ entrou de fato como espectador
+  if (mode === "spectator") {
+    pendingSpectatorJoinTableId = null;
+    ignoredRoomAfterSpectatorExit = null;
+  }
 
   if (tableId && seat && reconnectToken) {
     localStorage.setItem(
@@ -169,15 +189,13 @@ if (msg.type === "joined") {
     );
   }
 
-  // garante que a mesa exista no snapshot local
   window.state = window.state || {};
   window.state.tables = window.state.tables || {};
   window.state.tables[tableId] = window.state.tables[tableId] || { id: tableId };
 
   console.log("[WS] joined", { tableId, mode, seat, reconnectToken });
 
-  // jogador fica aguardando no lobby; espectador pode ver a mesa
-    if (mode === "spectator") {
+  if (mode === "spectator") {
     showScreen("game");
     updateSpectatorUI();
   } else {
@@ -189,10 +207,15 @@ if (msg.type === "joined") {
   return;
 }
 
-// 3) state_public
+
 // 3) state_public
 if (msg.type === "state_public") {
   const pub = msg.payload || {};
+
+  if (state.room === null && state.spectator === false) {
+  console.log("[CLIENT] ignorando state_public fora da mesa:", pub.tableId);
+  return;
+  }
 
   if (
     ignoredRoomAfterSpectatorExit &&
@@ -516,9 +539,17 @@ if (pub.started && !pub.matchEnded) {
 }
 
 // 4) state_private
-  if (msg.type === "state_private") {
-  const { seat, hand } = msg.payload || {};
-  state.canRematch = !!msg.payload.canRematch;
+if (msg.type === "state_private") {
+  const payload = msg.payload || {};
+
+  if (state.room === null && state.spectator === false) {
+    console.log("[CLIENT] ignorando state_private fora da mesa");
+    return;
+  }
+
+  const { seat, hand } = payload;
+
+  state.canRematch = !!payload.canRematch;
 
   const fixedHand = Array.isArray(hand)
     ? hand.map(c => (c && typeof c === "object" ? { ...c } : c))
@@ -979,6 +1010,9 @@ function bindGameControls() {
 
 let ignoredRoomAfterSpectatorExit = null;
 
+let pendingSpectatorJoinTableId = null;
+
+
 // ✅ Voltar às mesas: sai do modo espectador e volta pra lista de mesas
 window.backToTables = function backToTables() {
   stopTurnTimer();
@@ -1127,6 +1161,55 @@ function updateSpectatorUI() {
   document.querySelectorAll('button[onclick*="setHandSort"]').forEach(btn => {
     btn.style.display = isSpectator ? "none" : "";
   });
+  // botão mobile para voltar às mesas a partir da tela do jogo
+  const isMobile = true;
+  const isInGame = !!state.room?.id;
+
+  let gameBackBtn = document.getElementById("btnMobileBackToTables");
+
+  if (isMobile && isInGame) {
+    if (!gameBackBtn) {
+      gameBackBtn = document.createElement("button");
+      gameBackBtn.id = "btnMobileBackToTables";
+      const isMobileLayout =
+      window.matchMedia?.("(max-width: 768px)")?.matches;
+
+    gameBackBtn.textContent = isMobileLayout
+      ? "⬅"
+      : "Voltar às mesas";
+
+      if (isMobileLayout) {
+        gameBackBtn.style.minWidth = "42px";
+        gameBackBtn.style.padding = "8px";
+      } else {
+        gameBackBtn.style.minWidth = "";
+        gameBackBtn.style.padding = "8px 12px";
+      }
+
+      gameBackBtn.style.position = "absolute";
+      gameBackBtn.style.top = "14px";
+      gameBackBtn.style.right = "14px";
+      gameBackBtn.style.zIndex = "9999";
+      gameBackBtn.style.padding = "8px 12px";
+      gameBackBtn.style.borderRadius = "10px";
+      gameBackBtn.style.border = "1px solid rgba(255,255,255,0.25)";
+      gameBackBtn.style.background = "rgba(0,0,0,0.45)";
+      gameBackBtn.style.color = "#fff";
+      gameBackBtn.style.fontWeight = "800";
+      gameBackBtn.style.cursor = "pointer";
+
+      gameBackBtn.onclick = () => {
+        window.backToTables?.();
+      };
+
+      document.getElementById("game")?.appendChild(gameBackBtn);
+    }
+
+    gameBackBtn.style.display = "";
+  } else if (gameBackBtn) {
+    gameBackBtn.style.display = "none";
+  }
+
 }
 
 function enforceForcedPasswordChange() {
@@ -2144,19 +2227,22 @@ socket.send(JSON.stringify({
   }
 
     card.querySelector(`[data-watch="${t.id}"]`).onclick = () => {
-          if (!socket || socket.readyState !== 1) {
-            showGameNotice("WS ainda não conectou. Atualize a página.");
-            return;
-          }
-    
-          const nome = getLoggedPlayerName();
-          state.room = { id: t.id, buyIn: t.buyIn };
-    
-          socket.send(JSON.stringify({
-            type: "joinTable",
-            payload: { tableId: t.id, mode: "spectator", name: nome }
-          }));
-        };
+      if (!socket || socket.readyState !== WebSocket.OPEN) {
+        showGameNotice("WS ainda não conectou. Atualize a página.");
+        return;
+      }
+
+      const nome = getLoggedPlayerName();
+
+      // ✅ não assume a mesa antes do servidor confirmar
+      pendingSpectatorJoinTableId = t.id;
+      ignoredRoomAfterSpectatorExit = null;
+
+      socket.send(JSON.stringify({
+        type: "joinTable",
+        payload: { tableId: t.id, mode: "spectator", name: nome }
+      }));
+    };
 
     grid.appendChild(card);
   });

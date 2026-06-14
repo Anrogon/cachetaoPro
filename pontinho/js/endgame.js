@@ -86,39 +86,37 @@ export function validaBatida(jogador) {
     // TRINCA — PONTINHO CLÁSSICO (3 naipes permitidos; pode repetir dentro deles)
     // =========================
     if (jogo.type === "TRINCA") {
-      // na batida, trinca não pode ser só coringa
-      if (reais.length < 3) return false;
+      if (reais.length === 0) return false;
 
       const valor = reais[0].valor;
       for (const c of reais) {
         if (c.valor !== valor) return false;
       }
 
-      // ✅ Naipes permitidos (preferencialmente os 3 naipes "iniciais" salvos)
-      // Se não existir, deduz pelos primeiros 3 naipes distintos vistos na trinca.
-      let allowed = Array.isArray(jogo.allowedSuits) ? jogo.allowedSuits : null;
+      const naipesReais = reais.map(c => c.naipe).filter(Boolean);
+      const naipesUnicos = new Set(naipesReais);
 
-      if (!allowed) {
-        const uniq = [];
-        for (const c of reais) {
-          if (!uniq.includes(c.naipe)) uniq.push(c.naipe);
-          if (uniq.length === 3) break;
-        }
-        allowed = uniq;
+      // Nunca permite naipe real repetido em trinca
+      // Ex: 8♥ 8♥ 🃏 inválido
+      if (naipesUnicos.size !== naipesReais.length) return false;
+
+      // Trinca normal sem coringa: precisa ter 3 ou 4 cartas reais de naipes diferentes
+      if (coringas.length === 0) {
+        if (reais.length < 3) return false;
+        if (reais.length > 4) return false;
+        continue;
       }
 
-      // Pontinho clássico exige exatamente 3 naipes permitidos
-      if (!Array.isArray(allowed) || allowed.length !== 3) return false;
-
-      // ✅ não pode aparecer naipe fora dos permitidos (bloqueia o 4º naipe)
-      for (const c of reais) {
-        if (!allowed.includes(c.naipe)) return false;
+      // Trinca com coringa na batida:
+      // permitido somente 2 naipes reais diferentes + 1 coringa
+      if (coringas.length === 1) {
+        if (reais.length !== 2) return false;
+        if (naipesUnicos.size !== 2) return false;
+        continue;
       }
 
-      // ✅ trinca não permite coringa na batida (se você quiser permitir, a gente muda)
-      if (coringas.length > 0) return false;
-
-      continue;
+      // 2 coringas + 1 carta já é tratado na REGRA 9 acima.
+      return false;
     }
 
     // tipo desconhecido => inválido
@@ -244,16 +242,4 @@ export function applyRoundScoring(winnerId = state.players?.[state.currentPlayer
     return;
   }
 }
-/*
-  // 4) não acabou: vencedor recebe o pote inteiro da rodada
-  const winner = state.players.find(x => x.id === winnerId);
-  if (winner && !winner.eliminated) {
-    winner.chips = Number(winner.chips) || 0;
-    winner.chips += state.matchPot;
-    state.lastWinnerId = winnerId;
-  }
-
-  // 5) zera pote no final da rodada normal
-  state.matchPot = 0;
-  */
 

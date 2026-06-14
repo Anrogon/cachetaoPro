@@ -1442,11 +1442,49 @@ function validateMeldCards(room, cards) {
       const distinctSuits = [...new Set(suits)];
 
       if (isCrazy(room)) {
-        const crazyTrincaCheck = validateCrazyTrincaShape(cards, { initial: true });
-        if (!crazyTrincaCheck.ok) {
-          return crazyTrincaCheck;
-        }
+      const realCards = cards.filter(c => !isJoker(c));
+      const jokerCount = cards.length - realCards.length;
+
+      const realSuits = realCards
+        .map(c => getNaipe(c))
+        .filter(Boolean);
+
+      const uniqueRealSuits = new Set(realSuits);
+
+      // Regra MÃE da trinca Crazy:
+      // precisa ter pelo menos 3 naipes diferentes na baixada normal.
+      // Repetir naipe depois disso é permitido.
+      if (jokerCount === 0 && uniqueRealSuits.size < 3) {
+        return {
+          ok: false,
+          msg: "Trinca precisa ter pelo menos 3 naipes diferentes."
+        };
       }
+
+      // Trinca com coringa não pode ser baixada normalmente.
+      // Só é permitida na batida.
+      if (jokerCount > 0) {
+        return {
+          ok: false,
+          msg: "Trinca com coringa só é permitida na batida."
+        };
+      }
+
+      // Baixada normal no Crazy:
+      // - sem coringa: 3 ou 4 cartas reais, todos os naipes diferentes
+      // - com coringa: somente 2 naipes reais diferentes + 1 coringa, e apenas para batida
+      if (jokerCount > 0) {
+        return {
+          ok: false,
+          msg: "Trinca com coringa só é permitida na batida."
+        };
+      }
+
+      const crazyTrincaCheck = validateCrazyTrincaShape(cards, { initial: true });
+      if (!crazyTrincaCheck.ok) {
+        return crazyTrincaCheck;
+      }
+    }
 
       return { ok: true, kind: "TRINCA" };
     }
@@ -3745,6 +3783,19 @@ function canUseBatidaException(room, player, selectedCards, context = {}) {
         const distinctRealSuits = [...new Set(realSuits)];
         const totalSuitSlots = distinctRealSuits.length + trincaJokers.length;
 
+        const batidaRealSuits = nonJokers
+          .map(c => getNaipe(c))
+          .filter(Boolean);
+
+        const batidaUniqueRealSuits = new Set(batidaRealSuits);
+
+        if (batidaUniqueRealSuits.size !== batidaRealSuits.length) {
+          return {
+            ok: false,
+            msg: "Trinca com coringa precisa ter naipes reais diferentes."
+          };
+        }
+
         if (totalSuitSlots >= 3 && totalSuitSlots <= 8) {
           return {
             ok: true,
@@ -4824,15 +4875,6 @@ if (msg.type === "joinTableGroup") {
 */
 
 const mesaStack = (Number(room.buyIn) || 0) * 10;
-
-console.log("[JOIN CHIPS CHECK]", {
-  player: c.name,
-  userId: c.userId,
-  tableId,
-  buyIn: room.buyIn,
-  clientChips,
-  mesaStack
-});
 
 if (clientChips < mesaStack) {
   return send(ws, "error", {
