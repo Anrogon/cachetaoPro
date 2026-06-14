@@ -5062,7 +5062,7 @@ if (msg.type === "keepSeatForNextMatch") {
   });
 
   server.listen(PORT, () => {
-    console.log(`🃏 Pontinho Play rodando em http://localhost:${PORT}`);
+    console.log(`🃏 Cachetão Pro rodando em http://localhost:${PORT}`);
   });
 
 
