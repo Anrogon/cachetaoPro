@@ -164,8 +164,8 @@
   }
 
   #tablesGrid > .table-card .seat {
-    width: 30px !important;
-    height: 30px !important;
+    width: 25px !important;
+    height: 25px !important;
 
     font-size: 10px !important;
     font-weight: 800 !important;
@@ -173,39 +173,22 @@
     border-width: 1px !important;
   }
 
-  #tablesGrid > .table-card .seat.pos1 {
-    left: -5% !important;
-    top: 50% !important;
-    transform: translateY(-50%) !important;
-  }
+/* ✅ posições da sala de mesas móbile — Cachetão Pro 10 lugares */
 
-  #tablesGrid > .table-card .seat.pos2 {
-    left: 15% !important;
-    top: 6px !important;
-  }
+.seat.pos1  { left: 50%; top: 96%; transform: translate(-50%, -50%); }
+.seat.pos2  { left: 25%; top: 96%; transform: translate(-50%, -50%); }
 
-  #tablesGrid > .table-card .seat.pos3 {
-    left: 45% !important;
-    top: -6px !important;
-    transform: translateX(-50%) !important;
-  }
+.seat.pos3  { left: 1%;  top: 70%; transform: translate(-50%, -50%); }
+.seat.pos4  { left: 1%;  top: 25%; transform: translate(-50%, -50%); }
 
-  #tablesGrid > .table-card .seat.pos4 {
-    left: 75% !important;
-    top: 6px !important;
-  }
+.seat.pos5  { left: 25%; top: 0%;  transform: translate(-50%, -50%); }
+.seat.pos6  { left: 50%; top: 0%; transform: translate(-50%, -50%); }
+.seat.pos7  { left: 72%; top: 0%; transform: translate(-50%, -50%); }
 
-  #tablesGrid > .table-card .seat.pos5 {
-    left: 90% !important;
-    top: 50% !important;
-    transform: translateY(-50%) !important;
-  }
+.seat.pos8  { left: 98%; top: 25%; transform: translate(-50%, -50%); }
+.seat.pos9  { left: 98%; top: 70%; transform: translate(-50%, -50%); }
 
-  #tablesGrid > .table-card .seat.pos6 {
-    left: 45% !important;
-    top: 80% !important;
-    transform: translateX(-50%) !important;
-  }
+.seat.pos10 { left: 72%; top: 96%; transform: translate(-50%, -50%); }
 
   #tablesGrid > .table-card .watch-text {
     display: none !important;

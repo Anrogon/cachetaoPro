@@ -1728,19 +1728,12 @@ async function getAuthUserFromWsRequest(req) {
 // Config de mesas
 // --------------------
 const TABLES = [
-  { id: "S1", name: "Mesa 1", buyIn: 1000, variant: "CLASSIC" },
-  { id: "S2", name: "Mesa 2", buyIn: 5000, variant: "CLASSIC" },
-  { id: "S3", name: "Mesa 3", buyIn: 10000, variant: "CLASSIC" },
-  { id: "S4", name: "Mesa 4", buyIn: 20000, variant: "CLASSIC" },
-  { id: "S5", name: "Mesa 5", buyIn: 50000, variant: "CLASSIC" },
-  { id: "S6", name: "Mesa 6", buyIn: 100000, variant: "CLASSIC" },
-
-  { id: "C1", name: "Mesa 1", buyIn: 1000, variant: "CRAZY" },
-  { id: "C2", name: "Mesa 2", buyIn: 5000, variant: "CRAZY" },
-  { id: "C3", name: "Mesa 3", buyIn: 10000, variant: "CRAZY" },
-  { id: "C4", name: "Mesa 4", buyIn: 20000, variant: "CRAZY" },
-  { id: "C5", name: "Mesa 5", buyIn: 50000, variant: "CRAZY" },
-  { id: "C6", name: "Mesa 6", buyIn: 100000, variant: "CRAZY" }
+  { id: "K1", name: "Mesa 1", buyIn: 1000, variant: "CACHETAO" },
+  { id: "K2", name: "Mesa 2", buyIn: 5000, variant: "CACHETAO" },
+  { id: "K3", name: "Mesa 3", buyIn: 10000, variant: "CACHETAO" },
+  { id: "K4", name: "Mesa 4", buyIn: 20000, variant: "CACHETAO" },
+  { id: "K5", name: "Mesa 5", buyIn: 50000, variant: "CACHETAO" },
+  { id: "K6", name: "Mesa 6", buyIn: 100000, variant: "CACHETAO" }
 ];
 
 const rooms = new Map();
@@ -1760,7 +1753,8 @@ function getBaseTableConfig(tableGroupId) {
 
 function hasFreeSeat(room, seat) {
   const s = Number(seat);
-  return s >= 1 && s <= 6 && !room.playersBySeat?.[s - 1];
+  return s >= 1 && s <= room.playersBySeat.length &&
+         !room.playersBySeat?.[s - 1];
 }
 
 function findOrCreateRoomForGroup(tableGroupId, seat) {
@@ -1817,7 +1811,7 @@ function makeRoom(t) {
 
     variant: String(t?.variant || "CLASSIC").toUpperCase(),
 
-    playersBySeat: Array(6).fill(null),
+    playersBySeat: Array(10).fill(null),
     spectators: new Set(),
     deck: [],
     discard: [],
@@ -1826,7 +1820,7 @@ function makeRoom(t) {
     startAt: 0,
     currentSeat: 1,
     phase: "COMPRAR",
-    minPlayersToStart: 3, /* muda nº de jogadores para começar*/
+    minPlayersToStart: 5, /* muda nº de jogadores para começar*/
     mustUseJokerBySeat: {},
     mustUseDiscardCardBySeat: {},
 
@@ -2149,8 +2143,8 @@ async function persistMatchStats(room) {
 
     const winnerSeat = Number(room.matchWinnerSeat) || 0;
 
-    for (let seat = 1; seat <= 6; seat++) {
-      const p = room.playersBySeat[seat - 1];
+    for (let seat = 1; seat <= room.playersBySeat.length; seat++) {
+    const p = room.playersBySeat[seat - 1];
 
       if (!p?.userId) continue;
 
@@ -2279,6 +2273,7 @@ function sendState(roomId) {
     phase: room.phase,
     currentSeat: room.currentSeat,
     buyIn: room.buyIn,
+    maxSeats: room.playersBySeat.length,
     ante: Math.ceil((room.buyIn || 0) / 2),
     variant: getRoomVariant(room),
     turnEndsAt: Number(room.turnEndsAt) || 0,
@@ -2312,10 +2307,11 @@ function sendState(roomId) {
     winnerSeat: room.winnerSeat ?? null,
     rebuyDecisionUntil: room.rebuyDecisionUntil || 0,
     startAt: room.startAt || 0,
-    minPlayersToStart: room.minPlayersToStart || 2,
+    minPlayersToStart: room.minPlayersToStart || 5,
 
-    seats: room.playersBySeat.map(p =>
+    seats: room.playersBySeat.map((p, idx) =>
       p ? {
+        seat: idx + 1,
         name: p.name,
         avatarUrl: p.avatarUrl || "/assets/avatars/avatar-01.png",
         chips: p.chips,
@@ -2336,9 +2332,9 @@ function sendState(roomId) {
     tableMelds: room.tableMelds || []
   };
 
-    for (let seat = 1; seat <= 6; seat++) {
-    const player = room.playersBySeat[seat - 1];
-    if (!player) continue;
+    for (let seat = 1; seat <= room.playersBySeat.length; seat++) {
+  const player = room.playersBySeat[seat - 1];
+  if (!player) continue;
 
     const client = clients.get(player.clientId);
     if (!client?.ws || client.ws.readyState !== 1) continue;
@@ -2966,7 +2962,7 @@ const initialTableChips = Math.max(0, stake - getBuyIn(room));
   room.dealerSeat = getNextDealerSeat(room);*/
 
 
-   for (let s = 1; s <= 6; s++) {
+   for (let s = 1; s <= 10; s++) {
     if (room.playersBySeat[s - 1]) {
       room.currentSeat = s;
       break;
@@ -3007,7 +3003,7 @@ const initialTableChips = Math.max(0, stake - getBuyIn(room));
   room.discard = [];
   room.tableMelds = [];
 
-  for (let s = 1; s <= 6; s++) {
+  for (let s = 1; s <= 10; s++) {
     const p = room.playersBySeat[s - 1];
     if (!p) continue;
 
@@ -3111,7 +3107,7 @@ function nextOccupiedSeat(room, fromSeat) {
 
 function getNextDealerSeat(room) {
   const players = room.playersBySeat || [];
-  const total = players.length || 6;
+  const total = players.length || 10;
   const lastDealer = Number(room.dealerSeat) || 0;
 
   for (let step = 1; step <= total; step++) {
@@ -4672,7 +4668,7 @@ if (msg.type === "leaveTable") {
     const room = rooms.get(tableId);
     const seat = Number(c.seat);
 
-    if (seat >= 1 && seat <= 6) {
+    if (seat >= 1 && seat <= (room.playersBySeat?.length || 10)) {
       const p = room.playersBySeat?.[seat - 1];
 
       if (p && p.clientId === clientId) {
@@ -4720,7 +4716,7 @@ if (msg.type === "joinTableGroup") {
     return send(ws, "error", { message: "Mesa inválida." });
   }
 
-  if (!(seat >= 1 && seat <= 6)) {
+  if (!(seat >= 1 && seat <= 10)) {
     return send(ws, "error", { message: "Assento inválido." });
   }
 
@@ -4774,7 +4770,7 @@ if (msg.type === "joinTableGroup") {
 
   const s = Number(seat);
 
-  if (!(s >= 1 && s <= 6)) {
+  if (!(s >= 1 && s <= 10)) {
     return send(ws, "error", { message: "Assento inválido." });
   }
 

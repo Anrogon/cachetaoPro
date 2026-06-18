@@ -1450,7 +1450,12 @@ function renderMobileTableLayout() {
         <div class="mobile-seat pos3" data-seat-pos="3"></div>
         <div class="mobile-seat pos4" data-seat-pos="4"></div>
         <div class="mobile-seat pos5" data-seat-pos="5"></div>
-      </div>
+        <div class="mobile-seat pos6" data-seat-pos="6"></div>
+        <div class="mobile-seat pos7" data-seat-pos="7"></div>
+        <div class="mobile-seat pos8" data-seat-pos="8"></div>
+        <div class="mobile-seat pos9" data-seat-pos="9"></div>
+        <div class="mobile-seat pos10" data-seat-pos="10"></div>
+    </div>
     `;
 
     gameScreen.prepend(root);
@@ -1501,7 +1506,7 @@ const miniAnte = Number(
   const timerInfo = getMobileTurnTimerInfo(s);
   ensureMobileTurnBarTicker();
 
-    for (let seat = 1; seat <= 5; seat++) {
+    for (let seat = 1; seat <= 10; seat++) {
     const el = root.querySelector(`[data-seat-pos="${seat}"]`);
     const p = players.find(player => Number(player?.seat) === seat);
     
@@ -1602,6 +1607,10 @@ function renderDesktopTableLayout() {
         <div class="desktop-seat pos4" data-seat-pos="4"></div>
         <div class="desktop-seat pos5" data-seat-pos="5"></div>
         <div class="desktop-seat pos6" data-seat-pos="6"></div>
+        <div class="desktop-seat pos7" data-seat-pos="7"></div>
+        <div class="desktop-seat pos8" data-seat-pos="8"></div>
+        <div class="desktop-seat pos9" data-seat-pos="9"></div>
+        <div class="desktop-seat pos10" data-seat-pos="10"></div>
       </div>
     `;
     game.prepend(root);
@@ -1616,7 +1625,7 @@ function renderDesktopTableLayout() {
     ? tableData.seats.filter(Boolean)
     : (Array.isArray(state.players) ? state.players : []);
 
-  for (let seat = 1; seat <= 6; seat++) {
+  for (let seat = 1; seat <= 10; seat++) {
     const el = root.querySelector(`[data-seat-pos="${seat}"]`);
     const p = players.find(player => Number(player?.seat) === seat);
 

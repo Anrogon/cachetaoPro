@@ -9,34 +9,23 @@ function transformHomePlayButtons() {
 
   if (!btnOnline) return;
 
-  if (document.getElementById("btnClassicModeMain")) return;
+  if (document.getElementById("btnCachetaoModeMain")) return;
 
   const parent = btnOnline.parentElement;
   if (!parent) return;
 
-  const btnClassic = document.createElement("button");
-  btnClassic.id = "btnClassicModeMain";
-  btnClassic.className = btnOnline.className;
-  btnClassic.textContent = "Jogar Clássico";
-  btnClassic.onclick = () => {
-    state.selectedVariant = "CLASSIC";
-    showScreen("tables");
-  };
-
-  const btnCrazy = document.createElement("button");
-  btnCrazy.id = "btnCrazyModeMain";
-  btnCrazy.className = btnOnline.className;
-  btnCrazy.textContent = "Jogar Crazy";
-  btnCrazy.style.background = "#2d6cdf";
-  btnCrazy.onclick = () => {
-    state.selectedVariant = "CRAZY";
+  const btnCachetao = document.createElement("button");
+  btnCachetao.id = "btnCachetaoModeMain";
+  btnCachetao.className = btnOnline.className;
+  btnCachetao.textContent = "Jogar Cachetão Pro";
+  btnCachetao.onclick = () => {
+    state.selectedVariant = "CACHETAO";
     showScreen("tables");
   };
 
   const btnLogout = document.getElementById("btnLogout");
 
-  parent.insertBefore(btnClassic, btnOnline);
-  parent.insertBefore(btnCrazy, btnOnline);
+  parent.insertBefore(btnCachetao, btnOnline);
 
   if (btnLogout) {
     parent.insertBefore(btnLogout, btnOnline);

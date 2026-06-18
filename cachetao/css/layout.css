@@ -2,7 +2,7 @@
    BASE
 ============================= */
 :root{
-  --ui-gap: 14px;
+  --ui-gap: 12px;
   --sb-width: 240px;
   --sb-gutter: 16px;
   --hand-pad: 10px;
@@ -31,7 +31,7 @@ body{
 #game{
   min-height: 100vh; 
   background: #0b3d2e;
-  background-image: url("/assets/image/table-pon.png");/* fundo roxo/mesa gigante */
+  background-image: url("/assets/image/table-cachetao-pro.png");/* fundo roxo/mesa gigante */
   background-size: 95% 600px;
   background-position: center top;
   background-repeat: no-repeat;  
@@ -103,7 +103,7 @@ body{
   justify-content: center;
   align-items: center;
   gap: 18px;
-  margin: 10px 0;
+  margin: 12px 0;
 }
 
 /* slot do monte/lixo */
@@ -395,8 +395,8 @@ body{
 /* assentos */
 .seats-overlay .seat{
   position: absolute;
-  width: 50px;
-  height: 50px;
+  width: 35px;
+  height: 35px;
   border-radius: 999px;
   display: grid;
   place-items: center;
@@ -459,14 +459,21 @@ body{
 /*botão assistir*/
 
 
+/* ✅ posições da sala de mesas desktop — Cachetão Pro 10 lugares */
+.seat.pos1  { left: 50%; top: 95%; transform: translate(-50%, -50%); }
+.seat.pos2  { left: 25%; top: 95%; transform: translate(-50%, -50%); }
 
-/* ✅ posições (casam com positions = ["pos1","pos2"...] do app.js)*/
-.seat.pos1 { left: 3%;  top: 52%; transform: translate(-50%, -50%); }  /* esquerda */
-.seat.pos2 { left: 20%; top: 8%; transform: translate(-50%, -50%); }  /* topo-esq */
-.seat.pos3 { left: 50%; top: 7%;  transform: translate(-50%, -50%); }  /* topo */
-.seat.pos4 { left: 80%; top: 8%; transform: translate(-50%, -50%); }  /* topo-dir */
-.seat.pos5 { left: 98%; top: 52%; transform: translate(-50%, -50%); }  /* direita */
-.seat.pos6 { left: 50%; top: 92%; transform: translate(-50%, -50%); }  /* baixo */
+.seat.pos3  { left: 2%;  top: 70%; transform: translate(-50%, -50%); }
+.seat.pos4  { left: 2%;  top: 30%; transform: translate(-50%, -50%); }
+
+.seat.pos5  { left: 25%; top: 4%;  transform: translate(-50%, -50%); }
+.seat.pos6  { left: 50%; top: 4%;  transform: translate(-50%, -50%); }
+.seat.pos7  { left: 75%; top: 4%;  transform: translate(-50%, -50%); }
+
+.seat.pos8  { left: 98%; top: 30%; transform: translate(-50%, -50%); }
+.seat.pos9  { left: 98%; top: 70%; transform: translate(-50%, -50%); }
+
+.seat.pos10 { left: 75%; top: 95%; transform: translate(-50%, -50%); }
 
 .table-title{ font-weight: 900; font-size: 16px; text-align: center; }
 .table-value{ font-size: 14px; opacity: 0.95; text-align: center; }
@@ -1017,14 +1024,6 @@ body{
 .home-menu .btn-text {
   flex: 1;
   text-align: left;
-}
-
-#btnClassic .btn-icon {
-  color: #d8ff8f;
-}
-
-#btnCrazy .btn-icon {
-  color: #ffe08a;
 }
 
 #btnLogout .btn-icon {

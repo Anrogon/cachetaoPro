@@ -8,8 +8,8 @@ import { startTurnTimer } from "./turnTimer.js";
 import { renderRebuyButton, playPendingDrawAnimation, playPendingDiscardDrawAnimation, playPendingHandToTableAnimation } from "./render.js";
 import { showScreen } from "./screens.js";
 
-window.openTablesFromHome = function (variant) {
-  state.selectedVariant = variant;
+window.openTablesFromHome = function () {
+  state.selectedVariant = "CACHETAO";
   renderTablesScreen();
 
   document.getElementById("homeScreen").style.display = "none";
@@ -269,7 +269,7 @@ if (pub.tableId) {
   };
 }
   state.started = !!pub.started;
-  state.selectedVariant = state.selectedVariant || "CLASSIC";
+  state.selectedVariant = "CACHETAO";
   state.roundEnded = !!pub.roundEnded;
   state.winnerSeat = pub.winnerSeat ?? null;
   state.rematchVotes = pub.rematchVotes || {};
@@ -358,11 +358,6 @@ state.deckCount = pub.deckCount ?? 0;
   }
 
 
-/*--------------------------*/
-
-
-
-
   // players
   const players = [];
   (pub.seats || []).forEach((p, idx) => {
@@ -444,8 +439,8 @@ if (state.room?.id) {
   seatedCount: Array.isArray(pub.seats)
     ? pub.seats.filter(Boolean).length
     : (prev.seatedCount || 0),
-  maxSeats: prev.maxSeats || 6,
-  minPlayersToStart: pub.minPlayersToStart ?? prev.minPlayersToStart ?? 2,
+  maxSeats: pub.maxSeats ?? prev.maxSeats ?? 10,
+  minPlayersToStart: pub.minPlayersToStart ?? prev.minPlayersToStart ?? 5,
   startAt: Number(pub.startAt) || 0,
   tableMelds: Array.isArray(pub.tableMelds) ? pub.tableMelds : (prev.tableMelds || []),
   discardTop: pub.discardTop ?? prev.discardTop ?? null,
@@ -659,11 +654,6 @@ if (msg.type === "error") {
   });
 
 }
-
-
-
-
-
 
 // Envia ação para o servidor (todas as jogadas passam por aqui)*/
 
@@ -1297,8 +1287,8 @@ async function validateCurrentSession() {
 
 
 // ===== BOTÕES DA HOME =====
-function openTablesFromHome(variant) {
-  state.selectedVariant = variant;
+function openTablesFromHome() {
+  state.selectedVariant = "CACHETAO";
 
   renderTablesScreen();
 
@@ -1526,21 +1516,14 @@ function bindHomeButtons() {
     };
   }*/
 
-  const btnClassic = document.getElementById("btnClassic");
-  if (btnClassic) {
-    btnClassic.onclick = () => {
+  const btnCachetao = document.getElementById("btnCachetao");
+  if (btnCachetao) {
+    btnCachetao.onclick = () => {
       if (!requireAuthOrRedirect()) return;
-      openTablesFromHome("CLASSIC");
+      openTablesFromHome("CACHETAO");
     };
   }
 
-  const btnCrazy = document.getElementById("btnCrazy");
-  if (btnCrazy) {
-    btnCrazy.onclick = () => {
-      if (!requireAuthOrRedirect()) return;
-      openTablesFromHome("CRAZY");
-    };
-  }
 
   const navHome = document.getElementById("navHome");
   if (navHome) {
@@ -1642,7 +1625,7 @@ function renderHomeLiveTables() {
 
   el.innerHTML = tables.map((t, index) => {
     const seated = Number(t.seatedCount ?? t.playersCount ?? 0);
-    const max = Number(t.maxSeats ?? 6);
+    const max = Number(t.maxSeats ?? 10);
     const stake = Number(
       t.stake ??
       t.mesaValor ??
@@ -1653,7 +1636,7 @@ function renderHomeLiveTables() {
     const variant = String(t.variant || "CLASSIC").toUpperCase();
     const tableName = t.name || `Mesa ${index + 1}`;
 
-    const seatsHtml = Array.from({ length: 6 }).map((_, i) => {
+    const seatsHtml = Array.from({ length: 10 }).map((_, i) => {
       const seatNum = i + 1;
       const occupied = seatNum <= seated;
 
@@ -1722,12 +1705,12 @@ async function refreshHomeUser() {
   const btnLogout = document.getElementById("btnLogout");
   const btnSettings = document.getElementById("btnSettings");
   const btnProfile = document.getElementById("btnTrain");
-  const btnClassic = document.getElementById("btnClassic");
+  const btnCachetao = document.getElementById("btnCachetao");
 
   const btnBuyChips = document.getElementById("btnBuyChips");
   const walletModal = document.getElementById("walletModal");
   const walletCloseBtn = document.getElementById("walletCloseBtn");
-  const btnCrazy = document.getElementById("btnCrazy");
+ 
 
   function setLoggedOutHome() {
     if (homeUserName) homeUserName.textContent = "Visitante";
@@ -1750,8 +1733,7 @@ async function refreshHomeUser() {
       };
     }
 
-    if (btnClassic) btnClassic.style.display = "none";
-    if (btnCrazy) btnCrazy.style.display = "none";
+    if (btnCachetao) btnCachetao.style.display = "none";
   }
 
   function setLoggedInHome(user) {
@@ -1778,8 +1760,8 @@ async function refreshHomeUser() {
     if (btnSettings) btnSettings.style.display = "none";
     if (btnProfile) btnProfile.style.display = "";
     if (btnBuyChips) btnBuyChips.style.display = "";
-    if (btnClassic) btnClassic.style.display = "";
-    if (btnCrazy) btnCrazy.style.display = "";
+    if (btnCachetao) btnCachetao.style.display = "";
+  
   }
 
   try {
@@ -1953,10 +1935,6 @@ function getLoggedPlayerName() {
 
 export function renderTablesScreen() {
   const tablesScreenEl = document.getElementById("tablesScreen");
-  if (tablesScreenEl) {
-    const isCrazyMode = String(state.selectedVariant || "CLASSIC").toUpperCase() === "CRAZY";
-    tablesScreenEl.classList.toggle("tables-crazy-mode", isCrazyMode);
-  }
 
   let controls = document.getElementById("tablesVariantSwitch");
 
@@ -1967,7 +1945,7 @@ export function renderTablesScreen() {
   grid.innerHTML = "";
 
   if (controls) {
-    const isCrazyMode = String(state.selectedVariant || "CLASSIC").toUpperCase() === "CRAZY";
+    state.selectedVariant = "CACHETAO";
 
     controls.innerHTML = `
       <div class="tables-header">
@@ -1983,19 +1961,10 @@ export function renderTablesScreen() {
       <div class="tables-tabs-wrapper">
         <div class="tables-tabs">
           <button
-            id="btnTabClassic"
-            class="tables-tab ${!isCrazyMode ? "active" : ""}"
+            class="tables-tab active"
             type="button"
           >
-            Pontinho Clássico
-          </button>
-
-          <button
-            id="btnTabCrazy"
-            class="tables-tab ${isCrazyMode ? "active" : ""}"
-            type="button"
-          >
-            Pontinho Crazy
+            Cachetão Pro
           </button>
         </div>
       </div>
@@ -2006,39 +1975,27 @@ export function renderTablesScreen() {
         showScreen("home");
       };
     }
-    const btnTabClassic = document.getElementById("btnTabClassic");
-    const btnTabCrazy = document.getElementById("btnTabCrazy");
-
-    if (btnTabClassic) {
-      btnTabClassic.onclick = () => {
-        state.selectedVariant = "CLASSIC";
-        renderTablesScreen();
-      };
-    }
-
-    if (btnTabCrazy) {
-      btnTabCrazy.onclick = () => {
-        state.selectedVariant = "CRAZY";
-        renderTablesScreen();
-      };
-    }
+    
   }
 
   let selected = { tableId: null, seat: null };
-  const positions = ["pos1", "pos2", "pos3", "pos4", "pos5", "pos6"];
+  const positions = [
+  "pos1", "pos2", "pos3", "pos4", "pos5", "pos6", "pos7", "pos8", "pos9", "pos10"
+  ];
 
   const tables = Array.isArray(state.tableList) ? state.tableList : [];
 
-  const selectedVariant = String(state.selectedVariant || "CLASSIC").toUpperCase();
+  const selectedVariant = "CACHETAO";
+  state.selectedVariant = "CACHETAO";
 
   const visibleTables = (tables || []).filter(t => {
   const liveTable = window.state?.tables?.[t.id];
   const variant =
-    String(
-      t.variant ||
-      liveTable?.variant ||
-      (String(t.id || "").toUpperCase().startsWith("C") ? "CRAZY" : "CLASSIC")
-    ).toUpperCase();
+  String(
+    t.variant ||
+    liveTable?.variant ||
+    "CACHETAO"
+  ).toUpperCase();
 
   return variant === selectedVariant;
   });
@@ -2054,8 +2011,8 @@ export function renderTablesScreen() {
       ? liveTable.seats.filter(Boolean).length
       : 0;
 
-    const maxSeats = Number(liveTable.maxSeats) || 6;
-    const minPlayersToStart = Number(liveTable.minPlayersToStart) || 2;
+    const maxSeats = Number(liveTable.maxSeats) || 10;
+    const minPlayersToStart = Number(liveTable.minPlayersToStart) || 5;
     const startAt = Number(liveTable.startAt) || 0;
 
  let countdownHtml = "";
@@ -2092,8 +2049,7 @@ export function renderTablesScreen() {
   });
   }
 
-    const isCrazyMode = String(state.selectedVariant || "CLASSIC").toUpperCase() === "CRAZY";
-    const tableTitle = isCrazyMode ? `${t.name} Crazy` : t.name;
+    const tableTitle = t.name;
 
 
 
@@ -2101,7 +2057,7 @@ export function renderTablesScreen() {
       <div class="table-title">${tableTitle}</div>
 
       <div class="table-visual">
-        <img src="./assets/image/mesa-pts.png" alt="${t.name}" onerror="this.style.display='none'">
+        <img src="./assets/image/mesa-cachetao.png" alt="${t.name}" onerror="this.style.display='none'">
 
         <div class="table-center-info">
           <div class="table-players-count">${seatedCount}/${maxSeats}</div>
@@ -2123,7 +2079,7 @@ export function renderTablesScreen() {
 
     const seatsEl = card.querySelector(".seats-overlay");
 
-    for (let s = 1; s <= 6; s++) {
+    for (let s = 1; s <= maxSeats; s++) {
       const seatEl = document.createElement("div");
       seatEl.className = `seat ${positions[s - 1]}`;
       seatEl.dataset.seat = s;

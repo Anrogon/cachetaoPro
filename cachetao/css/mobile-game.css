@@ -212,7 +212,7 @@
     position: fixed !important;
 
     left: 50% !important;
-    bottom: calc(10px + env(safe-area-inset-bottom) + 110px) !important;
+    bottom: calc(10px + env(safe-area-inset-bottom) + 165px) !important;
     transform: translateX(-50%) !important;
 
     display: flex !important;

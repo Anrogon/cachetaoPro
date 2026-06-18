@@ -234,37 +234,20 @@
       0 0 18px rgba(255, 215, 0, 0.85);
   }
 
-.desktop-seat.pos1 {
-  left: -100px;
-  top: 250px;
-}
+.desktop-seat.pos1  { left: 2%; top: 85%; transform: translate(-50%, -50%); }
 
-.desktop-seat.pos2 {
-  left: 40px;
-  top: 35px;
-}
+.desktop-seat.pos2  { left: 0%; top: 62%; transform: translate(-50%, -50%); }
+.desktop-seat.pos3  { left: 2%; top: 38%; transform: translate(-50%, -50%); }
+.desktop-seat.pos4  { left: 10%; top: 15%; transform: translate(-50%, -50%); }
 
-.desktop-seat.pos3 {
-  left: 50%;
-  top: 20px;
-  transform: translateX(-50%);
-}
+.desktop-seat.pos5  { left: 38%; top: 12%; transform: translate(-50%, -50%); }
+.desktop-seat.pos6  { left: 67%; top: 12%; transform: translate(-50%, -50%); }
+.desktop-seat.pos7  { left: 90%; top: 15%; transform: translate(-50%, -50%); }
 
-.desktop-seat.pos4 {
-  right: 40px;
-  top: 35px;
-}
+.desktop-seat.pos8  { left: 98%; top: 38%; transform: translate(-50%, -50%); }
+.desktop-seat.pos9  { left: 100%; top: 62%; transform: translate(-50%, -50%); }
+.desktop-seat.pos10 { left: 98%; top: 85%; transform: translate(-50%, -50%); }
 
-.desktop-seat.pos5 {
-  right: -100px;
-  top: 250px;
-}
-
-.desktop-seat.pos6 {
-  left: 15%;
-  bottom: 18px;
-  transform: none;
-}
 }
 
 
