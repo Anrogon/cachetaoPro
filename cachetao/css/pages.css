@@ -1,0 +1,437 @@
+/* =========================================================
+   CACHETÃO PRO — PÁGINAS SECUNDÁRIAS
+   Login, Cadastro, Perfil, Contato, Termos, Privacidade etc.
+========================================================= */
+
+body.page-theme{
+  margin:0;
+  min-height:100vh;
+
+  background:
+    linear-gradient(rgba(0,70,35,.72), rgba(0,35,18,.88)),
+    url("../assets/image/bg-g.png") center/cover fixed no-repeat;
+
+  font-family:Arial, Helvetica, sans-serif;
+  color:#fff;
+}
+
+/* CARD CENTRAL */
+
+.cp-page{
+  min-height:100vh;
+  padding:42px 20px;
+  box-sizing:border-box;
+  color:#fff;
+}
+
+.cp-center{
+  display:grid;
+  place-items:center;
+}
+
+.cp-card{
+  width:min(920px,94vw);
+  margin:0 auto;
+  padding:30px 28px;
+
+  border-radius:22px;
+
+  background:linear-gradient(180deg,#06391f,#032514);
+  border:1px solid rgba(212,175,55,.38);
+
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.08),
+    0 14px 34px rgba(0,0,0,.32);
+
+  line-height:1.65;
+}
+
+.cp-card-narrow{
+  width:min(440px,92vw);
+}
+
+/* TÍTULOS */
+
+.cp-title{
+  margin:0 0 6px;
+
+  font-size:34px;
+  font-weight:900;
+
+  color:#ffd86b;
+
+  text-align:center;
+
+  text-shadow:0 3px 8px rgba(0,0,0,.5);
+}
+
+.cp-subtitle,
+.cp-date{
+  text-align:center;
+  margin-bottom:24px;
+
+  font-size:14px;
+  font-weight:800;
+
+  opacity:.85;
+}
+
+/* ALERTAS / ÍNDICE */
+
+.cp-alert{
+  margin:0 0 26px;
+  padding:16px 18px;
+
+  border-radius:18px;
+
+  background:rgba(212,175,55,.10);
+  border:1px solid rgba(212,175,55,.28);
+
+  font-size:15px;
+  font-weight:800;
+
+  text-align:center;
+}
+
+.cp-index{
+  display:flex;
+  flex-wrap:wrap;
+  align-items:center;
+  gap:10px;
+
+  margin:0 0 28px;
+  padding:18px;
+
+  border-radius:18px;
+
+  background:rgba(0,0,0,.22);
+  border:1px solid rgba(212,175,55,.22);
+
+  text-align:left;
+}
+
+.cp-index-title{
+  width:100%;
+  margin-bottom:4px;
+
+  color:#ffd86b;
+
+  font-size:18px;
+  font-weight:900;
+  text-align:left;
+}
+
+.cp-index-links{
+  display:contents;
+}
+
+.cp-index a{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+
+  padding:8px 14px;
+
+  border-radius:999px;
+
+  background:rgba(255,255,255,.06);
+  border:1px solid rgba(212,175,55,.25);
+
+  color:#fff;
+  text-decoration:none;
+
+  font-size:14px;
+  font-weight:800;
+
+  transition:
+    transform .15s ease,
+    background .15s ease,
+    border-color .15s ease;
+}
+
+.cp-index a:hover{
+  background:#8f1f33;
+  border-color:#d4af37;
+  transform:translateY(-2px);
+}
+
+.cp-index a:active{
+  transform:scale(.97);
+}
+
+/* TEXTOS */
+
+.cp-card h2{
+  margin:28px 0 10px;
+  padding-bottom:6px;
+
+  color:#ffd86b;
+
+  font-size:21px;
+  font-weight:900;
+
+  border-bottom:1px solid rgba(212,175,55,.28);
+}
+
+.cp-card p{
+  margin:0 0 14px;
+
+  font-size:15px;
+  color:rgba(255,255,255,.94);
+}
+
+.cp-card ul{
+  margin:10px 0 0;
+  padding-left:20px;
+}
+
+.cp-card li{
+  margin-bottom:8px;
+  font-size:15px;
+}
+
+/* CONTEÚDO DE LEITURA */
+
+/* CONTEÚDO DE LEITURA */
+
+.cp-content{
+  text-align:left;
+}
+
+.cp-content > .cp-title,
+.cp-content > .cp-subtitle,
+.cp-content > .cp-date,
+.cp-content > .cp-alert{
+  text-align:center;
+}
+
+.cp-content h2,
+.cp-content p,
+.cp-content ul,
+.cp-content ol,
+.cp-content li{
+  text-align:left;
+}
+
+.cp-content ul,
+.cp-content ol{
+  margin:12px 0 18px;
+  padding-left:26px;
+}
+
+.cp-content li{
+  margin-bottom:9px;
+}
+
+.cp-content hr{
+  margin:24px 0;
+
+  border:0;
+  border-top:1px solid rgba(212,175,55,.28);
+}
+
+.cp-content .cp-table,
+.cp-content .rules-table,
+.cp-content .cp-table th,
+.cp-content .cp-table td,
+.cp-content .rules-table th,
+.cp-content .rules-table td{
+  text-align:center;
+}
+
+.cp-content .cp-actions{
+  justify-content:center;
+  text-align:center;
+}
+
+/* INPUTS */
+
+.cp-card input,
+.cp-card textarea{
+  width:100%;
+  box-sizing:border-box;
+
+  margin-bottom:14px;
+  padding:13px 14px;
+
+  border-radius:14px;
+
+  border:1px solid rgba(212,175,55,.22);
+
+  background:rgba(255,255,255,.08);
+
+  color:#fff;
+
+  font-size:15px;
+
+  transition:.15s;
+}
+
+.cp-card input:focus,
+.cp-card textarea:focus{
+  outline:none;
+
+  border-color:#d4af37;
+
+  background:rgba(255,255,255,.12);
+
+  box-shadow:0 0 0 3px rgba(212,175,55,.18);
+}
+
+.cp-card input::placeholder,
+.cp-card textarea::placeholder{
+  color:rgba(255,255,255,.65);
+}
+
+/* BOTÕES */
+
+.cp-actions{
+  display:flex;
+  justify-content:center;
+  gap:12px;
+  flex-wrap:wrap;
+
+  margin-top:22px;
+}
+
+.cp-btn,
+.cp-card button{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+
+  min-width:170px;
+  padding:13px 22px;
+
+  border-radius:14px;
+
+  font-size:15px;
+  font-weight:900;
+
+  cursor:pointer;
+  text-decoration:none;
+
+  transition:
+    transform .10s ease,
+    filter .10s ease,
+    background .10s ease;
+}
+
+.cp-btn-primary,
+.cp-card .primary{
+  background:linear-gradient(180deg,#a51f36,#731726);
+  color:#fff;
+
+  border:1px solid rgba(212,175,55,.30);
+
+  box-shadow:0 8px 18px rgba(0,0,0,.24);
+}
+
+.cp-btn-primary:hover,
+.cp-card .primary:hover{
+  background:linear-gradient(180deg,#bd2941,#8b1d2f);
+  transform:translateY(-1px);
+}
+
+.cp-btn-secondary,
+.cp-card .secondary{
+  background:rgba(255,255,255,.10);
+  color:#fff;
+
+  border:1px solid rgba(255,255,255,.18);
+}
+
+.cp-btn-secondary:hover,
+.cp-card .secondary:hover{
+  background:rgba(255,255,255,.16);
+}
+
+.cp-btn:active,
+.cp-card button:active{
+  transform:scale(.97);
+  filter:brightness(.9);
+}
+
+/* MENSAGENS */
+
+.cp-msg,
+.msg,
+.auth-message{
+  min-height:22px;
+  margin-top:14px;
+
+  text-align:center;
+
+  color:#ffd86b;
+
+  font-weight:800;
+}
+
+/* TABELAS */
+
+.cp-table,
+.rules-table{
+  width:100%;
+  border-collapse:collapse;
+  margin-top:14px;
+  overflow:hidden;
+  border-radius:14px;
+}
+
+.cp-table th,
+.cp-table td,
+.rules-table th,
+.rules-table td{
+  border:1px solid rgba(212,175,55,.22);
+  padding:12px;
+  text-align:center;
+}
+
+.cp-table th,
+.rules-table th{
+  background:rgba(212,175,55,.16);
+  color:#ffd86b;
+}
+
+/* MOBILE */
+
+@media(max-width:640px){
+  .cp-page{
+    padding:30px 14px;
+  }
+
+  .cp-card{
+    padding:24px 18px;
+  }
+
+  .cp-title{
+    font-size:28px;
+  }
+
+  .cp-card h2{
+    font-size:19px;
+  }
+
+  .cp-btn,
+  .cp-card button{
+    width:100%;
+  }
+
+    .cp-index{
+    gap:8px;
+  }
+
+  .cp-index a{
+    padding:7px 11px;
+    font-size:13px;
+  }
+
+  .cp-content .rules-table{
+    font-size:13px;
+  }
+
+  .cp-content .rules-table th,
+  .cp-content .rules-table td{
+    padding:9px 7px;
+  }
+}

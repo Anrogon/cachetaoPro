@@ -3,150 +3,165 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
   <title>Contato - Cachetão Pro</title>
 
   <link rel="stylesheet" href="./css/reset.css">
   <link rel="stylesheet" href="./css/layout.css">
+  <link rel="stylesheet" href="./css/pages.css">
 
   <style>
-    .contact-page{
-      min-height: 100vh;
-      display: flex;
-      align-items: center;
-      justify-content: flex-start;
-      flex-direction: column;
-      padding: 20px 20px 40px;
-      color: #fff;
-      text-align: center;
-    }
+    /* =========================================================
+       CONTATO — AJUSTES EXCLUSIVOS
+    ========================================================= */
 
-    .contact-title{
-      font-size: 36px;
-      margin: 0 0 22px;
-      font-weight: 900;
-      text-shadow: 0 3px 8px rgba(0,0,0,.45);
-    }
-
-    .contact-highlight{
-      color: #ffd54a;
-      font-size: 22px;
-      font-weight: 900;
-      margin-bottom: 22px;
+    .contact-header{
+      text-align:center;
+      margin-bottom:28px;
     }
 
     .contact-text{
-      font-size: 20px;
-      line-height: 1.55;
-      max-width: 760px;
-      margin: 0 auto 46px;
-      text-shadow: 0 2px 6px rgba(0,0,0,.45);
-    }
-
-    .contact-card{
-      width: min(520px, 92vw);
-      border: 1px solid rgba(80, 255, 130, .35);
-      background: rgba(0, 45, 28, .42);
-      border-radius: 22px;
-      padding: 30px 26px;
-      box-shadow: 0 0 28px rgba(0,0,0,.22);
-      margin-bottom: 42px;
+      max-width:760px;
+      margin:0 auto;
+      font-size:18px;
+      line-height:1.55;
     }
 
     .contact-icon{
-      width: 70px;
-      height: 70px;
-      border-radius: 50%;
-      border: 2px solid #23d354;
-      display: grid;
-      place-items: center;
-      margin: 0 auto 20px;
-      color: #ffd54a;
-      font-size: 42px;
-      box-shadow: 0 0 18px rgba(35,211,84,.35);
-    }
+      width:70px;
+      height:70px;
 
-    .contact-card h2{
-      color: #ffd54a;
-      font-size: 26px;
-      margin: 0 0 16px;
+      margin:0 auto 18px;
+
+      display:grid;
+      place-items:center;
+
+      border-radius:50%;
+
+      background:rgba(0,0,0,.28);
+      border:2px solid rgba(212,175,55,.75);
+
+      color:#ffd86b;
+      font-size:38px;
+
+      box-shadow:0 0 18px rgba(212,175,55,.25);
     }
 
     .contact-email{
-      font-size: 24px;
-      font-weight: 800;
-      word-break: break-word;
-      text-shadow: 0 2px 6px rgba(0,0,0,.5);
+      margin:18px 0;
+
+      text-align:center;
+
+      font-size:22px;
+      font-weight:900;
+
+      word-break:break-word;
     }
 
-    .contact-back{
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      min-width: 200px;
-      border: 1px solid #23d354;
-      border-radius: 16px;
-      padding: 14px 24px;
-      color: #fff;
-      background: rgba(0, 60, 34, .55);
-      text-decoration: none;
-      font-size: 16px;
-      font-weight: 900;
-      box-shadow: 0 0 16px rgba(35,211,84,.22);
+    .contact-info{
+      display:grid;
+      gap:10px;
+
+      margin-top:18px;
     }
 
-    .contact-back:hover{
-      background: rgba(35,211,84,.22);
+    .contact-info-row{
+      padding:10px 12px;
+
+      border-radius:14px;
+
+      background:rgba(255,255,255,.08);
+      border:1px solid rgba(212,175,55,.22);
+
+      text-align:center;
+
+      font-size:14px;
+      font-weight:800;
     }
 
-    @media (max-width: 640px){
-      .contact-page{
-        padding-top: 44px;
-      }
+    .contact-note{
+      margin-top:24px;
+    }
 
-      .contact-title{
-        font-size: 34px;
-      }
-
-      .contact-highlight{
-        font-size: 20px;
-      }
+    @media (max-width:640px){
 
       .contact-text{
-        font-size: 18px;
+        font-size:16px;
       }
 
       .contact-email{
-        font-size: 20px;
+        font-size:18px;
       }
+
     }
   </style>
 </head>
-<body>
-  <main class="contact-page">
-    <h1 class="contact-title">Contato</h1>
 
-    <div class="contact-highlight">
-      Estamos aqui para ajudar!
+<body class="page-theme">
+
+  <main class="cp-page cp-center">
+
+    <div class="contact-header">
+
+      <h1 class="cp-title">
+        📩 Central de Atendimento
+      </h1>
+
+      <div class="cp-subtitle">
+        Estamos prontos para ajudar você.
+      </div>
+
+      <p class="contact-text">
+        Precisa de ajuda com sua conta?<br>
+        Encontrou algum erro durante uma partida?<br>
+        Tem sugestões para melhorar o Cachetão Pro?
+      </p>
+
     </div>
 
-    <p class="contact-text">
-      Dúvidas, suporte, sugestões ou problemas de acesso?<br>
-      Entre em contato com nossa equipe.
-    </p>
+    <section class="cp-card cp-card-narrow">
 
-    <section class="contact-card">
-      <div class="contact-icon">✉</div>
+      <div class="contact-icon">
+        ✉
+      </div>
 
-      <h2>E-mail</h2>
+      <h2 style="text-align:center">
+        Atendimento
+      </h2>
 
       <div class="contact-email">
-        suporte@pontinhoplay.com.br
+        suporte@cachetaopro.com.br
       </div>
+
+      <div class="contact-info">
+
+        <div class="contact-info-row">
+          🕘 Segunda a Sexta · 09h às 18h
+        </div>
+
+        <div class="contact-info-row">
+          ⏱ Resposta em até 24 horas úteis
+        </div>
+
+      </div>
+
+      <div class="cp-alert contact-note">
+        💡 Antes de entrar em contato, consulte a página
+        <strong>Como Jogar</strong>. Muitas dúvidas comuns podem estar
+        respondidas lá.
+      </div>
+
+      <div class="cp-actions">
+
+        <a href="./index.html" class="cp-btn cp-btn-primary">
+          ← Voltar ao início
+        </a>
+
+      </div>
+
     </section>
 
-    <a class="contact-back" href="./index.html">
-      ← Voltar para o início
-    </a>
   </main>
+
 </body>
 </html>

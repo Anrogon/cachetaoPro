@@ -5,3 +5,4 @@ export function getCardImage(card) {
 
   return `assets/cards/${card.valor}_${card.naipe}.png`;
 }
+

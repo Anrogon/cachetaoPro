@@ -1,76 +1,62 @@
+/* =========================================================
+   FEED DA TELA INICIAL
+========================================================= */
 
-
-function transformHomePlayButtons() {
-  const buttons = Array.from(document.querySelectorAll("button"));
-
-  const btnOnline = buttons.find(b =>
-    b.textContent?.trim().toLowerCase().includes("jogar online")
-  );
-
-  if (!btnOnline) return;
-
-  if (document.getElementById("btnCachetaoModeMain")) return;
-
-  const parent = btnOnline.parentElement;
-  if (!parent) return;
-
-  const btnCachetao = document.createElement("button");
-  btnCachetao.id = "btnCachetaoModeMain";
-  btnCachetao.className = btnOnline.className;
-  btnCachetao.textContent = "Jogar Cachetão Pro";
-  btnCachetao.onclick = () => {
-    state.selectedVariant = "CACHETAO";
-    showScreen("tables");
-  };
-
-  const btnLogout = document.getElementById("btnLogout");
-
-  parent.insertBefore(btnCachetao, btnOnline);
-
-  if (btnLogout) {
-    parent.insertBefore(btnLogout, btnOnline);
-  }
-
-  btnOnline.remove();
-}
-
-// Feed
 let homeStatusFeedTimer = null;
 let homeStatusFeedIndex = 0;
 
 const HOME_STATUS_FEED = [
-  "💡 Pegou carta do lixo? Use-a em um jogo ou devolva.",
-  "🃏 Coringa deve ser usado antes de descartar.",
-  "🔥 Sequência precisa ser do mesmo naipe.",
-  "💰 Trinca no clássico usa 3 naipes diferentes.",
+  "💡 Nem sempre vale a pena disputar todas as rodadas.",
+  "🃏 O coringa não pode ser descartado.",
+  "🔥 Sequências devem ser formadas pelo mesmo naipe.",
+  "🎴 Trincas usam cartas do mesmo valor e naipes diferentes.",
   "🎯 Bater sem descarte também encerra a rodada.",
-  "⚡ Não pode descartar carta que entra na mesa.",
-  "🎴 Você pode bater com dois coringas em uma carta.",
-  "👏 Quer bater com a mão cheia? Selecione todas as cartas e abaixe os jogos."
+  "⚡ Confira todas as combinações antes de declarar BATI.",
+  "🃏 É permitido usar dois coringas no mesmo jogo.",
+  "👏 Para bater, selecione as cartas e forme todos os jogos válidos.",
+  "⚪ Correr faz parte da estratégia e custa apenas 1 ponto.",
+  "⚔ Jogadores com 1 ponto entram automaticamente na Marra."
 ];
 
 function ensureHomeStatusFeed() {
-  const statusCard = document.querySelector("#homeScreen .home-status");
-  if (!statusCard) return;
+  const statusCard = document.querySelector(
+    "#homeScreen .home-status"
+  );
+
+  if (!statusCard) {
+    return;
+  }
 
   let feed = document.getElementById("homeStatusFeed");
 
   if (!feed) {
     statusCard.insertAdjacentHTML(
       "beforeend",
-      `<div id="homeStatusFeed" class="home-status-feed">
-         <div class="home-status-feed-text"></div>
-       </div>`
+      `
+        <div id="homeStatusFeed" class="home-status-feed">
+          <div class="home-status-feed-text"></div>
+        </div>
+      `
     );
+
     feed = document.getElementById("homeStatusFeed");
   }
 
-  const textEl = feed?.querySelector(".home-status-feed-text");
-  if (!textEl) return;
+  const textElement = feed?.querySelector(
+    ".home-status-feed-text"
+  );
+
+  if (!textElement) {
+    return;
+  }
 
   const renderFeed = () => {
-    textEl.textContent =
-      HOME_STATUS_FEED[homeStatusFeedIndex % HOME_STATUS_FEED.length];
+    const message =
+      HOME_STATUS_FEED[
+        homeStatusFeedIndex % HOME_STATUS_FEED.length
+      ];
+
+    textElement.textContent = message;
     homeStatusFeedIndex += 1;
   };
 
@@ -78,14 +64,18 @@ function ensureHomeStatusFeed() {
 
   if (homeStatusFeedTimer) {
     clearInterval(homeStatusFeedTimer);
-    homeStatusFeedTimer = null;
   }
 
-  homeStatusFeedTimer = setInterval(renderFeed, 3500);
+  homeStatusFeedTimer = setInterval(
+    renderFeed,
+    3500
+  );
 }
 
-// Feed termina aqui
-/*
+/* =========================================================
+   NAVEGAÇÃO ENTRE TELAS
+========================================================= */
+
 export function showScreen(idToShow) {
   const screenMap = {
     home: "homeScreen",
@@ -97,45 +87,29 @@ export function showScreen(idToShow) {
 
   const targetId = screenMap[idToShow] || idToShow;
 
-  ["homeScreen", "tablesScreen", "game"].forEach(id => {
-    const el = document.getElementById(id);
-    if (!el) return;
+  const screenIds = [
+    "homeScreen",
+    "tablesScreen",
+    "game"
+  ];
 
-    el.style.display = id === targetId ? "" : "none";
-  });
+  for (const screenId of screenIds) {
+    const screen = document.getElementById(screenId);
 
-  if (targetId === "homeScreen") {
-    if (typeof ensureHomeStatusFeed === "function") {
-      setTimeout(() => ensureHomeStatusFeed(), 50);
+    if (!screen) {
+      continue;
     }
-  }
-}*/
 
-export function showScreen(idToShow) {
-  const screenMap = {
-    home: "homeScreen",
-    tables: "tablesScreen",
-    game: "game",
-    homeScreen: "homeScreen",
-    tablesScreen: "tablesScreen",
-  };
-
-  const targetId = screenMap[idToShow] || idToShow;
-
-  ["homeScreen", "tablesScreen", "game"].forEach(id => {
-    const el = document.getElementById(id);
-    if (!el) return;
-
-    el.style.display = id === targetId ? "" : "none";
-  });
-
-  if (typeof setTopNavVisible === "function") {
-    setTopNavVisible(targetId === "homeScreen");
+    screen.style.display =
+      screenId === targetId
+        ? ""
+        : "none";
   }
 
   if (targetId === "homeScreen") {
-    if (typeof ensureHomeStatusFeed === "function") {
-      setTimeout(() => ensureHomeStatusFeed(), 50);
-    }
+    setTimeout(
+      ensureHomeStatusFeed,
+      50
+    );
   }
 }

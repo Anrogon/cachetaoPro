@@ -3,337 +3,223 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
   <title>Cachetão Pro - Painel Administrativo</title>
-  <style>
-    body {
-      margin: 0;
-      min-height: 100vh;
-      background: linear-gradient(180deg, #0b3c66, #0a2238);
-      font-family: Arial, Helvetica, sans-serif;
-      color: #fff;
-      padding: 20px;
-      box-sizing: border-box;
-    }
 
-    .wrap {
-      max-width: 1100px;
-      margin: 0 auto;
-    }
-
-    .topbar {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      gap: 12px;
-      margin-bottom: 20px;
-      flex-wrap: wrap;
-    }
-
-    .brand h1 {
-      margin: 0 0 6px;
-      font-size: 32px;
-    }
-
-    .brand p {
-      margin: 0;
-      color: #dbeafe;
-      font-size: 14px;
-    }
-
-    .badge-admin {
-      display: inline-block;
-      padding: 8px 12px;
-      border-radius: 999px;
-      background: rgba(240,193,75,0.18);
-      border: 1px solid rgba(240,193,75,0.35);
-      color: #ffe08a;
-      font-weight: 700;
-      font-size: 13px;
-    }
-
-    .msg {
-      text-align: center;
-      margin-bottom: 18px;
-      color: #ffd38a;
-      min-height: 22px;
-      font-size: 14px;
-    }
-
-    .hero {
-      background: rgba(255,255,255,0.08);
-      border: 1px solid rgba(255,255,255,0.12);
-      border-radius: 16px;
-      padding: 22px;
-      box-shadow: 0 10px 30px rgba(0,0,0,0.25);
-      margin-bottom: 20px;
-    }
-
-    .hero-title {
-      margin: 0 0 8px;
-      font-size: 24px;
-    }
-
-    .hero-subtitle {
-      margin: 0;
-      color: #dbeafe;
-      line-height: 1.6;
-      font-size: 14px;
-    }
-
-    .grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 18px;
-      margin-bottom: 20px;
-    }
-
-    .card {
-      background: rgba(255,255,255,0.08);
-      border: 1px solid rgba(255,255,255,0.12);
-      border-radius: 16px;
-      padding: 20px;
-      box-shadow: 0 10px 30px rgba(0,0,0,0.25);
-    }
-
-    .card h2 {
-      margin: 0 0 14px;
-      font-size: 20px;
-    }
-
-    .info-row {
-      display: flex;
-      justify-content: space-between;
-      gap: 16px;
-      padding: 10px 0;
-      border-bottom: 1px solid rgba(255,255,255,0.08);
-      font-size: 14px;
-    }
-
-    .info-row:last-child {
-      border-bottom: 0;
-      padding-bottom: 0;
-    }
-
-    .label {
-      color: #cbd5e1;
-    }
-
-    .value {
-      font-weight: 700;
-      text-align: right;
-      word-break: break-word;
-    }
-
-    .menu-grid {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 18px;
-      margin-bottom: 20px;
-    }
-
-    .menu-box {
-      background: rgba(255,255,255,0.08);
-      border: 1px solid rgba(255,255,255,0.12);
-      border-radius: 16px;
-      padding: 20px;
-      box-shadow: 0 10px 30px rgba(0,0,0,0.25);
-      display: flex;
-      flex-direction: column;
-      gap: 14px;
-      min-height: 220px;
-    }
-
-    .menu-box h3 {
-      margin: 0;
-      font-size: 18px;
-    }
-
-    .menu-box p {
-      margin: 0;
-      color: #dbeafe;
-      line-height: 1.6;
-      font-size: 14px;
-      flex: 1;
-    }
-
-    .button-row {
-      display: flex;
-      gap: 12px;
-      flex-wrap: wrap;
-    }
-
-    button {
-      padding: 12px 14px;
-      border: 0;
-      border-radius: 10px;
-      font-weight: 700;
-      cursor: pointer;
-      font-size: 15px;
-    }
-
-    .btn-primary {
-      background: #f0c14b;
-      color: #1a1a1a;
-    }
-
-    .btn-secondary {
-      background: #f0c14b;;
-      color: #fff;
-      border: 1px solid rgba(255,255,255,0.16);
-    }
-
-    .btn-danger {
-      background: #b91c1c;
-      color: #fff;
-      border: 1px solid rgba(255,255,255,0.16);
-    }
-
-    .footer-actions {
-      display: flex;
-      justify-content: center;
-      gap: 12px;
-      flex-wrap: wrap;
-    }
-
-    @media (max-width: 900px) {
-      .grid,
-      .menu-grid {
-        grid-template-columns: 1fr;
-      }
-
-      .topbar {
-        flex-direction: column;
-        align-items: flex-start;
-      }
-    }
-  </style>
+  <link rel="stylesheet" href="./css/reset.css">
+  <link rel="stylesheet" href="./css/admin.css">
 </head>
-<body>
-  <div class="wrap">
-    <div class="topbar">
-      <div class="brand">
-        <h1>Painel Administrativo</h1>
-        <p>Cachetão Pro • área restrita para administração do sistema</p>
+
+<body class="admin-theme">
+  <main class="admin-wrap">
+
+    <header class="admin-topbar">
+      <div class="admin-brand">
+        <h1>🛠 Painel Administrativo</h1>
+
+        <p>
+          Cachetão Pro • área restrita para administração do sistema
+        </p>
       </div>
 
-      <div class="badge-admin">Acesso exclusivo para administradores</div>
+      <div class="admin-badge">
+        Acesso exclusivo para administradores
+      </div>
+    </header>
+
+    <div id="adminHomeMsg" class="admin-msg">
+      Validando acesso...
     </div>
 
-    <div id="adminHomeMsg" class="msg">Validando acesso...</div>
+    <section class="admin-hero">
+      <h2>Bem-vindo ao painel administrativo</h2>
 
-    <section class="hero">
-      <h2 class="hero-title">Bem-vindo ao painel administrativo</h2>
-      <p class="hero-subtitle">
-        Esta área é separada do ambiente do jogador. Aqui você administra o sistema,
-        valida acessos e acessa as páginas internas de gestão.
+      <p>
+        Esta área é separada do ambiente do jogador. Aqui você administra
+        o sistema, valida acessos e entra nas páginas internas de gestão.
       </p>
     </section>
 
-    <section class="grid">
-      <div class="card">
+    <section class="admin-info-grid">
+      <article class="admin-info-card">
         <h2>Sessão administrativa</h2>
 
-        <div class="info-row">
-          <div class="label">Usuário</div>
-          <div id="adminUsername" class="value">—</div>
+        <div class="admin-info-row">
+          <div class="admin-info-label">
+            Usuário
+          </div>
+
+          <div id="adminUsername" class="admin-info-value">
+            —
+          </div>
         </div>
 
-        <div class="info-row">
-          <div class="label">E-mail</div>
-          <div id="adminEmail" class="value">—</div>
+        <div class="admin-info-row">
+          <div class="admin-info-label">
+            E-mail
+          </div>
+
+          <div id="adminEmail" class="admin-info-value">
+            —
+          </div>
         </div>
 
-        <div class="info-row">
-          <div class="label">Perfil</div>
-          <div id="adminRole" class="value">—</div>
+        <div class="admin-info-row">
+          <div class="admin-info-label">
+            Perfil
+          </div>
+
+          <div id="adminRole" class="admin-info-value">
+            —
+          </div>
         </div>
 
-        <div class="info-row">
-          <div class="label">ID do usuário</div>
-          <div id="adminUserId" class="value">—</div>
-        </div>
-      </div>
+        <div class="admin-info-row">
+          <div class="admin-info-label">
+            ID do usuário
+          </div>
 
-      <div class="card">
+          <div id="adminUserId" class="admin-info-value">
+            —
+          </div>
+        </div>
+      </article>
+
+      <article class="admin-info-card">
         <h2>Status do sistema</h2>
 
-        <div class="info-row">
-          <div class="label">Autenticação</div>
-          <div id="adminAuthStatus" class="value">Validando...</div>
+        <div class="admin-info-row">
+          <div class="admin-info-label">
+            Autenticação
+          </div>
+
+          <div id="adminAuthStatus" class="admin-info-value">
+            Validando...
+          </div>
         </div>
 
-        <div class="info-row">
-          <div class="label">Backend</div>
-          <div id="adminBackendStatus" class="value">Consultando...</div>
+        <div class="admin-info-row">
+          <div class="admin-info-label">
+            Backend
+          </div>
+
+          <div id="adminBackendStatus" class="admin-info-value">
+            Consultando...
+          </div>
         </div>
 
-        <div class="info-row">
-          <div class="label">Página atual</div>
-          <div class="value">admin-home.html</div>
+        <div class="admin-info-row">
+          <div class="admin-info-label">
+            Página atual
+          </div>
+
+          <div class="admin-info-value">
+            admin-home.html
+          </div>
         </div>
 
-        <div class="info-row">
-          <div class="label">Modo</div>
-          <div class="value">Administração</div>
+        <div class="admin-info-row">
+          <div class="admin-info-label">
+            Modo
+          </div>
+
+          <div class="admin-info-value">
+            Administração
+          </div>
         </div>
-      </div>
+      </article>
     </section>
 
-    <section class="menu-grid">
-      <div class="menu-box">
-        <h3>Usuários</h3>
+    <section
+      class="admin-menu-grid"
+      aria-label="Menu administrativo"
+    >
+      <article class="admin-menu-card">
+        <h3>👥 Usuários</h3>
+
         <p>
-          Acessa a tela administrativa de usuários cadastrados no sistema.
+          Acesse a tela administrativa dos usuários cadastrados no sistema.
         </p>
-        <div class="button-row">
-          <button id="btnGoUsers" class="btn-primary" type="button">Abrir Administração de Usuários</button>
+
+        <div class="admin-menu-actions">
+          <button
+            id="btnGoUsers"
+            class="admin-btn admin-btn-primary"
+            type="button"
+          >
+            Abrir Administração de Usuários
+          </button>
         </div>
-      </div>
+      </article>
 
-      <div class="menu-box">
-        <h3>Dashboard</h3>
+      <article class="admin-menu-card">
+        <h3>📊 Dashboard</h3>
+
         <p>
-          Abre o painel com resumo de usuários, administradores, bloqueados, ativos e últimas ações administrativas.
+          Consulte o resumo de usuários, administradores, bloqueados,
+          ativos e as últimas ações administrativas.
         </p>
-        <div class="button-row">
-          <button id="btnGoDashboard" class="btn-secondary" type="button">Abrir Dashboard</button>
+
+        <div class="admin-menu-actions">
+          <button
+            id="btnGoDashboard"
+            class="admin-btn admin-btn-primary"
+            type="button"
+          >
+            Abrir Dashboard
+          </button>
         </div>
-      </div>
+      </article>
 
-      <div class="menu-box">
-        <h3>Financeiro</h3>
+      <article class="admin-menu-card">
+        <h3>💰 Financeiro</h3>
 
         <p>
-          Acompanha depósitos PIX, histórico financeiro,
-          arrecadação e venda de fichas.
+          Acompanhe depósitos PIX, histórico financeiro, arrecadação
+          e venda de fichas.
         </p>
 
-        <div class="button-row">
+        <div class="admin-menu-actions">
           <button
             id="btnGoFinance"
-            class="btn-primary"
+            class="admin-btn admin-btn-primary"
             type="button"
           >
             Abrir Financeiro
           </button>
         </div>
-      </div>
+      </article>
 
-      <div class="menu-box">
-        <h3>Encerrar sessão</h3>
+      <article class="admin-menu-card">
+        <h3>🚪 Encerrar sessão</h3>
+
         <p>
-          Sai da conta atual e retorna para a tela de login.
+          Encerre a conta administrativa atual e retorne para a tela de login.
         </p>
-        <div class="button-row">
-          <button id="btnLogout" class="btn-danger" type="button">Sair</button>
+
+        <div class="admin-menu-actions">
+          <button
+            id="btnLogout"
+            class="admin-btn admin-btn-danger"
+            type="button"
+          >
+            Sair
+          </button>
         </div>
-      </div>
+      </article>
     </section>
 
-    <div class="footer-actions">
-      <button id="btnLogoutBottom" class="btn-danger" type="button">Sair da conta</button>
+    <div class="admin-footer-actions">
+      <button
+        id="btnLogoutBottom"
+        class="admin-btn admin-btn-danger"
+        type="button"
+      >
+        Sair da conta
+      </button>
     </div>
-  </div>
+
+  </main>
 
   <script src="./js/admin-home.js"></script>
 </body>

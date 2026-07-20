@@ -1,3 +1,8 @@
+const API_BASE =
+  window.location.hostname === "localhost"
+    ? "http://localhost:3001/api"
+    : "/api";
+
 const financeMessage = document.getElementById("financeMessage");
 const financeTableBody = document.getElementById("financeTableBody");
 
@@ -40,7 +45,7 @@ async function loadFinance() {
   }
 
   try {
-    const res = await fetch("/api/admin/finance/summary", {
+    const res = await fetch(`${API_BASE}/admin/finance/summary`, {
       credentials: "include",
     });
 

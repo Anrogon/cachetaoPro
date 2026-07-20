@@ -35,12 +35,12 @@
         </a>
 
         <a href="./how-to-play.html">
-          <span class="nav-icon">🃏</span>
+          <span class="nav-icon">📖</span>
           <span>Como jogar</span>
         </a>
 
         <a href="#" id="navBuyChips">
-          <span class="nav-icon">💳</span>
+          <span class="nav-icon">💰</span>
           <span>Comprar fichas</span>
         </a>
 
@@ -50,7 +50,7 @@
         </a>
 
         <a href="#" id="navLogout">
-          <span class="nav-icon">📲</span>
+          <span class="nav-icon">🚪</span>
           <span>Sair</span>
         </a>
       </div>
@@ -181,34 +181,77 @@
   <div id="playerInfo"></div>
     <div id="playerInfo"></div>
 
-    <div id="table"></div>
-
     <div id="deck-area">
-      <div id="monte" class="pile-slot"></div>
-      <div id="lixo" class="pile-slot"></div>
+  <div id="deck-row">
+    <div id="monte" class="pile-slot monte-horizontal"></div>
+
+    <div id="pot-area">
+      <div class="chip-stack" aria-label="Pote 500"></div>
+      <div class="pote-label">Pote: 500</div>
     </div>
+
+    <div id="lixo" class="pile-slot"></div>
+
+    <div id="vira-area" class="pile-slot">
+      <div id="vira-card" class="vira-card-real"></div>
+    </div>
+  </div>
+
+  <div id="vira-joker">Coringas: —</div>
+</div>
+
+    <div id="table"></div>
 
     <div id="bottomArea">
       <div id="hand"></div>
       <div id="scoreboard"></div>
 
-      <button
-        type="button"
-        class="sort-btn"
-        title="Ordenar por valor"
-        onclick="window.setHandSort('value')"
-      >
-        <img src="./assets/image/sort-value.png" alt="Ordenar por Valor" />
-      </button>
+      <div id="sortPanel">
 
-      <button
-        type="button"
-        class="sort-btn"
-        title="Ordenar por naipe"
-        onclick="window.setHandSort('suit')"
-      >
-        <img src="./assets/image/sort-suit.png" alt="Ordenar por Naipe" />
-      </button>
+      <div id="sortPanel" aria-label="Ordenação das cartas">
+  <div class="sort-title">Ordenar:</div>
+
+  <div class="sort-buttons">
+    <button
+      type="button"
+      class="sort-btn"
+      title="Ordenar por valor"
+      aria-label="Ordenar por valor"
+      onclick="window.setHandSort('value')"
+    >
+      <span class="sort-card sort-card-value" aria-hidden="true">
+      <span class="sort-values-grid">
+        <span class="black">A</span>
+        <span class="red">8</span>
+        <span class="red">K</span>
+        <span class="black">4</span>
+      </span>
+    </span>
+    </button>
+
+    <button
+      type="button"
+      class="sort-btn"
+      title="Ordenar por naipe"
+      aria-label="Ordenar por naipe"
+      onclick="window.setHandSort('suit')"
+    >
+      <span class="sort-card sort-card-suit" aria-hidden="true">
+        <span class="sort-suit-column">
+          <span class="red">♥</span>
+          <span class="black">♣</span>
+        </span>
+
+        <span class="sort-suit-column">
+          <span class="red">♦</span>
+          <span class="black">♠</span>
+        </span>
+      </span>
+    </button>
+  </div>
+</div>
+
+    </div>
     </div>
   </div>
 

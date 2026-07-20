@@ -1,183 +1,434 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<title>Como Jogar - Cachetão Pro</title>
+  <title>Como Jogar - Cachetão Pro</title>
 
-<link rel="stylesheet" href="./css/reset.css">
-<link rel="stylesheet" href="./css/layout.css">
+  <link rel="stylesheet" href="./css/reset.css">
+  <link rel="stylesheet" href="./css/layout.css">
+  <link rel="stylesheet" href="./css/pages.css">
 
-<style>
+  <style>
+  /* =========================================================
+     COMO JOGAR — SOMENTE AJUSTES EXCLUSIVOS
+  ========================================================= */
 
-.howto-container{
-  max-width:1100px;
-  margin:20px auto;
-  padding:20px;
-  color:#fff;
-}
+  .howto-steps{
+    list-style:decimal;
+    margin:12px 0 20px;
+    padding-left:28px;
+  }
 
-.howto-title{
-  text-align:center;
-  font-size:42px;
-  margin-bottom:30px;
-}
+  .howto-steps li{
+    margin-bottom:10px;
+    padding:0;
 
-.howto-card{
-  background:rgba(0,0,0,.25);
-  border:1px solid rgba(255,255,255,.12);
-  border-radius:16px;
-  padding:24px;
-  margin-bottom:24px;
-  text-align: left;
-  line-height: 1.6;
-}
+    background:transparent;
+    border:0;
+  }
 
-.howto-card h2{
-  color:#ffd54a;
-  margin-bottom:16px;
-}
+  .howto-example{
+    margin:14px 0 18px;
+    padding:14px 16px;
 
-.rules-table{
-  width:100%;
-  border-collapse:collapse;
-}
+    border-radius:14px;
 
-.rules-table th,
-.rules-table td{
-  border:1px solid rgba(255,255,255,.12);
-  padding:12px;
-  text-align:center;
-}
+    background:rgba(255,255,255,.07);
+    border:1px solid rgba(212,175,55,.22);
+  }
 
-.rules-table th{
-  background:#123f6e;
-}
+  .howto-example strong{
+    color:#ffd86b;
+  }
 
-.back-btn{
-  display:inline-block;
-  margin-top:20px;
-  padding:12px 20px;
-  border-radius:10px;
-  background:#1f7a3f;
-  color:#fff;
-  text-decoration:none;
-  font-weight:bold;
-}
-
-.rules-list{
-  font: size 16px;
-}
-
+  .howto-final-alert{
+    margin-top:30px;
+  }
 </style>
 </head>
 
-<body>
+<body class="page-theme">
+  <main class="cp-page">
+    <section class="cp-card cp-content">
 
-<div class="howto-container">
+      <h1 class="cp-title">
+        ♠ Como Jogar Cachetão Pro ♥
+      </h1>
 
-  <h1 class="howto-title">
-    ♥   Como Jogar Cachetão Pro   ♠
-  </h1>
+      <div class="cp-date">
+        Guia rápido para novos jogadores
+      </div>
 
-  <div class="howto-card">
-    <h2>Objetivo</h2>
+      <div class="cp-alert">
+        Aprenda as principais regras do Cachetão Pro em poucos minutos
+        e entre preparado para sua primeira partida.
+      </div>
 
-    <p>
-      Monte jogos válidos utilizando suas cartas e seja o primeiro a ficar sem cartas na mão.
-    </p>
+      <nav class="cp-index" aria-label="Índice de Como Jogar">
+        <div class="cp-index-title">Índice</div>
 
-    <p>
-      O vencedor da rodada recebe fichas dos adversários de acordo com a pontuação restante em suas mãos.
-    </p>
-  </div>
+        <div class="cp-index-links">
+          <a href="#objetivo">🎯 Objetivo</a>
+          <a href="#rodada">🎴 Rodada</a>
+          <a href="#coringa">🃏 Coringa</a>
+          <a href="#jogar">🟢 Jogar</a>
+          <a href="#jogar-vira">🎴 Jogar com a Vira</a>
+          <a href="#correr">⚪ Correr</a>
+          <a href="#marra">⚔ Marra</a>
+          <a href="#bati">🏆 Batidas</a>
+          <a href="#bater-vira">🏆 Bater com a Vira</a>
+          <a href="#pontuacao">💰 Pontuação</a>
+          <a href="#dicas">💡 Dicas</a>
+        </div>
+      </nav>
 
-  <div class="howto-card">
-    <h2>Regras Básicas</h2>
+      <h2 id="objetivo">🎯 Objetivo</h2>
 
-    <ul class="rules-list">
-      <li>São distribuídas 9 cartas para cada jogador.</li>
-      <li>Na sua vez você compra uma carta.</li>
-      <li>Pode baixar jogos e adicionar cartas na mesa.</li>
-      <li>Pode baixar trincas e sequências.</li>
-      <li>As trinca usam cartas do mesmo valor. EX: 4♣ 4♠ 4♥ </li>
-      <li>As sequências devem ser formadas com cartas do mesmo naipe. Ex: 8♣ 9♣ 10♣ </li>
-      <li>As sequências podem incluir coringas na "gaveta". Ex: 4♣ 🃏 6♣ </li>
-      <li>Você pode pegar um coringa da mesa se tiver a carta real e uma sequência válida.</li>
-      <li>Pode pegar a carta descartada no lixo pelo oponente e baixar um jogo.</li>
-      <li>Ao final deve descartar uma carta.</li>
-      <li>Quem ficar sem cartas bate e encerra a rodada.</li>
-      <li>O jogador que ultrapassar 100 pontos perde a partida.</li>
-      <li>O jogador pode fazer rebuy e retornar à patida com mesma pontuação do jogador que tiver mais pontos.</li>
-      <li>Ao final das rodadas, o jogador que não ultrapassar 100 pontos vence a partida.</li>
-      <li>Pontuação: coringa = 20 pontos, Ás = 15 pontos, figuras = 10 pontos. Demais cartas ( do 2 ao 10 ) = valor de face.</li>
-    </ul>
-  </div>
+      <p>
+        Todos os jogadores iniciam a partida com <strong>10 pontos</strong>.
+      </p>
 
-  <div class="howto-card">
+      <p>
+        O objetivo não é apenas vencer uma rodada, mas permanecer vivo
+        até ser o último jogador da mesa.
+      </p>
 
-    <h2>Pontinho Clássico x Pontinho Crazy</h2>
+      <hr>
 
-    <table class="rules-table">
+      <h2 id="rodada">🎴 Como funciona uma rodada</h2>
 
-      <tr>
-        <th>Regra</th>
-        <th>Clássico</th>
-        <th>Crazy</th>
-      </tr>
+      <ol class="howto-steps">
+        <li>Cada jogador recebe <strong>9 cartas</strong>.</li>
+        <li>Uma carta é virada.</li>
+        <li>A carta virada define os coringas da rodada.</li>
 
-      <tr>
-        <td>Baixar sequência real</td>
-        <td>Sim</td>
-        <td>Sim</td>
-      </tr>
+        <li>
+          A decisão começa pelo primeiro jogador após o carteador.
+          O carteador é o último a decidir.
+        </li>
 
-      <tr>
-        <td>Coringa na "gaveta"</td>
-        <td>Sim</td>
-        <td>Sim</td>
-      </tr>
+        <li>
+          Cada jogador decide entre <strong>Jogar</strong> ou
+          <strong>Correr</strong>.
+        </li>
 
-      <tr>
-        <td>Coringa na ponta</td>
-        <td>Não</td>
-        <td>Somente para bater</td>
-      </tr>
+        <li>
+          A rodada começa entre os jogadores que decidiram jogar.
+        </li>
 
-      <tr>
-        <td>Trinca com coringa</td>
-        <td>Não</td>
-        <td>Somente para bater</td>
-      </tr>
+        <li>
+          Antes da primeira compra, os participantes podem declarar
+          <strong>BATI com a Vira</strong>.
+        </li>
 
-      <tr>
-        <td>Batida fora do turno</td>
-        <td>Não</td>
-        <td>Sim</td>
-      </tr>
+        <li>
+          O primeiro jogador que realizará a compra também poderá escolher
+          <strong>Jogar com a Vira</strong>.
+        </li>
 
-      <tr>
-        <td>Baixar Trinca</td>
-        <td>Três naipes diferentes</td>
-        <td>Todos os naipes</td>
-      </tr>
+        <li>
+          O vencedor da rodada é o jogador que realizar uma batida válida primeiro.
+        </li>
+      </ol>
 
-      <tr>
-        <td>Modo de jogo</td>
-        <td>Tradicional</td>
-        <td>Mais dinâmico</td>
-      </tr>
+      <hr>
 
-    </table>
+      <h2 id="coringa">🃏 O Coringa</h2>
 
-  </div>
+      <p>
+        O Cachetão Pro não possui coringas fixos.
+      </p>
 
-  <a href="./index.html" class="back-btn">
-    ← Voltar ao início
-  </a>
+      <p>
+        Os coringas mudam a cada rodada conforme a carta virada.
+      </p>
 
-</div>
+      <div class="howto-example">
+        <strong>Exemplo:</strong><br>
+        Vira: <strong>9♥</strong><br>
+        Coringas: <strong>10♥</strong> e <strong>10♦</strong>
+      </div>
 
+      <p>
+        O coringa pode substituir qualquer carta em sequências e trincas.
+        Também é permitido utilizar dois coringas no mesmo jogo.
+      </p>
+
+      <hr>
+
+      <h2 id="jogar">🟢 Jogar</h2>
+
+      <p>
+        Quem escolher <strong>Jogar</strong> participa normalmente da rodada.
+      </p>
+
+      <p>
+        Caso perca a rodada, perde <strong>2 pontos</strong>.
+      </p>
+
+      <hr>
+
+      <h2 id="jogar-vira">🎴 Jogar com a Vira</h2>
+
+      <p>
+        Depois que todos decidirem entre Jogar e Correr, o primeiro jogador
+        que realizará a compra possui uma opção exclusiva:
+        <strong>Jogar com a Vira</strong>.
+      </p>
+
+      <p>
+        Essa opção existe porque, no início da rodada, o lixo ainda está vazio.
+        Enquanto os jogadores seguintes poderão escolher entre comprar do monte
+        ou pegar a carta do lixo, o primeiro comprador ainda não possui essa
+        segunda opção.
+      </p>
+
+      <p>
+        Ao escolher <strong>Jogar com a Vira</strong>:
+      </p>
+
+      <ul>
+        <li>
+          a carta virada fica disponível para aquele jogador como uma carta normal;
+        </li>
+
+        <li>
+          ela poderá ser utilizada posteriormente em um dos jogos da sua batida;
+        </li>
+
+        <li>
+          ela também poderá ser descartada normalmente;
+        </li>
+
+        <li>
+          se for descartada, passa a ser a carta do lixo;
+        </li>
+
+        <li>
+          o próximo jogador poderá pegá-la do lixo normalmente, inclusive para bater.
+        </li>
+      </ul>
+
+      <div class="howto-example">
+        <strong>Importante:</strong><br>
+        Somente o primeiro jogador que realizará a compra poderá escolher
+        Jogar com a Vira. Os demais jogadores não possuem essa opção.
+      </div>
+
+      <hr>
+
+      <h2 id="correr">⚪ Correr</h2>
+
+      <p>Ao escolher <strong>Correr</strong>:</p>
+
+      <ul>
+        <li>suas cartas retornam ao monte;</li>
+        <li>você não participa daquela rodada;</li>
+        <li>você perde apenas <strong>1 ponto</strong>.</li>
+      </ul>
+
+      <p>
+        Muitas vezes correr é uma excelente estratégia para evitar uma perda maior.
+      </p>
+
+      <hr>
+
+      <h2 id="marra">⚔ Marra</h2>
+
+      <p>
+        Quando um jogador fica com apenas <strong>1 ponto</strong>,
+        entra automaticamente na Marra.
+      </p>
+
+      <ul>
+        <li>não pode correr;</li>
+        <li>é obrigado a jogar;</li>
+        <li>se perder, é eliminado;</li>
+        <li>se vencer, continua com 1 ponto e permanece na Marra.</li>
+      </ul>
+
+      <hr>
+
+      <h2 id="bati">🏆 Formas de Batida</h2>
+
+      <p>O Cachetão Pro permite as seguintes formas de bater:</p>
+
+      <ul>
+        <li>
+          <strong>Batida Simples</strong><br>
+          3 jogos com uma carta para descarte, ou 3 jogos sem descarte.
+        </li>
+
+        <li>
+          <strong>Batida de Dez</strong><br>
+          2 jogos de 3 cartas e 1 jogo de 4 cartas, sem descarte.
+        </li>
+
+        <li>
+          <strong>Batida de Quadra e Quina</strong><br>
+          1 jogo de 4 cartas e 1 jogo de 5 cartas, sem descarte.
+        </li>
+      </ul>
+
+      <p>
+        O jogador pode declarar <strong>BATI</strong> inclusive fora do seu turno,
+        respeitando a prioridade do jogador da vez.
+      </p>
+
+      <p>
+        Se a tentativa não formar uma batida válida, o jogador fica
+        <strong>Queimado</strong> e não poderá pegar cartas do lixo naquela rodada.
+      </p>
+
+      <hr>
+
+      <h2 id="bater-vira">🏆 Bater com a Vira</h2>
+
+      <p>
+        Antes que seja realizada a primeira compra da rodada, qualquer jogador
+        que tenha escolhido <strong>Jogar</strong> poderá declarar
+        <strong>BATI com a Vira</strong>.
+      </p>
+
+      <p>
+        Diferentemente da opção Jogar com a Vira, o direito de tentar uma
+        batida imediata não é exclusivo do primeiro comprador.
+      </p>
+
+      <p>
+        Ao declarar <strong>BATI com a Vira</strong>:
+      </p>
+
+      <ul>
+        <li>
+          o jogador deverá selecionar a vira junto com as cartas de um dos seus jogos;
+        </li>
+
+        <li>
+          a vira poderá ser utilizada no primeiro, no segundo ou no terceiro jogo;
+        </li>
+
+        <li>
+          a ordem em que os jogos são baixados não é importante;
+        </li>
+
+        <li>
+          a vira deverá obrigatoriamente fazer parte de pelo menos um jogo válido;
+        </li>
+
+        <li>
+          o jogador poderá utilizar nove cartas nos jogos e deixar uma carta
+          física para descarte, como em uma batida normal;
+        </li>
+
+        <li>
+          também poderá utilizar todas as cartas, desde que a combinação forme
+          uma das batidas válidas do Cachetão Pro.
+        </li>
+      </ul>
+
+      <div class="howto-example">
+        <strong>Importante:</strong><br>
+        A opção Bater com a Vira fica disponível apenas antes da primeira compra.
+        Assim que uma carta for comprada, essa oportunidade termina.
+      </div>
+
+      <p>
+        Se mais de um jogador declarar BATI com a Vira, será respeitada a
+        prioridade do jogador que está na vez.
+      </p>
+
+      <p>
+        Caso a tentativa seja cancelada ou não forme uma batida válida,
+        o jogador ficará <strong>Queimado</strong>.
+      </p>
+
+      <hr>
+
+      <h2 id="pontuacao">💰 Pontuação</h2>
+
+      <table class="rules-table">
+        <thead>
+          <tr>
+            <th>Situação</th>
+            <th>Resultado</th>
+          </tr>
+        </thead>
+
+        <tbody>
+          <tr>
+            <td>Correr</td>
+            <td>−1 ponto</td>
+          </tr>
+
+          <tr>
+            <td>Jogar e perder</td>
+            <td>−2 pontos</td>
+          </tr>
+
+          <tr>
+            <td>Marra e perder</td>
+            <td>Eliminado</td>
+          </tr>
+
+          <tr>
+            <td>Marra e vencer</td>
+            <td>Permanece com 1 ponto</td>
+          </tr>
+
+          <tr>
+            <td>Último jogador vivo</td>
+            <td>Campeão</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <hr>
+
+      <h2 id="dicas">💡 Dicas</h2>
+
+      <ul>
+        <li>Nem sempre vale a pena disputar todas as rodadas.</li>
+        <li>Correr também faz parte da estratégia.</li>
+        <li>Observe quais jogadores estão na Marra.</li>
+
+        <li>
+          Administrar seus pontos é tão importante quanto montar bons jogos.
+        </li>
+
+        <li>
+          Utilize sua posição e a ordem de decisão de forma estratégica.
+        </li>
+
+        <li>
+          Se você for o primeiro comprador, avalie cuidadosamente se vale a pena
+          Jogar com a Vira.
+        </li>
+
+        <li>
+          Antes da primeira compra, confira se sua mão permite uma batida
+          imediata utilizando a vira.
+        </li>
+
+        <li>
+          Antes de declarar BATI, confira cuidadosamente todos os seus jogos.
+        </li>
+      </ul>
+
+      <div class="cp-alert howto-final-alert">
+        As fichas utilizadas no Cachetão Pro são moedas virtuais destinadas
+        exclusivamente ao entretenimento dentro da plataforma.
+      </div>
+
+      <div class="cp-actions">
+        <a href="./index.html" class="cp-btn cp-btn-primary">
+          ← Voltar ao início
+        </a>
+      </div>
+
+    </section>
+  </main>
 </body>
 </html>

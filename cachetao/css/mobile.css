@@ -1,7 +1,7 @@
 @media (max-width: 768px) {
   .card {
-    width: 46px;
-    height: 70px;
+    width: 57px;
+    height: 89px;
   }
 
   .jogo-mesa {
@@ -10,111 +10,9 @@
 }
 
 /* =========================================================
-   MOBILE PORTRAIT â€” MESA / JOGOS BAIXADOS
-========================================================= */
-@media (max-width: 520px) and (orientation: portrait) {
-  #table {
-    position: fixed !important;
-    left: 10px !important;
-    right: 10px !important;
-
-    top: calc(10px + env(safe-area-inset-top) + 165px) !important;
-    bottom: calc(10px + env(safe-area-inset-bottom) + 230px) !important;
-
-    background: transparent !important;
-    overflow-x: auto !important;
-    overflow-y: hidden !important;
-
-    z-index: 16000 !important;
-    pointer-events: auto !important;
-  }
-
-  #table .table-melds-layer {
-    position: absolute !important;
-    left: 50% !important;
-    transform: translateX(-50%) !important;
-
-    display: flex !important;
-    flex-direction: row !important;
-    flex-wrap: wrap !important;
-    justify-content: center !important;
-    align-items: flex-start !important;
-
-    gap: 4px !important;
-    width: 96% !important;
-
-    pointer-events: none !important;
-  }
-
-  #table .table-melds-top {
-    top: 40px !important;
-  }
-
-  #table .table-melds-bottom {
-    top: 150px !important;
-  }
-
-  #table .grupo-table {
-    position: relative !important;
-    display: block !important;
-
-    width: 46px !important;
-    min-width: 46px !important;
-    height: 165px !important;
-
-    overflow: visible !important;
-    margin: 0 !important;
-    padding: 0 !important;
-    background: transparent !important;
-
-    pointer-events: auto !important;
-    flex: 0 0 46px !important;
-  }
-
-  #table .grupo-table .card {
-    position: absolute !important;
-    left: 0 !important;
-
-    width: 46px !important;
-    height: 72px !important;
-
-    margin: 0 !important;
-    border-radius: 5px !important;
-  }
-
-  #table .grupo-table .card:nth-child(1)  { top: 0px !important; z-index: 1 !important; }
-  #table .grupo-table .card:nth-child(2)  { top: 12px !important; z-index: 2 !important; }
-  #table .grupo-table .card:nth-child(3)  { top: 24px !important; z-index: 3 !important; }
-  #table .grupo-table .card:nth-child(4)  { top: 36px !important; z-index: 4 !important; }
-  #table .grupo-table .card:nth-child(5)  { top: 48px !important; z-index: 5 !important; }
-  #table .grupo-table .card:nth-child(6)  { top: 60px !important; z-index: 6 !important; }
-  #table .grupo-table .card:nth-child(7)  { top: 72px !important; z-index: 7 !important; }
-  #table .grupo-table .card:nth-child(8)  { top: 84px !important; z-index: 8 !important; }
-  #table .grupo-table .card:nth-child(9)  { top: 96px !important; z-index: 9 !important; }
-  #table .grupo-table .card:nth-child(10) { top: 108px !important; z-index: 10 !important; }
-  #table .grupo-table .card:nth-child(11) { top: 120px !important; z-index: 11 !important; }
-  #table .grupo-table .card:nth-child(12) { top: 132px !important; z-index: 12 !important; }
-  #table .grupo-table .card:nth-child(13) { top: 144px !important; z-index: 13 !important; }
-}
-
-/* =========================================================
    MOBILE HUD INFERIOR â€” JOGADOR, MONTE/LIXO, ORDENAR, BATI
 ========================================================= */
 @media (max-width: 520px) and (orientation: portrait) {
-  #deck-area {
-    position: fixed !important;
-    left: 50% !important;
-    transform: translateX(-50%) !important;
-    bottom: calc(10px + env(safe-area-inset-bottom) + 118px) !important;
-
-    display: flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-    gap: 8px !important;
-
-    z-index: 25000 !important;
-    pointer-events: auto !important;
-  }
 
   #mobileBottomHud {
     position: fixed !important;
@@ -233,37 +131,6 @@
   }
 }
 
-/* =========================================================
-   MOBILE POT NO TOPO DA MESA
-========================================================= */
-@media (max-width: 520px) and (orientation: portrait) {
-  #mobilePotTop {
-    position: absolute !important;
-    left: 50% !important;
-    top: 120px !important;
-    transform: translateX(-50%) !important;
-
-    z-index: 30 !important;
-    pointer-events: none !important;
-
-    display: flex !important;
-    flex-direction: column !important;
-    align-items: center !important;
-    justify-content: center !important;
-  }
-
-  #mobilePotTop img {
-    max-width: 58px !important;
-    max-height: 58px !important;
-  }
-
-  #mobilePotTop,
-  #mobilePotTop * {
-    color: #fff !important;
-    font-weight: 800 !important;
-    text-align: center !important;
-  }
-}
 
 
 
@@ -278,7 +145,7 @@
     position: relative !important;
 
     width: 100% !important;
-    min-height: 300px !important;
+    min-height: 260px !important;
 
     margin: 0 auto !important;
     padding-top: 38px !important;
@@ -329,30 +196,29 @@
     pointer-events: none !important;
   }
 
-  .mobile-seat {
+    .mobile-seat {
     position: absolute !important;
 
-    width: 100px !important;
-    min-height: 40px !important;
+    width: 92px !important;
+    min-height: 34px !important;
 
     display: flex !important;
     align-items: center !important;
-    gap: 6px !important;
+    gap: 4px !important;
 
-    padding: 3px 6px !important;
+    padding: 3px 5px !important;
 
     text-align: left !important;
-
     overflow: visible !important;
 
     border-radius: 999px !important;
 
-    background: rgba(0,0,0,0.42) !important;
-    border: 1px solid rgba(255,255,255,0.18) !important;
+    background: rgba(0,0,0,0.40) !important;
+    border: 1px solid rgba(255,215,0,0.40) !important;
 
     color: #fff !important;
 
-    box-shadow: 0 3px 10px rgba(0,0,0,0.25) !important;
+    box-shadow: 0 3px 8px rgba(0,0,0,0.22) !important;
   }
 
   .mobile-seat.is-current-turn {
@@ -364,27 +230,33 @@
   }
 
 
+  
   .mobile-seat-avatar {
-    width: 24px !important;
-    height: 24px !important;
+    position: relative !important;
 
-    flex: 0 0 24px !important;
+    width: 22px !important;
+    height: 22px !important;
+
+    flex: 0 0 22px !important;
 
     margin: 0 !important;
 
     border-radius: 50% !important;
-    overflow: hidden !important;
 
-    border: 2px solid rgba(255,255,255,0.6) !important;
+    /* A ficha precisa poder sair para fora do avatar */
+    overflow: visible !important;
+
+    border: 1px solid rgba(255,215,0,0.65) !important;
   }
 
   .mobile-seat-avatar img {
     width: 100% !important;
     height: 100% !important;
 
-    object-fit: cover !important;
-
     display: block !important;
+
+    border-radius: 50% !important;
+    object-fit: cover !important;
   }
 
   .mobile-seat-text {
@@ -392,9 +264,9 @@
   }
 
   .mobile-seat-name {
-    margin: 0 0 2px 0 !important;
+    margin: 0 0 1px 0 !important;
 
-    font-size: 11px !important;
+    font-size: 9.5px !important;
     font-weight: 900 !important;
     line-height: 1 !important;
 
@@ -404,11 +276,27 @@
   }
 
   .mobile-seat-meta {
-    font-size: 8.5px !important;
+    font-size: 8px !important;
+    font-weight: 800 !important;
     line-height: 1 !important;
 
     white-space: nowrap !important;
   }
+
+  .dealer-chip-mobile {
+  position: absolute;
+
+  width: 16px;
+  height: 16px;
+
+  right: -7px;
+  bottom: -5px;
+
+  font-size: 9px;
+  line-height: 1;
+
+  z-index: 20;
+}
 
   /* =========================
      POSIÇÕES
@@ -482,4 +370,46 @@
   .mobile-seat-cards .mobile-mini-card:nth-child(8) { transform: rotate(15deg) translateY(3px) !important; }
   .mobile-seat-cards .mobile-mini-card:nth-child(9) { transform: rotate(20deg) translateY(4px) !important; }
 
+}
+
+.mobile-seat-marra {
+  position: absolute;
+  left: 50%;
+  bottom: -10px;
+  transform: translateX(-50%);
+
+  padding: 1px 8px;
+  border-radius: 999px;
+
+  background: linear-gradient(180deg, #e53935, #a60000);
+  color: #fff;
+
+  font-size: 7px;
+  font-weight: 900;
+  line-height: 1.1;
+
+  border: 1px solid rgba(255, 215, 0, .85);
+  box-shadow: 0 1px 4px rgba(0,0,0,.45);
+
+  white-space: nowrap;
+
+
+}
+
+@media (max-width: 520px) and (orientation: portrait) {
+  body.mobile-table-mode #roundBanner {
+    top: 50% !important;
+    left: 50% !important;
+    transform: translate(-50%, -50%) !important;
+
+    min-width: 180px !important;
+    max-width: 220px !important;
+
+    padding: 10px 14px !important;
+    border-radius: 12px !important;
+
+    font-size: 12px !important;
+    text-align: center !important;
+    white-space: pre-line !important;
+  }
 }

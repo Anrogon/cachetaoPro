@@ -2,65 +2,114 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
   <title>Cachetão Pro - Admin Financeiro</title>
-  <link rel="stylesheet" href="./css/layout.css">
+
+  <link rel="stylesheet" href="./css/reset.css">
+  <link rel="stylesheet" href="./css/admin.css">
 </head>
-<body class="admin-page">
 
-  <div class="admin-wrap">
-    <h1>💰 Admin Financeiro</h1>
+<body class="admin-theme">
+  <main class="admin-wrap">
 
-    <div class="admin-actions">
-      <button onclick="window.location.href='./admin-home.html'">
-        Voltar ao painel
-      </button>
+    <header class="admin-topbar">
+      <div class="admin-brand">
+        <h1>💰 Admin • Financeiro</h1>
 
-      <button onclick="loadFinance()">
-        Atualizar
-      </button>
-    </div>
+        <p>
+          Cachetão Pro • receitas, depósitos e movimentações financeiras
+        </p>
+      </div>
 
-    <div id="financeMessage" class="admin-message">
+      <div class="admin-badge">
+        Área administrativa
+      </div>
+    </header>
+
+    <nav class="admin-toolbar" aria-label="Ações do Financeiro">
+      <div class="admin-toolbar-group">
+        <button
+          class="admin-btn admin-btn-secondary"
+          type="button"
+          onclick="window.location.href='./admin-home.html'"
+        >
+          ← Voltar ao painel
+        </button>
+
+        <button
+          class="admin-btn admin-btn-primary"
+          type="button"
+          onclick="loadFinance()"
+        >
+          🔄 Atualizar
+        </button>
+      </div>
+    </nav>
+
+    <div id="financeMessage" class="admin-msg">
       Carregando financeiro...
     </div>
 
-    <div class="finance-cards">
+    <section
+      class="admin-finance-grid"
+      aria-label="Resumo financeiro"
+    >
+      <article class="admin-finance-card">
+        <span>Receita hoje</span>
 
-      <div class="finance-card">
-        <span>Receita Hoje</span>
-        <strong id="financeTodayAmount">R$ 0,00</strong>
-      </div>
+        <strong id="financeTodayAmount">
+          R$ 0,00
+        </strong>
+      </article>
 
-      <div class="finance-card">
-        <span>Receita Total</span>
-        <strong id="financeRevenueAmount">R$ 0,00</strong>
-      </div>
+      <article class="admin-finance-card">
+        <span>Receita total</span>
 
-      <div class="finance-card">
+        <strong id="financeRevenueAmount">
+          R$ 0,00
+        </strong>
+      </article>
+
+      <article class="admin-finance-card">
         <span>Total arrecadado</span>
-        <strong id="financeTotalAmount">R$ 0,00</strong>
-      </div>
 
-      <div class="finance-card">
+        <strong id="financeTotalAmount">
+          R$ 0,00
+        </strong>
+      </article>
+
+      <article class="admin-finance-card">
         <span>Fichas vendidas</span>
-        <strong id="financeTotalChips">0</strong>
-      </div>
 
-      <div class="finance-card">
+        <strong id="financeTotalChips">
+          0
+        </strong>
+      </article>
+
+      <article class="admin-finance-card">
         <span>Depósitos aprovados</span>
-        <strong id="financeApprovedCount">0</strong>
-      </div>
 
-      <div class="finance-card">
+        <strong id="financeApprovedCount">
+          0
+        </strong>
+      </article>
+
+      <article class="admin-finance-card">
         <span>Depósitos pendentes</span>
-        <strong id="financePendingCount">0</strong>
-      </div>
-    </div>
 
-    <h2>Últimas transações</h2>
+        <strong id="financePendingCount">
+          0
+        </strong>
+      </article>
+    </section>
 
-    <div class="finance-table-wrap">
-      <table class="finance-table">
+    <h2 class="admin-section-title">
+      Últimas transações
+    </h2>
+
+    <div class="admin-table-wrap">
+      <table class="admin-table">
         <thead>
           <tr>
             <th>Data</th>
@@ -72,14 +121,18 @@
             <th>Pagamento</th>
           </tr>
         </thead>
+
         <tbody id="financeTableBody">
           <tr>
-            <td colspan="7">Carregando...</td>
+            <td colspan="7">
+              Carregando...
+            </td>
           </tr>
         </tbody>
       </table>
     </div>
-  </div>
+
+  </main>
 
   <script src="./js/admin-finance.js"></script>
 </body>

@@ -10,7 +10,7 @@ const { randomUUID } = require("crypto");
 
 
 function isJoker(card) {
-  return card?.isJoker === true || card?.valor === "JOKER" || String(card?.id || "").startsWith("J");
+  return card?.isJoker === true || card?.valor === "JOKER";
 }
 
 function getNaipe(card) {
@@ -186,7 +186,16 @@ function startNewRound(room) {
     return;
   }
 
+  // Cachetão Pro: limpa decisão da rodada anterior
+  for (const p of room.playersBySeat || []) {
+    if (!p) continue;
+
+    p.participando = false;
+    p.passouRodada = false;
+  }
+
   const aliveSeats = getAliveSeats(room);
+
   if (aliveSeats.length <= 1) {
     room.started = false;
     room.phase = "WAITING";
@@ -198,13 +207,23 @@ function startNewRound(room) {
     clearTimeout(room._dealStartTimer);
     room._dealStartTimer = null;
   }
+
   clearAutoTurnTimer(room);
+
   room.turnEndsAt = 0;
   room.buyEndsAt = 0;
   room._autoTurnSeat = null;
 
   // nova rodada
   room.roundNumber = (room.roundNumber || 1) + 1;
+    // Cachetão Pro - limpa vira/coringa da rodada anterior
+  room.cartaVira = null;
+  room.coringaValor = null;
+  room.coringaNaipes = [];
+
+  // Cachetão Pro - decisão da rodada
+  room.participationDecisionBySeat = {};
+  room.participationEndsAt = 0;
 
   // reset da mecânica de BATI por rodada
   room.crazyBatidaBurnedBySeat = {};
@@ -222,11 +241,13 @@ function startNewRound(room) {
   room.batidaAnnouncement = "";
   room.batidaAnnouncementEndsAt = 0;
 
-  // cobra mini-ante dos sobreviventes
-  const miniAnteCollected = collectMiniAnte(room);
-  room.lastMiniAnteCollected = miniAnteCollected;
+  // mantém economia antiga por enquanto
+  /*const miniAnteCollected = collectMiniAnte(room);
+  room.lastMiniAnteCollected = miniAnteCollected;*/
 
   // limpa mesa / obrigações
+  // Cachetão Pro - limpa espera do duelo
+  room.cachetaoDuelCountdownDone = false;
   room.tableMelds = [];
   room.discard = [];
   room.mustUseJokerBySeat = {};
@@ -237,28 +258,39 @@ function startNewRound(room) {
   // novo baralho
   room.deck = shuffle(makeDeck());
 
-  // limpa mãos
+  // limpa mãos e estados da rodada
   for (const p of room.playersBySeat) {
     if (!p || p.eliminated) continue;
+
     p.hand = [];
     p.pendingBatidaAfterDiscard = false;
+
+    // Cachetão Pro
+    p.participando = false;
+    p.passouRodada = false;
+    p.marrou = false;
   }
 
-  // distribui 9 cartas para cada sobrevivente
+    // distribui 9 cartas para cada sobrevivente
   for (let r = 0; r < 9; r++) {
     for (const seat of aliveSeats) {
       const p = room.playersBySeat[seat - 1];
       if (!p || p.eliminated) continue;
+
       const card = room.deck.pop();
       if (card) p.hand.push(card);
     }
   }
 
+  // Cachetão Pro - define NOVA vira e NOVO coringa a cada rodada
+  setupCachetaoRoundJoker(room);
+
   advanceDealerAndCurrentSeat(room);
+
   room.started = true;
 
   // fase visual entre rodadas
-  room.dealMs = Number(room.dealMs) > 0 ? Number(room.dealMs) : 2200;
+  room.dealMs = Number(room.dealMs) > 0 ? Number(room.dealMs) : 1200;
   room.dealEndsAt = Date.now() + room.dealMs;
   room.phase = "DEALING";
 
@@ -269,14 +301,332 @@ function startNewRound(room) {
 
     if (!room || room.matchEnded || room.roundEnded) return;
 
-    room.phase = "COMPRAR";
+    // Cachetão Pro:
+    // Depois de distribuir, NÃO começa COMPRAR ainda.
+    // Primeiro todos escolhem Participar ou Passar.
+    room.phase = "DECISAO_PARTICIPAR";
     room.dealEndsAt = 0;
+    room.buyEndsAt = 0;
+
+    // força novo timer para o primeiro jogador decidir
+    room._autoTurnSeat = null;
+    room.turnEndsAt = 0;
+    room.buyEndsAt = 0;
+
+    autoMarraCachetaoDecision(room);
 
     startTurnClock(room);
 
     if (room?.id) sendState(room.id);
     scheduleAutoTurn(room);
   }, room.dealMs);
+}
+
+
+function tryFinishCachetaoDecision(room) {
+  if (!room || room.phase !== "DECISAO_PARTICIPAR") return;
+
+  const aliveSeats = getAliveSeats(room);
+
+  const allDecided = aliveSeats.every((seat) => {
+    const p = room.playersBySeat?.[seat - 1];
+    return p && (p.participando || p.passouRodada);
+  });
+
+  if (!allDecided) {
+    sendState(room.id);
+    return;
+  }
+
+  const playingSeats = aliveSeats.filter((seat) => {
+    const p = room.playersBySeat?.[seat - 1];
+    return p && p.participando && !p.eliminated;
+  });
+
+  // Quem correu devolve as cartas ao monte e perde 1 ponto
+const deckAntes = room.deck.length;
+let cartasDevolvidas = 0;
+
+for (const seat of aliveSeats) {
+  const p = room.playersBySeat?.[seat - 1];
+  if (!p || p.eliminated) continue;
+
+  if (p.passouRodada) {
+
+    if (Array.isArray(p.hand) && p.hand.length) {
+      cartasDevolvidas += p.hand.length;
+      room.deck.push(...p.hand);
+    }
+
+    p.hand = [];
+    p.jogosBaixados = [];
+    p.pendingBatidaAfterDiscard = false;
+    p.obrigacaoBaixar = false;
+
+    if (p.vidas <= 0) {
+      p.eliminated = true;
+    }
+  }
+}
+
+console.log(
+  `[CACHETAO] Monte: ${deckAntes} -> ${room.deck.length} (+${cartasDevolvidas})`
+);
+
+// Cachetão Pro:
+// quem corre devolve as cartas ao monte,
+// então o monte precisa ser embaralhado antes do duelo.
+if (cartasDevolvidas > 0) {
+  shuffle(room.deck);
+  console.log("[CACHETAO] Monte embaralhado após devolução.");
+}
+
+  
+  // se menos de 2 jogadores decidiram jogar, não há duelo
+
+  
+  // se menos de 2 jogadores decidiram jogar, não há duelo
+  if (playingSeats.length < 2) {
+    room.roundAnnouncement = "Rodada sem duelo. Nova rodada em instantes.";
+    room.roundAnnouncementEndsAt = Date.now() + 1500;
+
+    sendState(room.id);
+
+    setTimeout(() => {
+      startNewRound(room);
+    }, 1500);
+
+    return;
+  }
+
+  if (!room.cachetaoDuelCountdownDone) {
+    room.cachetaoDuelCountdownDone = true;
+
+    clearAutoTurnTimer(room);
+
+    room.phase = "AGUARDANDO_DUELO";
+    room.dealMs = 10000;
+    room.dealEndsAt = Date.now() + 10000;
+    room.turnEndsAt = 0;
+    room.buyEndsAt = 0;
+
+    room.roundAnnouncement = "Embaralhando... Duelo começa em instantes.";
+    room.roundAnnouncementEndsAt = room.dealEndsAt;
+
+    sendState(room.id);
+
+    setTimeout(() => {
+      if (!room || room.matchEnded || room.roundEnded) return;
+      if (room.phase !== "AGUARDANDO_DUELO") return;
+
+      room.phase = "DECISAO_PARTICIPAR";
+      room.dealEndsAt = 0;
+      room.roundAnnouncement = "";
+      room.roundAnnouncementEndsAt = 0;
+
+      tryFinishCachetaoDecision(room);
+    }, 10000);
+
+    return;
+  }
+
+  room.tableMelds = [];
+  room.discard = [];
+  room.mustUseJokerBySeat = {};
+  room.mustUseDiscardCardBySeat = {};
+  room.roundEnded = false;
+  room.winnerSeat = null;
+
+  // começa no primeiro participante depois do dealer
+  const totalSeats = room.playersBySeat?.length || 10;
+  let current = Number(room.dealerSeat || 0);
+
+  for (let i = 0; i < totalSeats; i++) {
+    current++;
+    if (current > totalSeats) current = 1;
+
+    const p = room.playersBySeat?.[current - 1];
+
+    if (!p) continue;
+    if (p.eliminated) continue;
+    if (!p.participando) continue;
+    if (p.passouRodada) continue;
+
+    room.currentSeat = current;
+    break;
+  }
+
+  room.phase = "COMPRAR";
+  room.dealEndsAt = 0;
+  room.buyEndsAt = 0;
+
+  // Cachetão Pro — jogar com a vira.
+  // Somente o primeiro jogador da fase de compras pode escolher essa opção.
+  room.viraDisponivelParaJogar = true;
+  room.primeiroCompradorSeat = room.currentSeat;
+  room.viraEmUsoPorSeat = null;
+
+  for (const p of room.playersBySeat || []) {
+    if (!p) continue;
+
+    p.jogandoComVira = false;
+    p.viraBaixada = false;
+  }
+
+  room._autoTurnSeat = null;
+  room.turnEndsAt = 0;
+
+  startTurnClock(room);
+
+  if (room?.id) sendState(room.id);
+  scheduleAutoTurn(room);
+}
+
+function advanceCachetaoDecisionTurn(room) {
+  if (!room || room.phase !== "DECISAO_PARTICIPAR") return;
+
+  const totalSeats = room.playersBySeat?.length || 10;
+
+  const aliveSeats = getAliveSeats(room);
+
+  const allDecided = aliveSeats.every((seat) => {
+    const p = room.playersBySeat?.[seat - 1];
+    return p && (p.participando || p.passouRodada);
+  });
+
+  if (allDecided) {
+    tryFinishCachetaoDecision(room);
+    return;
+  }
+
+  let current = Number(room.currentSeat || 0);
+
+  for (let i = 0; i < totalSeats; i++) {
+    current++;
+
+    if (current > totalSeats) current = 1;
+
+    const p = room.playersBySeat?.[current - 1];
+
+    if (!p) continue;
+    if (p.eliminated) continue;
+    if (p.participando || p.passouRodada) continue;
+
+    room.currentSeat = current;
+    room.phase = "DECISAO_PARTICIPAR";
+
+    startTurnClock(room);
+
+    sendState(room.id);
+    scheduleAutoTurn(room);
+    return;
+  }
+
+  tryFinishCachetaoDecision(room);
+}
+
+function autoDecideCachetaoParticipation(room) {
+  if (!room || room.phase !== "DECISAO_PARTICIPAR") return;
+
+  const seat = Number(room.currentSeat || 0);
+  const player = room.playersBySeat?.[seat - 1];
+
+  if (!player || player.eliminated) {
+    advanceCachetaoDecisionTurn(room);
+    return;
+  }
+
+  if (player.participando || player.passouRodada) {
+    advanceCachetaoDecisionTurn(room);
+    return;
+  }
+
+  const estaNaMarra =
+    player.marra === true ||
+    player.naMarra === true;
+
+  if (estaNaMarra) {
+    player.participando = true;
+    player.passouRodada = false;
+  } else {
+    player.participando = false;
+    player.passouRodada = true;
+
+    player.vidas = Math.max(0, (Number(player.vidas) || 0) - 1);
+
+    if (player.vidas <= 0) {
+      mandarParaRebuyCachetao(room, player);
+    }
+  }
+
+  advanceCachetaoDecisionTurn(room);
+  tryFinishCachetaoDecision(room);
+  sendState(room.id);
+}
+
+function autoMarraCachetaoDecision(room) {
+  if (!room || room.phase !== "DECISAO_PARTICIPAR") return;
+
+  let changed = false;
+
+  for (const p of room.playersBySeat || []) {
+    if (!p || p.eliminated) continue;
+    if (p.participando || p.passouRodada) continue;
+
+    const estaNaMarra =
+      !!p.marra ||
+      !!p.naMarra ||
+      Number(p.vidas) === 1 ||
+      Number(p.totalPoints) === 1;
+
+    if (estaNaMarra) {
+      p.participando = true;
+      p.passouRodada = false;
+      changed = true;
+    }
+  }
+
+  if (changed) {
+    advanceCachetaoDecisionTurn(room);
+    tryFinishCachetaoDecision(room);
+    sendState(room.id);
+  }
+}
+
+function advanceCachetaoDecisionSeat(room) {
+  if (!room || room.phase !== "DECISAO_PARTICIPAR") return;
+
+  const aliveSeats = getAliveSeats(room);
+  if (!aliveSeats.length) return;
+
+  const allDecided = aliveSeats.every((seat) => {
+    const p = room.playersBySeat?.[seat - 1];
+    return p && (p.participando || p.passouRodada);
+  });
+
+  if (allDecided) {
+    tryFinishCachetaoDecision(room);
+    return;
+  }
+
+  let current = Number(room.currentSeat || aliveSeats[0]);
+
+  for (let i = 0; i < aliveSeats.length; i++) {
+    current++;
+
+    if (current > 10) current = 1;
+
+    const p = room.playersBySeat?.[current - 1];
+
+    if (!p || p.eliminated) continue;
+    if (p.participando || p.passouRodada) continue;
+
+    room.currentSeat = current;
+    sendState(room.id);
+    return;
+  }
+
+  tryFinishCachetaoDecision(room);
 }
 
 function cloneJson(value) {
@@ -294,16 +644,53 @@ function captureCrazyBatidaSnapshot(room) {
     discard: cloneJson(room.discard || []),
     tableMelds: cloneJson(room.tableMelds || []),
 
-    mustUseDiscardCardBySeat: { ...(room.mustUseDiscardCardBySeat || {}) },
-    mustUseJokerBySeat: { ...(room.mustUseJokerBySeat || {}) },
+    mustUseDiscardCardBySeat: {
+      ...(room.mustUseDiscardCardBySeat || {})
+    },
 
-    discardLockForSeat: room.discardLockForSeat || null,
-    discardLockCardId: room.discardLockCardId || null,
+    mustUseJokerBySeat: {
+      ...(room.mustUseJokerBySeat || {})
+    },
 
-    players: (room.playersBySeat || []).map(p => p ? {
-      hand: cloneJson(p.hand || []),
-      pendingBatidaAfterDiscard: !!p.pendingBatidaAfterDiscard
-    } : null)
+    discardLockForSeat:
+      room.discardLockForSeat || null,
+
+    discardLockCardId:
+      room.discardLockCardId || null,
+
+    // Cachetão Pro — estado da vira antes da tentativa
+    viraDisponivelParaJogar:
+      !!room.viraDisponivelParaJogar,
+
+    primeiroCompradorSeat:
+      room.primeiroCompradorSeat ?? null,
+
+    viraEmUsoPorSeat:
+      room.viraEmUsoPorSeat ?? null,
+
+    viraNaMesa:
+      room.viraNaMesa !== false,
+
+    players: (room.playersBySeat || []).map(p =>
+      p ? {
+        hand: cloneJson(p.hand || []),
+
+        pendingBatidaAfterDiscard:
+          !!p.pendingBatidaAfterDiscard,
+
+        jogandoComVira:
+          !!p.jogandoComVira,
+
+        batendoComVira:
+          !!p.batendoComVira,
+
+        viraBaixada:
+          !!p.viraBaixada,
+
+        viraDescartada:
+          !!p.viraDescartada
+      } : null
+    )
   };
 }
 
@@ -316,24 +703,68 @@ function restoreCrazyBatidaSnapshot(room, snapshot) {
   room.buyEndsAt = Number(snapshot.buyEndsAt) || 0;
   room._autoTurnSeat = snapshot.autoTurnSeat || null;
 
-  room.discard = cloneJson(snapshot.discard || []);
-  room.tableMelds = cloneJson(snapshot.tableMelds || []);
+  room.discard =
+    cloneJson(snapshot.discard || []);
 
-  room.mustUseDiscardCardBySeat = { ...(snapshot.mustUseDiscardCardBySeat || {}) };
-  room.mustUseJokerBySeat = { ...(snapshot.mustUseJokerBySeat || {}) };
+  room.tableMelds =
+    cloneJson(snapshot.tableMelds || []);
 
-  room.discardLockForSeat = snapshot.discardLockForSeat || null;
-  room.discardLockCardId = snapshot.discardLockCardId || null;
+  room.mustUseDiscardCardBySeat = {
+    ...(snapshot.mustUseDiscardCardBySeat || {})
+  };
 
-  for (let i = 0; i < (room.playersBySeat || []).length; i++) {
+  room.mustUseJokerBySeat = {
+    ...(snapshot.mustUseJokerBySeat || {})
+  };
+
+  room.discardLockForSeat =
+    snapshot.discardLockForSeat || null;
+
+  room.discardLockCardId =
+    snapshot.discardLockCardId || null;
+
+  room.viraDisponivelParaJogar =
+    !!snapshot.viraDisponivelParaJogar;
+
+  room.primeiroCompradorSeat =
+    snapshot.primeiroCompradorSeat ?? null;
+
+  room.viraEmUsoPorSeat =
+    snapshot.viraEmUsoPorSeat ?? null;
+
+  room.viraNaMesa =
+    snapshot.viraNaMesa !== false;
+
+  for (
+    let i = 0;
+    i < (room.playersBySeat || []).length;
+    i++
+  ) {
     const p = room.playersBySeat[i];
     const snapP = snapshot.players?.[i];
+
     if (!p || !snapP) continue;
 
-    p.hand = cloneJson(snapP.hand || []);
-    p.pendingBatidaAfterDiscard = !!snapP.pendingBatidaAfterDiscard;
+    p.hand =
+      cloneJson(snapP.hand || []);
+
+    p.pendingBatidaAfterDiscard =
+      !!snapP.pendingBatidaAfterDiscard;
+
+    p.jogandoComVira =
+      !!snapP.jogandoComVira;
+
+    p.batendoComVira =
+      !!snapP.batendoComVira;
+
+    p.viraBaixada =
+      !!snapP.viraBaixada;
+
+    p.viraDescartada =
+      !!snapP.viraDescartada;
   }
 }
+
 
 function clearCrazyBatidaAttempt(room, options = {}) {
   if (!room) return;
@@ -410,7 +841,21 @@ function markCrazyBatidaBurned(room, seat) {
   room.crazyBatidaBurnedBySeat[Number(seat || 0)] = true;
 }
 
+function devolverJogosDoJogadorParaMao(room, playerSeat) {
+  const player = room.playersBySeat?.[playerSeat - 1];
+  if (!player) return;
 
+  const ownMelds = (room.tableMelds || []).filter(m => Number(m.seat) === Number(playerSeat));
+  const otherMelds = (room.tableMelds || []).filter(m => Number(m.seat) !== Number(playerSeat));
+
+  for (const meld of ownMelds) {
+    player.hand = player.hand || [];
+    player.hand.push(...(meld.cards || []));
+  }
+
+  room.tableMelds = otherMelds;
+  player.pendingBatidaAfterDiscard = false;
+}
 
 function dequeueCrazyBatidaClaim(room) {
   if (!room || !Array.isArray(room.crazyBatidaClaimQueue)) return 0;
@@ -512,6 +957,156 @@ function startCrazyBatidaAttemptForSeat(room, seat, ms = 25000) {
 
     if (room?.id) sendState(room.id);
   }, ms);
+
+  return { ok: true };
+}
+
+function startBatidaComViraAttemptForSeat(
+  room,
+  seat,
+  ms = 25000
+) {
+  const player =
+    room?.playersBySeat?.[seat - 1];
+
+  if (!room || !player) {
+    return {
+      ok: false,
+      msg: "Jogador inválido para BATI com a vira."
+    };
+  }
+
+  if (
+    !player.participando ||
+    player.passouRodada ||
+    player.eliminated
+  ) {
+    return {
+      ok: false,
+      msg: "Você não está participando desta rodada."
+    };
+  }
+
+  if (!room.cartaVira || room.viraNaMesa === false) {
+    return {
+      ok: false,
+      msg: "A vira não está disponível."
+    };
+  }
+
+  const prioritySeat =
+    Number(
+      room.crazyBatidaAttempt?.prioritySeat || 0
+    ) ||
+    Number(room.currentSeat || 0);
+
+  removeCrazyBatidaClaimFromQueue(room, seat);
+  clearAutoTurnTimer(room);
+
+  // A vira continua fora da mão.
+  player.jogandoComVira = true;
+  player.batendoComVira = true;
+  player.viraBaixada = false;
+  player.viraDescartada = false;
+
+  room.viraEmUsoPorSeat = seat;
+  room.viraDisponivelParaJogar = false;
+  room.viraNaMesa = true;
+
+  room.crazyBatidaAttempt = {
+    active: true,
+    claimantSeat: seat,
+    prioritySeat,
+    discardCardId: null,
+
+    // diferencia esta tentativa do BATI pelo lixo
+    usesVira: true,
+
+    startedAt: Date.now(),
+    expiresAt: Date.now() + ms
+  };
+
+  room.batidaAnnouncement =
+    `${player.name || "Alguém"} pediu BATI com a Vira!`;
+
+  room.batidaAnnouncementEndsAt =
+    Date.now() + 2200;
+
+  room.currentSeat = seat;
+  room.phase = "BAIXAR";
+  room.turnEndsAt =
+    room.crazyBatidaAttempt.expiresAt;
+
+  room.buyEndsAt = 0;
+  room._autoTurnSeat = seat;
+
+  if (room._crazyBatidaAttemptTimer) {
+    clearTimeout(
+      room._crazyBatidaAttemptTimer
+    );
+
+    room._crazyBatidaAttemptTimer = null;
+  }
+
+  room._crazyBatidaAttemptTimer =
+    setTimeout(() => {
+      room._crazyBatidaAttemptTimer = null;
+
+      if (!isCrazyBatidaAttemptActive(room)) {
+        return;
+      }
+
+      const tentativaAtual =
+        room.crazyBatidaAttempt;
+
+      if (!tentativaAtual?.usesVira) {
+        return;
+      }
+
+      const failedSeat =
+        Number(
+          tentativaAtual.claimantSeat || 0
+        );
+
+      markCrazyBatidaBurned(
+        room,
+        failedSeat
+      );
+
+      clearCrazyBatidaAttempt(room, {
+        restoreSnapshot: true,
+        resumeTurn: false
+      });
+
+      room.batidaAnnouncement = "";
+      room.batidaAnnouncementEndsAt = 0;
+
+      removeCrazyBatidaClaimFromQueue(
+        room,
+        failedSeat
+      );
+
+      const nextSeat =
+        dequeueCrazyBatidaClaim(room);
+
+      if (nextSeat) {
+        startBatidaComViraAttemptForSeat(
+          room,
+          nextSeat,
+          ms
+        );
+      } else {
+        room._crazyBatidaSnapshot = null;
+        room.crazyBatidaClaimQueue = [];
+
+        clearAutoTurnTimer(room);
+        startTurnClock(room);
+      }
+
+      if (room?.id) {
+        sendState(room.id);
+      }
+    }, ms);
 
   return { ok: true };
 }
@@ -638,6 +1233,177 @@ function revealBatidaThenEndRound(room, winnerSeat, ms = 1800) {
   }, ms);
 }
 
+function handleStartBatidaComViraAttempt(
+  room,
+  player,
+  playerSeat
+) {
+  if (!isCrazy(room)) {
+    return {
+      ok: false,
+      msg: "BATI com a vira só existe no Cachetão Pro."
+    };
+  }
+
+  if (!room.started || room.roundEnded) {
+    return {
+      ok: false,
+      msg: "A rodada já terminou."
+    };
+  }
+
+  if (room.pendingBatidaReveal) {
+    return {
+      ok: false,
+      msg: "Aguarde a exibição da batida."
+    };
+  }
+
+  if (
+    !player ||
+    !player.participando ||
+    player.passouRodada ||
+    player.eliminated
+  ) {
+    return {
+      ok: false,
+      msg: "Você não está participando desta rodada."
+    };
+  }
+
+  if (isCrazyBatidaBurned(room, playerSeat)) {
+    return {
+      ok: false,
+      msg: "Você já tentou BATER nesta rodada."
+    };
+  }
+
+  const activeAttempt =
+    room.crazyBatidaAttempt || null;
+
+  // Já existe uma tentativa em andamento.
+  if (activeAttempt?.active) {
+    if (!activeAttempt.usesVira) {
+      return {
+        ok: false,
+        msg: "Já existe uma tentativa de BATI em andamento."
+      };
+    }
+
+    const claimantSeat =
+      Number(
+        activeAttempt.claimantSeat || 0
+      );
+
+    const prioritySeat =
+      Number(
+        activeAttempt.prioritySeat ||
+        room.currentSeat ||
+        0
+      );
+
+    if (
+      claimantSeat ===
+      Number(playerSeat || 0)
+    ) {
+      return {
+        ok: false,
+        msg: "Você já está tentando BATI com a vira."
+      };
+    }
+
+    // O primeiro comprador mantém a prioridade.
+    if (
+      prioritySeat &&
+      Number(playerSeat || 0) === prioritySeat &&
+      claimantSeat !== prioritySeat
+    ) {
+      enqueueCrazyBatidaClaim(
+        room,
+        claimantSeat,
+        prioritySeat
+      );
+
+      clearCrazyBatidaAttempt(room, {
+        restoreSnapshot: true,
+        resumeTurn: false
+      });
+
+      const started =
+        startBatidaComViraAttemptForSeat(
+          room,
+          playerSeat,
+          25000
+        );
+
+      if (room?.id) {
+        sendState(room.id);
+      }
+
+      return started.ok
+        ? null
+        : started;
+    }
+
+    enqueueCrazyBatidaClaim(
+      room,
+      playerSeat,
+      prioritySeat
+    );
+
+    if (room?.id) {
+      sendState(room.id);
+    }
+
+    return null;
+  }
+
+  // A janela existe somente antes da primeira compra.
+  if (
+    room.phase !== "COMPRAR" ||
+    !room.viraDisponivelParaJogar
+  ) {
+    return {
+      ok: false,
+      msg: "BATI com a vira só pode ser pedido antes da primeira compra."
+    };
+  }
+
+  if (
+    !room.cartaVira ||
+    room.viraNaMesa === false
+  ) {
+    return {
+      ok: false,
+      msg: "A vira não está disponível."
+    };
+  }
+
+  if (!room._crazyBatidaSnapshot) {
+    room._crazyBatidaSnapshot =
+      captureCrazyBatidaSnapshot(room);
+  }
+
+  room.crazyBatidaClaimQueue =
+    Array.isArray(room.crazyBatidaClaimQueue)
+      ? room.crazyBatidaClaimQueue
+      : [];
+
+  const started =
+    startBatidaComViraAttemptForSeat(
+      room,
+      playerSeat,
+      25000
+    );
+
+  if (room?.id) {
+    sendState(room.id);
+  }
+
+  return started.ok
+    ? null
+    : started;
+}
 
 
 function handleStartCrazyBatidaAttempt(room, player, playerSeat) {
@@ -833,14 +1599,9 @@ function endRoundByEmptyDeck(room) {
 
 function endRound(room, winnerSeat) {
   if (room.roundEnded) return;
+
   room.roundEnded = true;
   room.winnerSeat = winnerSeat;
-
-  for (let i = 0; i < room.playersBySeat.length; i++) {
-    const p = room.playersBySeat[i];
-    if (!p) continue;
-
-  }
 
   clearCrazyBatidaAttempt(room, { restoreSnapshot: false, resumeTurn: false });
   room._crazyBatidaSnapshot = null;
@@ -861,77 +1622,71 @@ function endRound(room, winnerSeat) {
     room._pendingBatidaRevealTimeoutId = null;
   }
 
-  // 1) calcula pontos da rodada
+  // Cachetão Pro:
+  // Quem jogou e perdeu perde 2 pontos.
+  // Quem correu já perdeu 1 ponto no momento da decisão.
+  // Quem ganhou não perde ponto.
   for (let i = 0; i < room.playersBySeat.length; i++) {
     const p = room.playersBySeat[i];
     if (!p) continue;
+    if (p.eliminated) continue;
 
-    if (i + 1 === winnerSeat) {
-      p.lastRoundPoints = 0;
-      p.totalPoints = p.totalPoints || 0;
+    const seat = i + 1;
+
+    p.lastRoundPoints = 0;
+
+    if (seat === Number(winnerSeat)) {
       continue;
     }
 
-    const pts = getHandPoints(p.hand || []);
-    p.lastRoundPoints = pts;
-    p.totalPoints = (p.totalPoints || 0) + pts;
-  }
+    if (p.participando && !p.passouRodada) {
+      p.vidas = Math.max(0, (Number(p.vidas) || 0) - 2);
+      p.totalPoints = p.vidas;
+      p.lastRoundPoints = 2;
 
-  // 2) aplica pagamento por pontos UMA vez só
-  const pointTransfers = applyRoundPointPayments(room, winnerSeat);
-
-  // 3) processa eliminações / rebuy
-  for (let i = 0; i < room.playersBySeat.length; i++) {
-    const p = room.playersBySeat[i];
-    if (!p) continue;
-    if (i + 1 === winnerSeat) continue;
-
-    if (p.totalPoints > 100) {
-      const wasEliminated = !!p.eliminated;
-      const seat = i + 1;
-
-      p.eliminated = true;
-      p.hand = [];
-
-      // Só processa a oferta de rebuy quando a eliminação acontece
-      // nesta "vida" atual do jogador.
-      if (!wasEliminated) {
-        if ((p.rebuyCount || 0) < 3) {
-          if (p.disconnected) {
-            // desconectado: rebuy obrigatório automático
-            p.pendingRebuy = true;
-            p.rebuyDeclined = false;
-
-          } else {
-            // conectado: decide manualmente no botão
-            p.pendingRebuy = false;
-            p.rebuyDeclined = false;
-          }
-        } else {
-          // sem rebuys restantes
-          p.pendingRebuy = false;
-          p.rebuyDeclined = true;
-        }
-      }
+    if (p.vidas <= 0) {
+      mandarParaRebuyCachetao(room, p);
+    }
     }
   }
 
-  // 4) log econômico da rodada
-  pushRoundEconomicLog(
-    room,
-    winnerSeat,
-    pointTransfers,
-    room.lastMiniAnteCollected || 0,
-    []
-  );
+  // Verifica se a partida terminou
+  const alivePlayers = (room.playersBySeat || []).filter(p => p && !p.eliminated);
 
-  // 5) abre janela de rebuy
-  scheduleNextRoundWithRebuy(room, 15000);
+  if (alivePlayers.length <= 1) {
+  const winner = alivePlayers[0] || null;
 
-  // 6) avisa o cliente agora, antes da nova distribuição
+  room.matchEnded = true;
+  room.matchWinnerSeat = winner
+    ? room.playersBySeat.indexOf(winner) + 1
+    : winnerSeat;
+
+  // limpa estado de rodada/marra antes da revanche
+  for (const p of room.playersBySeat || []) {
+    if (!p) continue;
+
+    p.participando = false;
+    p.passouRodada = false;
+
+    p.marra = false;
+    p.naMarra = false;
+    p.emMarra = false;
+    p.isMarra = false;
+    p.cachetaoMarra = false;
+    p.obrigadoJogar = false;
+  }
+
+  finalizeMatchEconomy(room);
+
   if (room?.id) sendState(room.id);
+  return;
 }
 
+      // Cachetão Pro: agenda próxima rodada usando janela de rebuy
+    scheduleNextRoundWithRebuy(room, 15000);
+
+    if (room?.id) sendState(room.id);
+}
 
 function isCrazyBatidaOpenEndedSequence(meld, room, player, idSet) {
   if (!Array.isArray(meld) || meld.length < 3) return false;
@@ -1026,10 +1781,95 @@ function getRebuyCost(room, p) {
   return ante * times;
 }
 
+
+function getCachetaoRebuyReturnVidas(room) {
+  const vivos = (room.playersBySeat || [])
+    .filter(p => p && !p.eliminated)
+    .map(p => Number(p.vidas ?? p.totalPoints ?? 0))
+    .filter(v => v > 0);
+
+  if (!vivos.length) return 1;
+
+  return Math.min(...vivos);
+}
+
+function todosVivosNaMarra(room) {
+  const vivos = (room.playersBySeat || [])
+    .filter(p => p && !p.eliminated && !p.pendingRebuy);
+
+  if (vivos.length < 2) return false;
+
+  return vivos.every(p =>
+    !!p.marra ||
+    !!p.naMarra ||
+    Number(p.vidas ?? p.totalPoints ?? 0) === 1
+  );
+}
+
+function mandarParaRebuyCachetao(room, player) {
+  if (!room || !player) return;
+
+  player.eliminated = true;
+  player.hand = [];
+  player.jogosBaixados = [];
+
+  const rebuyCount = Number(player.rebuyCount) || 0;
+  const cost = Number(getRebuyCost(room, player)) || 0;
+  const chips = Number(player.chips) || 0;
+
+  if (
+    rebuyCount < 3 &&
+    cost > 0 &&
+    chips >= cost &&
+    !todosVivosNaMarra(room)
+  ) {
+    player.pendingRebuy = false;
+
+console.log("[CACHEIPRO REBUY ABRIU]", {
+  player: player.name,
+  vidas: player.vidas,
+  rebuyCount: player.rebuyCount,
+  cost,
+  chips,
+  rebuyDecisionUntil: room.rebuyDecisionUntil
+});
+
+    player.rebuyDeclined = false;
+    return;
+  }
+
+    console.log("[CACHEIPRO REBUY NÃO ABRIU]", {
+      player: player.name,
+      rebuyCount,
+      motivo:
+        rebuyCount >= 3
+          ? "Limite de 3 rebuys atingido"
+          : todosVivosNaMarra(room)
+          ? "Todos os jogadores vivos estão na Marra"
+          : chips < cost
+          ? "Saldo insuficiente"
+          : "Outro motivo",
+      chips
+    });
+
+
+  player.pendingRebuy = false;
+  player.rebuyDeclined = true;
+}
+
+
+
 function applyPendingRebuys(room) {
-  // referência de pontos: volta com o maior totalPoints entre ativos
-  const active = (room.playersBySeat || []).filter(pl => pl && !pl.eliminated && !pl.pendingRebuy);
-  const maxPts = active.length ? Math.max(...active.map(pl => Number(pl.totalPoints) || 0)) : 0;
+  // Cachetão Pro:
+  // volta com o menor ponto entre os jogadores ativos
+  const active = (room.playersBySeat || [])
+    .filter(pl => pl && !pl.eliminated && !pl.pendingRebuy);
+
+  const minVidas = active.length
+    ? Math.min(...active.map(pl => Number(pl.vidas ?? pl.totalPoints ?? 0)).filter(v => v > 0))
+    : 1;
+
+  const returnVidas = Number.isFinite(minVidas) && minVidas > 0 ? minVidas : 1;
 
   const appliedRebuys = [];
 
@@ -1037,41 +1877,45 @@ function applyPendingRebuys(room) {
     const pl = room.playersBySeat[i];
     if (!pl || !pl.pendingRebuy) continue;
 
-  if ((pl.rebuyCount || 0) >= 3) {
-  pl.pendingRebuy = false;
-  pl.eliminated = true;
+    if ((pl.rebuyCount || 0) >= 3) {
+      pl.pendingRebuy = false;
+      pl.eliminated = true;
 
-  // 👇 REMOVE se estiver desconectado
-  if (pl.disconnected) {
-    room.playersBySeat[i] = null;
-  }
+      if (pl.disconnected) {
+        room.playersBySeat[i] = null;
+      }
 
-  continue;
-}
+      continue;
+    }
 
     const cost = Number(getRebuyCost(room, pl)) || 0;
 
     pl.chips = Number(pl.chips);
     if (!Number.isFinite(pl.chips)) pl.chips = 0;
 
-  if (pl.chips < cost || cost <= 0) {
-  pl.pendingRebuy = false;
-  pl.eliminated = true;
+    if (pl.chips < cost || cost <= 0) {
+      pl.pendingRebuy = false;
+      pl.eliminated = true;
 
-  // 👇 REMOVE se estiver desconectado
-  if (pl.disconnected) {
-    room.playersBySeat[i] = null;
-  }
+      if (pl.disconnected) {
+        room.playersBySeat[i] = null;
+      }
 
-  continue;
-}
+      continue;
+    }
 
     const rebuyCountBefore = pl.rebuyCount || 0;
 
-    // paga rebuy
     pl.chips -= cost;
 
-    // entra no pote
+    // Cachetão Pro/Pontinho: mantém o saldo da mesa sincronizado para HUD/scoreboard
+    pl.tableChips = Number(pl.tableChips);
+    if (!Number.isFinite(pl.tableChips)) {
+      pl.tableChips = Number(pl.chips) || 0;
+    }
+
+    pl.tableChips = Math.max(0, pl.tableChips - cost);
+
     room.matchPot = Number(room.matchPot) || 0;
     room.matchPot += cost;
 
@@ -1084,17 +1928,21 @@ function applyPendingRebuys(room) {
     pl.jogosBaixados = [];
     pl.obrigacaoBaixar = false;
 
-    // volta com pontos “pesados”
-    pl.totalPoints = maxPts;
+    // Cachetão Pro: volta com o menor ponto entre os ativos
+    pl.vidas = returnVidas;
+    pl.totalPoints = returnVidas;
+
+    pl.marra = returnVidas === 1;
+    pl.naMarra = returnVidas === 1;
 
     appliedRebuys.push({
       seat: i + 1,
       name: pl.name,
       rebuyCountBefore,
       rebuyCountAfter: pl.rebuyCount,
-      cost
+      cost,
+      returnVidas
     });
-
   }
 
   return appliedRebuys;
@@ -1140,7 +1988,8 @@ function resetRoomForRematch(room) {
     p.nextMatchReady = false;
 
     p.hand = [];
-    p.totalPoints = 0;
+    p.totalPoints = 10;
+    p.vidas = 10;
     p.lastRoundPoints = 0;
     p.pendingBatidaAfterDiscard = false;
 
@@ -1151,6 +2000,16 @@ function resetRoomForRematch(room) {
 
     p.jogosBaixados = [];
     p.obrigacaoBaixar = false;
+    p.participando = false;
+    p.passouRodada = false;
+    p.decidiuParticipar = false;
+    
+    p.marra = false;
+    p.emMarra = false;
+    p.naMarra = false;
+    p.isMarra = false;
+    p.cachetaoMarra = false;
+    p.obrigadoJogar = false;
     
   }
   cleanupEmptyRoomInstances();
@@ -1232,6 +2091,8 @@ function scheduleNextRoundWithRebuy(room, ms = 20000) {
     }
 
     room.rebuyDecisionUntil = Date.now() + ms;
+
+    if (room?.id) sendState(room.id);
 
     room.nextRoundTimeoutId = setTimeout(() => {
     room.nextRoundTimeoutId = null;
@@ -1407,8 +2268,8 @@ function validateMeldCards(room, cards) {
     return { ok: false, msg: "Mínimo 3 cartas." };
   }
 
-  const jokers = cards.filter(isJoker);
-  const nonJokers = cards.filter(c => !isJoker(c));
+  const jokers = cards.filter(c => isMeldJoker(c, room));
+  const nonJokers = cards.filter(c => !isMeldJoker(c, room));
 
   // ordena cartas reais por valor
   const sortedReal = [...nonJokers].sort((a, b) => {
@@ -1420,10 +2281,8 @@ function validateMeldCards(room, cards) {
     return { ok: false, msg: "Sequência inválida." };
   }
 
-  // -------------------------
+    // -------------------------
   // TRINCA (base)
-  // Aqui validamos a forma base.
-  // As restrições de variant (classic/crazy) continuam no playMeld/addToMeld.
   // -------------------------
   {
     const valores = nonJokers.map(c => getValor(c));
@@ -1432,59 +2291,47 @@ function validateMeldCards(room, cards) {
       valores.every(v => v === valores[0]);
 
     if (allValorOk) {
-      const hasJokerInTrinca = cards.some(c => isJoker(c));
+      const hasJokerInTrinca = cards.some(c => isMeldJoker(c, room));
 
       if (isClassic(room) && hasJokerInTrinca) {
         return { ok: false, msg: "Trinca com coringa somente para bater no modo Crazy." };
       }
 
-      const suits = cards.map(c => getNaipe(c)).filter(Boolean);
-      const distinctSuits = [...new Set(suits)];
-
       if (isCrazy(room)) {
-      const realCards = cards.filter(c => !isJoker(c));
-      const jokerCount = cards.length - realCards.length;
+        const realCards = cards.filter(c => !isMeldJoker(c, room));
+        const jokerCount = cards.length - realCards.length;
 
-      const realSuits = realCards
-        .map(c => getNaipe(c))
-        .filter(Boolean);
+        const realSuits = realCards
+          .map(c => getNaipe(c))
+          .filter(Boolean);
 
-      const uniqueRealSuits = new Set(realSuits);
+        const uniqueRealSuits = new Set(realSuits);
 
-      // Regra MÃE da trinca Crazy:
-      // precisa ter pelo menos 3 naipes diferentes na baixada normal.
-      // Repetir naipe depois disso é permitido.
-      if (jokerCount === 0 && uniqueRealSuits.size < 3) {
-        return {
-          ok: false,
-          msg: "Trinca precisa ter pelo menos 3 naipes diferentes."
-        };
+        // Se NÃO tem coringa, exige pelo menos 3 naipes diferentes.
+        if (jokerCount === 0 && uniqueRealSuits.size < 3) {
+          return {
+            ok: false,
+            msg: "Trinca precisa ter pelo menos 3 naipes diferentes."
+          };
+        }
+
+        // Se TEM coringa, o coringa não conta com o naipe físico dele.
+        // Só as cartas reais precisam ter naipes diferentes entre si.
+        if (jokerCount > 0 && uniqueRealSuits.size !== realSuits.length) {
+          return {
+            ok: false,
+            msg: "Trinca inválida: naipes reais repetidos."
+          };
+        }
+
+        // Validação antiga só deve rodar quando NÃO tem coringa.
+        if (jokerCount === 0) {
+          const crazyTrincaCheck = validateCrazyTrincaShape(cards, { initial: true });
+          if (!crazyTrincaCheck.ok) {
+            return crazyTrincaCheck;
+          }
+        }
       }
-
-      // Trinca com coringa não pode ser baixada normalmente.
-      // Só é permitida na batida.
-      if (jokerCount > 0) {
-        return {
-          ok: false,
-          msg: "Trinca com coringa só é permitida na batida."
-        };
-      }
-
-      // Baixada normal no Crazy:
-      // - sem coringa: 3 ou 4 cartas reais, todos os naipes diferentes
-      // - com coringa: somente 2 naipes reais diferentes + 1 coringa, e apenas para batida
-      if (jokerCount > 0) {
-        return {
-          ok: false,
-          msg: "Trinca com coringa só é permitida na batida."
-        };
-      }
-
-      const crazyTrincaCheck = validateCrazyTrincaShape(cards, { initial: true });
-      if (!crazyTrincaCheck.ok) {
-        return crazyTrincaCheck;
-      }
-    }
 
       return { ok: true, kind: "TRINCA" };
     }
@@ -1508,7 +2355,10 @@ function validateMeldCards(room, cards) {
     }
   }
 
-  function checkSequenceFlexible(ranksSortedAsc, jokersCount) {
+    function checkSequenceFlexible(ranksSortedAsc, jokersCount, opts = {}) {
+    const minRank = opts.aceHigh ? 2 : 1;
+    const maxRank = opts.aceHigh ? 14 : 13;
+
     // não pode repetir cartas reais
     for (let i = 0; i < ranksSortedAsc.length - 1; i++) {
       if (ranksSortedAsc[i] === ranksSortedAsc[i + 1]) {
@@ -1517,6 +2367,7 @@ function validateMeldCards(room, cards) {
     }
 
     let internalNeeded = 0;
+
     for (let i = 0; i < ranksSortedAsc.length - 1; i++) {
       const a = ranksSortedAsc[i];
       const b = ranksSortedAsc[i + 1];
@@ -1525,7 +2376,7 @@ function validateMeldCards(room, cards) {
       if (diff === 1) continue;
 
       if (diff > 1) {
-        internalNeeded += (diff - 1);
+        internalNeeded += diff - 1;
         continue;
       }
 
@@ -1541,11 +2392,31 @@ function validateMeldCards(room, cards) {
 
     const leftover = jokersCount - internalNeeded;
 
-    // sobra de coringa = coringa na ponta
-    // isso NÃO entra na validação normal
-    // fica reservado para a exceção de batida
+    // Cachetão Pro:
+    // coringa sobrando pode ir na ponta da sequência
+    // Ex: 5♠ 6♠ CORINGA
+    // Ex: CORINGA K♦ A♦
+    // Ex: CORINGA CORINGA 3♣
     if (leftover > 0) {
-      return { ok: false, msg: "Coringa na ponta só vale para batida no modo Crazy." };
+      const first = ranksSortedAsc[0];
+      const last = ranksSortedAsc[ranksSortedAsc.length - 1];
+
+      const canExtendLeft = first - leftover >= minRank;
+      const canExtendRight = last + leftover <= maxRank;
+
+      // também permite dividir coringas nas duas pontas
+      let canSplit = false;
+      for (let left = 1; left < leftover; left++) {
+        const right = leftover - left;
+        if (first - left >= minRank && last + right <= maxRank) {
+          canSplit = true;
+          break;
+        }
+      }
+
+      if (!canExtendLeft && !canExtendRight && !canSplit) {
+        return { ok: false, msg: "Sequência inválida: coringa não encaixa na ponta." };
+      }
     }
 
     return {
@@ -1561,7 +2432,7 @@ function validateMeldCards(room, cards) {
   }
 
   // tenta com A=1 (Ás baixo)
-  const attempt1 = checkSequenceFlexible([...ranksA1].sort((a, b) => a - b), jokers.length);
+  const attempt1 = checkSequenceFlexible([...ranksA1].sort((a, b) => a - b), jokers.length, { aceHigh: false });
   if (attempt1.ok) {
     return { ok: true, kind: "SEQUENCIA", naipe, aceHigh: false };
   }
@@ -1570,7 +2441,7 @@ function validateMeldCards(room, cards) {
   const hasAce = ranksA1.includes(1);
   if (hasAce) {
     const ranksA14 = ranksA1.map(r => (r === 1 ? 14 : r));
-    const attempt2 = checkSequenceFlexible([...ranksA14].sort((a, b) => a - b), jokers.length);
+    const attempt2 = checkSequenceFlexible([...ranksA14].sort((a, b) => a - b), jokers.length, { aceHigh: true });
     if (attempt2.ok) {
       return { ok: true, kind: "SEQUENCIA", naipe, aceHigh: true };
     }
@@ -1584,19 +2455,6 @@ function validateMeldCards(room, cards) {
   return attempt1;
 }
 
-/*Modo Debug
-
-function debugSetHand(room, playerSeat, cards) {
-  const player = room.playersBySeat?.[playerSeat - 1];
-  if (!player) return;
-
-  player.hand = cards.map((c, i) => ({
-    id: "debug-" + i + "-" + Date.now(),
-    value: c.value,
-    suit: c.suit || null
-  }));
-}
-*/
 
 
 function sortSequenceCards(cards, aceHigh) {
@@ -1813,9 +2671,15 @@ function makeRoom(t) {
 
     playersBySeat: Array(10).fill(null),
     spectators: new Set(),
-    deck: [],
+        deck: [],
     discard: [],
     tableMelds: [],
+
+    // Cachetão Pro - vira/coringa da rodada
+    cartaVira: null,
+    coringaValor: null,
+    coringaNaipes: [],
+
     started: false,
     startAt: 0,
     currentSeat: 1,
@@ -1843,7 +2707,7 @@ function makeRoom(t) {
     economicLogs: [],
     lastAppliedRebuys: [],
     lastMiniAnteCollected: 0,
-    dealMs: 2200,
+    dealMs: 1200,
     dealEndsAt: 0,
     _dealStartTimer: null,
   };
@@ -1860,34 +2724,101 @@ const RANKS = ["A","2","3","4","5","6","7","8","9","10","J","Q","K"];
 let serverCardId = 0;
 
 function makeDeck() {
-  const naipes = ["espadas", "copas", "ouros", "paus"];
-  const valores = ["A","2","3","4","5","6","7","8","9","10","J","Q","K"];
+  const suits = ["espadas", "copas", "ouros", "paus"];
+  const ranks = ["A", "2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K"];
 
   const deck = [];
 
-  // 2 baralhos (igual ao seu deck.js)
-  for (let d = 0; d < 2; d++) {
-    for (const naipe of naipes) {
-      for (const valor of valores) {
+  // Cachetão Pro:
+  // 2 baralhos de 52 cartas
+  // Sem coringas impressos
+  for (let copy = 1; copy <= 2; copy++) {
+    for (const suit of suits) {
+      for (const rank of ranks) {
         deck.push({
-          id: serverCardId++,
-          valor,
-          naipe
+          id: `${rank}_${suit}_${copy}_${Math.random().toString(36).slice(2, 8)}`,
+          valor: rank,
+          naipe: suit
         });
       }
     }
   }
 
-  // 4 jokers
-  for (let i = 0; i < 4; i++) {
-    deck.push({
-      id: serverCardId++,
-      valor: "JOKER",
-      isJoker: true
-    });
+  return deck;
+}
+
+function getNextRank(rank) {
+  const order = ["A", "2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K"];
+  const idx = order.indexOf(String(rank));
+
+  if (idx < 0) return null;
+
+  return order[(idx + 1) % order.length];
+}
+
+function getSameColorSuits(naipe) {
+  if (naipe === "espadas" || naipe === "paus") {
+    return ["espadas", "paus"];
   }
 
-  return deck;
+  if (naipe === "copas" || naipe === "ouros") {
+    return ["copas", "ouros"];
+  }
+
+  return [];
+}
+
+function setupCachetaoRoundJoker(room) {
+  if (!room || !Array.isArray(room.deck)) return;
+
+  const vira = room.deck.pop();
+
+  if (!vira) {
+    room.cartaVira = null;
+    room.coringaValor = null;
+    room.coringaNaipes = [];
+
+    room.viraNaMesa = false;
+    room.viraDisponivelParaJogar = false;
+    room.primeiroCompradorSeat = null;
+    room.viraEmUsoPorSeat = null;
+
+    return;
+  }
+
+  room.cartaVira = vira;
+  room.coringaValor = getNextRank(vira.valor);
+  room.coringaNaipes = getSameColorSuits(vira.naipe);
+
+  // Nova rodada: restaura a nova vira na mesa
+  room.viraNaMesa = true;
+  room.viraDisponivelParaJogar = false;
+  room.primeiroCompradorSeat = null;
+  room.viraEmUsoPorSeat = null;
+
+  for (const p of room.playersBySeat || []) {
+    if (!p) continue;
+
+    p.jogandoComVira = false;
+    p.viraBaixada = false;
+    p.viraDescartada = false;
+    p.batendoComVira = false;
+  }
+}
+
+function isCachetaoJoker(card, room) {
+  if (!card || !room) return false;
+
+  return (
+    String(card.valor) === String(room.coringaValor) &&
+    Array.isArray(room.coringaNaipes) &&
+    room.coringaNaipes.includes(card.naipe)
+  );
+}
+
+
+function isMeldJoker(card, room) {
+  return isJoker(card) || isCachetaoJoker(card, room);
 }
 
 function shuffle(a) {
@@ -2272,6 +3203,7 @@ function sendState(roomId) {
     started: !!room.started,
     phase: room.phase,
     currentSeat: room.currentSeat,
+    dealerSeat: Number(room.dealerSeat) || 0,
     buyIn: room.buyIn,
     maxSeats: room.playersBySeat.length,
     ante: Math.ceil((room.buyIn || 0) / 2),
@@ -2281,12 +3213,19 @@ function sendState(roomId) {
     buyEndsAt: Number(room.buyEndsAt) || 0,
     buyMs: Number(room.buyMs) || 15000,
     dealEndsAt: Number(room.dealEndsAt) || 0,
-    dealMs: Number(room.dealMs) || 2200,
+    dealMs: Number(room.dealMs) || 1200,
     matchEnded: room.matchEnded || false,
     matchWinnerSeat: room.matchWinnerSeat || null,
     /*rematchRequestedBySeat: room.rematchRequestedBySeat || null,*/
     deckCount: room.deck.length,
     discardTop: room.discard?.[room.discard.length - 1] || null,
+    cartaVira: room.cartaVira || null,
+    viraDisponivelParaJogar: !!room.viraDisponivelParaJogar,
+    primeiroCompradorSeat: Number(room.primeiroCompradorSeat) || 0,
+    viraEmUsoPorSeat: Number(room.viraEmUsoPorSeat) || 0,
+    viraNaMesa: room.viraNaMesa !== false,
+    coringaValor: room.coringaValor || null,
+    coringaNaipes: Array.isArray(room.coringaNaipes) ? room.coringaNaipes : [],
     matchPot: Number(room.matchPot) || 0,
     houseRakePct: getHouseRakePct(room),
     houseRake: getHouseRake(room),
@@ -2300,6 +3239,7 @@ function sendState(roomId) {
     crazyBatidaAttemptSeat: Number(room.crazyBatidaAttempt?.claimantSeat) || 0,
     crazyBatidaAttemptPrioritySeat: Number(room.crazyBatidaAttempt?.prioritySeat) || 0,
     crazyBatidaAttemptExpiresAt: Number(room.crazyBatidaAttempt?.expiresAt) || 0,
+    crazyBatidaAttemptUsesVira: !!room.crazyBatidaAttempt?.usesVira,
     crazyBatidaBurnedBySeat: room.crazyBatidaBurnedBySeat || {},
 
     // ✅ esses campos são da rodada/sala, não do jogador
@@ -2318,10 +3258,13 @@ function sendState(roomId) {
         tableChips: typeof p.tableChips === "number"
           ? p.tableChips
           : (((Number(room.buyIn) || 0) * 10) - (Number(room.buyIn) || 0)),
-        totalPoints: p.totalPoints || 0,
+        totalPoints: typeof p.vidas === "number" ? p.vidas : (p.totalPoints || 0),
+        vidas: typeof p.vidas === "number" ? p.vidas : 10,
         lastRoundPoints: p.lastRoundPoints || 0,
         handCount: Array.isArray(p.hand) ? p.hand.length : 0,
         eliminated: !!p.eliminated,
+        participando: !!p.participando,
+        passouRodada: !!p.passouRodada,
         rebuyCount: p.rebuyCount || 0,
         pendingRebuy: !!p.pendingRebuy,
         rebuyDeclined: !!p.rebuyDeclined,
@@ -2406,6 +3349,7 @@ function isOutOfTurnAllowed(actionType) {
     actionType === "rebuy" ||
     actionType === "declineRebuy" ||
     actionType === "startCrazyBatidaAttempt" ||
+    actionType === "startBatidaComViraAttempt" ||
     actionType === "cancelCrazyBatidaAttempt"
   );
 }
@@ -2486,7 +3430,7 @@ function createPlayerForSeat(room, seat, clientId, client, avatarUrl) {
   const saldoAtual = Number(client.chips ?? client.chipsBalance ?? 0);
 
   // cobra buy-in do saldo geral
-  /*client.chips = saldoAtual - mesaStack;*/ //caso queira cobrar o stack completo já no buy-in, use mesaStack ao invés de mesaStackLiquido/
+  /*client.chips = saldoAtual - mesaStack;*/ // caso queira cobrar o stack completo já no buy-in, use mesaStack ao invés de mesaStackLiquido
   client.chips = saldoAtual - mesaStackLiquido;
   client.chipsBalance = client.chips;
 
@@ -2509,15 +3453,23 @@ function createPlayerForSeat(room, seat, clientId, client, avatarUrl) {
 
     hand: [],
 
+    // Cachetão Pro
+    vidas: 10,
+    participando: false,
+    passouRodada: false,
+    marrou: false,
+
+    // Mantidos por enquanto para não quebrar telas antigas
     totalPoints: 0,
     lastRoundPoints: 0,
+
     eliminated: false,
 
     rebuyCount: 0,
     pendingRebuy: false,
     rebuyDeclined: false,
     pendingBatidaAfterDiscard: false,
-    
+
     disconnected: false,
     nextMatchReady: true,
     disconnectDeadline: 0,
@@ -2529,7 +3481,6 @@ function createPlayerForSeat(room, seat, clientId, client, avatarUrl) {
 
   return room.playersBySeat[seat - 1];
 }
-
 
 
 function ensurePhase(room, allowedPhases) {
@@ -2552,9 +3503,45 @@ function goToLayPhase(room) {
 }
 
 function advanceTurn(room) {
-  room.currentSeat = nextOccupiedSeat(room, room.currentSeat);
-  room.phase = "COMPRAR";
-  startTurnClock(room);
+  const totalSeats = room.playersBySeat?.length || 10;
+  let current = Number(room.currentSeat || 0);
+
+    // Cachetão Pro:
+  // ao sair do turno do primeiro comprador, encerra definitivamente
+  // a opção de Jogar com a Vira.
+  if (
+    room.viraDisponivelParaJogar &&
+    Number(room.currentSeat) === Number(room.primeiroCompradorSeat)
+  ) {
+    room.viraDisponivelParaJogar = false;
+    room.primeiroCompradorSeat = null;
+  }
+
+  for (let i = 0; i < totalSeats; i++) {
+    current++;
+
+    if (current > totalSeats) current = 1;
+
+    const p = room.playersBySeat?.[current - 1];
+
+    if (!p) continue;
+    if (p.eliminated) continue;
+    if (p.passouRodada) continue;
+    if (!p.participando) continue;
+
+    room.currentSeat = current;
+    room.phase = "COMPRAR";
+    startTurnClock(room);
+    return;
+  }
+
+  // Segurança: se ninguém puder jogar, encerra a rodada
+  room.roundEnded = true;
+  room.phase = "WAITING";
+  room.turnEndsAt = 0;
+  room.buyEndsAt = 0;
+
+  sendState(room.id);
 }
 
 function broadcastRoomState(room) {
@@ -2571,7 +3558,12 @@ function isClassic(room) {
 }
 
 function isCrazy(room) {
-  return getRoomVariant(room) === "CRAZY";
+  const variant = getRoomVariant(room);
+  return (
+    variant === "CRAZY" ||
+    variant === "CACHETAO" ||
+    variant === "CACHETAO_PRO"
+  );
 }
 
 function ensureDiscardStateMaps(room) {
@@ -2729,12 +3721,78 @@ function shouldForceBatida(room, player) {
   return false;
 }
 
+function handlePlayWithViraAction(room, player, playerSeat) {
+  const phaseCheck = ensurePhase(room, "COMPRAR");
+  if (!phaseCheck.ok) return phaseCheck;
+
+  const activeCheck = ensureActiveRoundPlayer(player);
+  if (!activeCheck.ok) return activeCheck;
+
+  if (!room.cartaVira) {
+    return {
+      ok: false,
+      msg: "A vira desta rodada não está disponível."
+    };
+  }
+
+  if (!room.viraDisponivelParaJogar) {
+    return {
+      ok: false,
+      msg: "A opção de jogar com a vira já foi encerrada."
+    };
+  }
+
+  if (Number(playerSeat) !== Number(room.primeiroCompradorSeat)) {
+    return {
+      ok: false,
+      msg: "Somente o primeiro jogador da rodada pode jogar com a vira."
+    };
+  }
+
+  if (Number(room.currentSeat) !== Number(playerSeat)) {
+    return {
+      ok: false,
+      msg: "Não é sua vez."
+    };
+  }
+
+  if (player.jogandoComVira) {
+    return {
+      ok: false,
+      msg: "Você já declarou que está jogando com a vira."
+    };
+  }
+
+  // Não coloca a vira fisicamente na mão.
+  // Ela continuará na mesa e precisará ser selecionada em um jogo.
+  player.jogandoComVira = true;
+  player.viraBaixada = false;
+  player.viraDescartada = false;
+  room.viraNaMesa = true;
+
+  room.viraEmUsoPorSeat = playerSeat;
+  room.viraDisponivelParaJogar = false;
+
+  goToLayPhase(room);
+  room.buyEndsAt = 0;
+
+  return null;
+}
+
 function handleDrawDeckAction(room, player, playerSeat) {
   const phaseCheck = ensurePhase(room, "COMPRAR");
   if (!phaseCheck.ok) return phaseCheck;
 
   const activeCheck = ensureActiveRoundPlayer(player);
   if (!activeCheck.ok) return activeCheck;
+
+  // A primeira compra normal encerra a opção de jogar com a vira.
+  if (
+    room.viraDisponivelParaJogar &&
+    Number(playerSeat) === Number(room.primeiroCompradorSeat)
+  ) {
+    room.viraDisponivelParaJogar = false;
+  }
 
   const card = room.deck.pop();
   if (!card) {
@@ -2773,45 +3831,121 @@ function handleDiscardAction(room, player, playerSeat, action) {
     action?.payload?.cardId ??
     action?.card?.id;
 
+    const descartandoVira =
+    String(cardId) === "__VIRA__";
+
+    if (
+      player.batendoComVira &&
+      descartandoVira
+    ) {
+      return {
+        ok: false,
+        msg: "No BATI com a vira, ela precisa ser usada em um jogo."
+      };
+    }
+
+    if (
+      player.batendoComVira &&
+      !player.viraBaixada
+    ) {
+      return {
+        ok: false,
+        msg: "Use a vira em um dos jogos antes de descartar."
+      };
+    }
+
   if (cardId === undefined || cardId === null || cardId === "") {
     return { ok: false, msg: "Ação inválida." };
   }
 
-  const idx = (player.hand || []).findIndex(c => String(c.id) === String(cardId));
-  if (idx < 0) {
-    return { ok: false, msg: "Carta inválida." };
+  let idx = -1;
+  let card = null;
+
+  if (descartandoVira) {
+    if (!player.jogandoComVira) {
+      return {
+        ok: false,
+        msg: "Você não está jogando com a vira."
+      };
+    }
+
+    if (player.viraBaixada) {
+      return {
+        ok: false,
+        msg: "A vira já foi usada em um jogo."
+      };
+    }
+
+    if (player.viraDescartada) {
+      return {
+        ok: false,
+        msg: "A vira já foi descartada."
+      };
+    }
+
+    if (!room.viraNaMesa || !room.cartaVira) {
+      return {
+        ok: false,
+        msg: "A vira não está mais disponível."
+      };
+    }
+
+    if (
+      Number(room.viraEmUsoPorSeat) !== Number(playerSeat)
+    ) {
+      return {
+        ok: false,
+        msg: "A vira não pertence a este jogador."
+      };
+    }
+
+    card = room.cartaVira;
+  } else {
+    idx = (player.hand || []).findIndex(
+      c => String(c.id) === String(cardId)
+    );
+
+    if (idx < 0) {
+      return { ok: false, msg: "Carta inválida." };
+    }
+
+    card = player.hand[idx];
+  }
+  const ownMelds = (room.tableMelds || []).filter(m => Number(m.seat) === Number(playerSeat));
+
+  // Cachetão Pro:
+  // Se baixou jogo mas ainda não está em batida com descarte,
+  // tentou descartar sem bater: volta tudo para a mão e Queimou.
+  if (ownMelds.length > 0 && !player.pendingBatidaAfterDiscard) {
+    devolverJogosDoJogadorParaMao(room, playerSeat);
+    markCrazyBatidaBurned(room, playerSeat);
+
+    return {
+      ok: false,
+      msg: "Batida inválida. Você queimou."
+    };
   }
 
-  const card = player.hand[idx];
-
-  // NOVA REGRA: não pode descartar coringa
-  if (isJoker(card)) {
-    return { ok: false, msg: "Não é permitido descartar coringa." };
-  }
-
-  if (requiredJoker != null) {
-    return { ok: false, msg: "Use o coringa antes de descartar." };
-  }
-
-  if (!player.disconnected && canCardBeAddedToAnyMeld(room, card)) {
-    return { ok: false, msg: "Essa carta entra em um jogo da mesa." };
-  }
-
-  if (!player.disconnected && canCardReplaceAnyJokerOnTable(room, card)) {
-    return { ok: false, msg: "Essa carta substitui um coringa na mesa." };
-  }
-
-  if (requiredDiscard != null && String(card.id) !== String(requiredDiscard)) {
-    return { ok: false, msg: "Pegou do lixo: use ou devolva a carta." };
-  }
-
-  if (requiredJoker != null && String(card.id) === String(requiredJoker)) {
-    return { ok: false, msg: "Use o coringa antes de descartar." };
+    // Cachetão Pro: não pode descartar o coringa da rodada
+  if (!descartandoVira && isCachetaoJoker(card, room)) {
+    return {
+      ok: false,
+      msg: "Não é permitido descartar o coringa da rodada."
+    };
   }
 
   clearDiscardLock(room);
 
-  player.hand.splice(idx, 1);
+  if (descartandoVira) {
+    player.viraDescartada = true;
+    player.viraBaixada = false;
+    player.jogandoComVira = false;
+
+    room.viraNaMesa = false;
+    room.viraEmUsoPorSeat = null;
+  } else {
+    player.hand.splice(idx, 1);
+  }
   room.discard.push(card);
 
   if (requiredDiscard != null && String(card.id) === String(requiredDiscard)) {
@@ -2932,6 +4066,10 @@ const initialTableChips = Math.max(0, stake - getBuyIn(room));
 
     p.totalPoints = 0;
     p.lastRoundPoints = 0;
+    p.vidas = 10;
+    p.participando = false;
+    p.passouRodada = false;
+    p.marrou = false;
     p.hand = [];
     p.jogosBaixados = [];
     p.obrigacaoBaixar = false;
@@ -3015,7 +4153,9 @@ const initialTableChips = Math.max(0, stake - getBuyIn(room));
     }
   }
 
-  room.dealMs = Number(room.dealMs) > 0 ? Number(room.dealMs) : 2200;
+  setupCachetaoRoundJoker(room);
+
+  room.dealMs = Number(room.dealMs) > 0 ? Number(room.dealMs) : 1200;
   room.dealEndsAt = Date.now() + room.dealMs;
 
   broadcastRoomState(room);
@@ -3026,17 +4166,31 @@ const initialTableChips = Math.max(0, stake - getBuyIn(room));
   }
 
   room._dealStartTimer = setTimeout(() => {
-    room._dealStartTimer = null;
+  room._dealStartTimer = null;
 
-    if (!room || room.matchEnded || room.roundEnded) return;
+  if (!room || room.matchEnded || room.roundEnded) return;
 
-    room.phase = "COMPRAR";
-    room.dealEndsAt = 0;
+  // Cachetão Pro:
+  // depois da primeira distribuição, todos decidem JOGAR ou CORRER
+  room.phase = "DECISAO_PARTICIPAR";
+  room.dealEndsAt = 0;
+  room.buyEndsAt = 0;
 
-    startTurnClock(room);
-    broadcastRoomState(room);
-    scheduleAutoTurn(room);
-  }, room.dealMs);
+  if (room.dealerSeat) {
+  room.currentSeat = nextOccupiedSeat(
+    room,
+    room.dealerSeat
+  );
+}
+
+  // força novo relógio da decisão
+  room._autoTurnSeat = null;
+  room.turnEndsAt = 0;
+  startTurnClock(room);
+
+  if (room?.id) sendState(room.id);
+  scheduleAutoTurn(room);
+}, room.dealMs);
 }
 
 
@@ -3066,26 +4220,8 @@ function isPlayersTurn(room, clientId) {
 
 
 
-/*
-function getNextDealerSeat(room) {
-  const players = room.playersBySeat || [];
 
-  if (!players.some(Boolean)) return null;
 
-  const lastDealer = Number(room.dealerSeat) || 0;
-
-  for (let step = 1; step <= players.length; step++) {
-    const seat = ((lastDealer - 1 + step) % players.length) + 1;
-    const p = players[seat - 1];
-
-    if (p && !p.eliminated) {
-      return seat;
-    }
-  }
-
-  return null;
-}
-*/
 
 function nextOccupiedSeat(room, fromSeat) {
   const total = room.playersBySeat.length;
@@ -3126,7 +4262,12 @@ function advanceDealerAndCurrentSeat(room) {
   room.dealerSeat = getNextDealerSeat(room);
 
   if (room.dealerSeat) {
-    room.currentSeat = room.dealerSeat;
+    // A decisão começa no primeiro jogador vivo depois do dealer.
+    // O dealer será o último a decidir.
+    room.currentSeat = nextOccupiedSeat(
+      room,
+      room.dealerSeat
+    );
   } else {
     room.currentSeat = null;
   }
@@ -3180,10 +4321,18 @@ function getAutoDiscardIndex(room, seat, hand) {
   const requiredDiscard = room.mustUseDiscardCardBySeat?.[seat];
   const requiredJoker = room.mustUseJokerBySeat?.[seat];
 
-  // 1) se está obrigado a devolver a carta do lixo, devolve ela
+    // 1) se está obrigado a devolver a carta do lixo,
+  // só devolve se NÃO for coringa da rodada
   if (requiredDiscard != null) {
     const idx = hand.findIndex(c => String(c?.id) === String(requiredDiscard));
-    if (idx >= 0) return idx;
+
+    if (idx >= 0) {
+      const card = hand[idx];
+
+      if (!isMeldJoker(card, room)) {
+        return idx;
+      }
+    }
   }
 
   // 3) fallback: maior carta NÃO-coringa
@@ -3193,7 +4342,7 @@ function getAutoDiscardIndex(room, seat, hand) {
   for (let i = 0; i < hand.length; i++) {
     const card = hand[i];
     if (!card) continue;
-    if (isJoker(card)) continue;
+    if (isMeldJoker(card, room)) continue;
 
     const val = getCardRankValue(card);
     if (val > bestVal) {
@@ -3305,6 +4454,11 @@ function scheduleAutoTurn(room) {
 
     const now2 = Date.now();
 
+    // Cachetão Pro: decisão automática Jogar/Correr
+    if (room.phase === "DECISAO_PARTICIPAR" && room.turnEndsAt && now2 >= room.turnEndsAt) {
+      autoDecideCachetaoParticipation(room);
+      return;
+    }
     // 1) Se ainda está em COMPRAR e bateu 15s, compra automático
     if (room.phase === "COMPRAR" && room.buyEndsAt && now2 >= room.buyEndsAt) {
       const bought = room.deck.pop();
@@ -3418,6 +4572,26 @@ function handleDrawDiscardAction(room, player, playerSeat) {
   const activeCheck = ensureActiveRoundPlayer(player);
   if (!activeCheck.ok) return activeCheck;
 
+  // Qualquer compra normal do primeiro comprador encerra a janela da vira.
+  if (
+    room.viraDisponivelParaJogar &&
+    Number(playerSeat) === Number(room.primeiroCompradorSeat)
+  ) {
+    room.viraDisponivelParaJogar = false;
+  }
+
+  // Cachetão Pro:
+  // quem Queimou não pode pegar carta do lixo.
+  // Só pode comprar do monte.
+  if (isCrazyBatidaBurned(room, playerSeat)) {
+    return {
+      ok: false,
+      msg: "Você queimou. Agora só pode comprar do monte."
+    };
+  }
+
+  ensureDiscardLockState(room);
+
   ensureDiscardLockState(room);
 
   const topCard = room.discard?.[room.discard.length - 1];
@@ -3426,7 +4600,8 @@ function handleDrawDiscardAction(room, player, playerSeat) {
   }
 
   // NOVA REGRA: não pode pegar coringa do lixo
-  if (isJoker(topCard)) {
+    // Cachetão Pro: não pode pegar coringa do lixo
+  if (isMeldJoker(topCard, room)) {
     return { ok: false, msg: "Não é permitido pegar coringa do lixo." };
   }
 
@@ -3442,9 +4617,12 @@ function handleDrawDiscardAction(room, player, playerSeat) {
   player.hand = player.hand || [];
   player.hand.push(card);
 
-  markDiscardCardRequired(room, playerSeat, card.id);
+  // Cachetão Pro:
+  // pegou do lixo, mas NÃO é obrigado a baixar jogo.
+  // Vai direto para descarte.
+  clearRequiredDiscardCard(room, playerSeat);
 
-  room.phase = "BAIXAR";
+  room.phase = "DESCARTAR";
   room.buyEndsAt = 0;
 
   return null;
@@ -3878,18 +5056,89 @@ function handlePlayMeldAction(room, player, playerSeat, action) {
   }
 
   const hand = player.hand || [];
-  const selected = cardIds.map(id =>
-    hand.find(c => String(c.id) === String(id))
+
+  const querUsarVira = cardIds.some(
+    id => String(id) === "__VIRA__"
   );
+
+  if (querUsarVira) {
+    if (!player.jogandoComVira) {
+      return {
+        ok: false,
+        msg: "Você não declarou que está jogando com a vira."
+      };
+    }
+
+    if (player.viraBaixada) {
+      return {
+        ok: false,
+        msg: "A vira já foi usada em outro jogo."
+      };
+    }
+
+    if (
+      Number(room.viraEmUsoPorSeat) !== Number(playerSeat)
+    ) {
+      return {
+        ok: false,
+        msg: "A vira não está disponível para este jogador."
+      };
+    }
+
+    if (!room.cartaVira) {
+      return {
+        ok: false,
+        msg: "A vira desta rodada não está disponível."
+      };
+    }
+  }
+
+  const selected = cardIds.map(id => {
+    if (String(id) === "__VIRA__") {
+      return room.cartaVira;
+    }
+
+    return hand.find(
+      c => String(c.id) === String(id)
+    );
+  });
 
   if (selected.some(c => !c)) {
     return { ok: false, msg: "Carta inválida." };
   }
 
-  const handSizeBefore = hand.length;
-  const willBatidaWithoutDiscard = handSizeBefore === selected.length;
-  const willBatidaWithDiscard = handSizeBefore === selected.length + 1;
+  const handSizeBefore =
+    hand.length;
+
+  // A vira é virtual e não existe dentro de player.hand.
+  const selectedPhysicalCount =
+    cardIds.filter(
+      id => String(id) !== "__VIRA__"
+    ).length;
+
+  const willBatidaWithoutDiscard =
+    handSizeBefore === selectedPhysicalCount;
+
+  const willBatidaWithDiscard =
+    handSizeBefore ===
+    selectedPhysicalCount + 1;
+
+
   const willBatidaNow = willBatidaWithoutDiscard || willBatidaWithDiscard;
+
+  // Quem declarou BATI com a vira precisa
+// obrigatoriamente utilizá-la em um dos jogos.
+if (
+  willBatidaNow &&
+  player.batendoComVira &&
+  !player.viraBaixada &&
+  !querUsarVira
+) {
+  return {
+    ok: false,
+    msg: "Para bater com a vira, selecione-a em um dos jogos."
+  };
+}
 
   // 1) EXCEÇÃO DE BATIDA — prioridade máxima
   if (willBatidaNow) {
@@ -3899,8 +5148,14 @@ function handlePlayMeldAction(room, player, playerSeat, action) {
     });
 
     if (batidaEx.ok) {
+      const handCardIds = cardIds.filter(
+        id => String(id) !== "__VIRA__"
+      );
+
       player.hand = hand.filter(
-        c => !cardIds.some(id => String(id) === String(c.id))
+        c => !handCardIds.some(
+          id => String(id) === String(c.id)
+        )
       );
 
       room.tableMelds = room.tableMelds || [];
@@ -3921,6 +5176,12 @@ function handlePlayMeldAction(room, player, playerSeat, action) {
           seat: playerSeat
         });
       }
+
+      if (querUsarVira) {
+      player.viraBaixada = true;
+      player.viraDescartada = false;
+      room.viraNaMesa = false;
+}
 
       const requiredDiscard = getRequiredDiscardCardId(room, playerSeat);
       if (requiredDiscard != null) {
@@ -3976,16 +5237,26 @@ function handlePlayMeldAction(room, player, playerSeat, action) {
     }
 
     if (isCrazy(room)) {
-      const crazyTrincaCheck = validateCrazyTrincaShape(selected, { initial: true });
-      if (!crazyTrincaCheck.ok) {
-        return crazyTrincaCheck;
+      const temCoringaNaTrinca = selected.some(c => isMeldJoker(c, room));
+
+      if (!temCoringaNaTrinca) {
+        const crazyTrincaCheck = validateCrazyTrincaShape(selected, { initial: true });
+        if (!crazyTrincaCheck.ok) {
+          return crazyTrincaCheck;
+        }
       }
     }
   }
 
   // 3) APLICA
+  const handCardIds = cardIds.filter(
+    id => String(id) !== "__VIRA__"
+  );
+
   player.hand = hand.filter(
-    c => !cardIds.some(id => String(id) === String(c.id))
+    c => !handCardIds.some(
+      id => String(id) === String(c.id)
+    )
   );
 
   let meldCards = selected;
@@ -4005,6 +5276,11 @@ function handlePlayMeldAction(room, player, playerSeat, action) {
 
   room.tableMelds = room.tableMelds || [];
   room.tableMelds.push(meld);
+  if (querUsarVira) {
+    player.viraBaixada = true;
+    player.viraDescartada = false;
+    room.viraNaMesa = false;
+  }
 
   // 4) LIMPA OBRIGAÇÕES
   const requiredDiscard = getRequiredDiscardCardId(room, playerSeat);
@@ -4029,8 +5305,15 @@ function handlePlayMeldAction(room, player, playerSeat, action) {
     return null;
   }
 
-  if (shouldForceBatida(room, player)) {
+    if (shouldForceBatida(room, player)) {
     endRound(room, playerSeat);
+    return null;
+  }
+
+  // Cachetão Pro:
+  // baixou jogos válidos e sobrou 1 carta = batida com descarte
+  if ((player.hand || []).length === 1) {
+    player.pendingBatidaAfterDiscard = true;
     return null;
   }
 
@@ -4225,6 +5508,7 @@ function handleAddToMeldAction(room, player, playerSeat, action) {
 // Ações autoritativas
 // --------------------
 function handleAction(clientId, tableId, action) {
+
   const room = rooms.get(tableId);
   const client = clients.get(clientId);
 
@@ -4246,6 +5530,71 @@ function handleAction(clientId, tableId, action) {
     return { ok: false, msg: "Você não está sentado nesta mesa." };
   }
 
+// -------------------------
+// CACHETÃO PRO - DECISÃO JOGAR / CORRER
+// -------------------------
+if (
+  action?.type === "jogarRodada" ||
+  action?.type === "correrRodada" ||
+  action?.type === "marraRodada"
+) {
+
+  if (room.phase !== "DECISAO_PARTICIPAR") {
+    return { ok: false, msg: "Fora do momento de decisão." };
+  }
+
+  const seat = Number(playerSeat);
+
+  if (Number(room.currentSeat) !== seat) {
+    return { ok: false, msg: "Aguarde sua vez de decidir." };
+  }
+
+  if (player.eliminated) {
+    return { ok: false, msg: "Você foi eliminado." };
+  }
+
+  if (player.participando || player.passouRodada) {
+    return { ok: false, msg: "Você já decidiu esta rodada." };
+  }
+
+  const estaNaMarra =
+  player.marra === true ||
+  player.naMarra === true;
+
+if (action.type === "correrRodada" && estaNaMarra) {
+  return {
+    ok: false,
+    msg: "Você está na Marra e é obrigado a jogar."
+  };
+}
+
+if (action.type === "jogarRodada" || action.type === "marraRodada") {
+  player.participando = true;
+  player.passouRodada = false;
+
+  if (estaNaMarra) {
+    player.marra = true;
+    player.naMarra = true;
+  }
+}
+
+  if (action.type === "correrRodada") {
+  player.participando = false;
+  player.passouRodada = true;
+
+    // Quem corre perde 1 ponto
+    player.vidas = Math.max(0, (Number(player.vidas) || 0) - 1);
+
+    if (player.vidas <= 0) {
+      mandarParaRebuyCachetao(room, player);
+    }
+  }
+
+  advanceCachetaoDecisionTurn(room);
+
+  return { ok: true };
+}
+
     const crazyAttemptSeatCanAct = canSeatActDuringCrazyBatidaAttempt(
     room,
     playerSeat,
@@ -4255,6 +5604,21 @@ function handleAction(clientId, tableId, action) {
   if (isCrazyBatidaAttemptActive(room) && !crazyAttemptSeatCanAct && action?.type !== "startCrazyBatidaAttempt") {
     return { ok: false, msg: "Aguarde a tentativa de BATI." };
   }
+
+// Cachetão Pro:
+// quem correu a rodada fica apenas assistindo.
+// Não pode comprar, pegar lixo, baixar ou descartar.
+if (
+  player.passouRodada &&
+  action?.type !== "startCrazyBatidaAttempt" &&
+  action?.type !== "cancelCrazyBatidaAttempt"
+) {
+  return {
+    ok: false,
+    msg: "Você correu esta rodada. Aguarde a próxima."
+  };
+}
+
 
   if (!isOutOfTurnAllowed(action?.type) && !crazyAttemptSeatCanAct) {
     if (!isPlayersTurn(room, clientId)) {
@@ -4268,6 +5632,18 @@ function handleAction(clientId, tableId, action) {
 
 
   switch (action.type) {
+
+    case "playWithVira": {
+    const err = handlePlayWithViraAction(
+      room,
+      player,
+      playerSeat
+    );
+
+    if (err) return err;
+    break;
+  }
+
   case "drawDeck": {
   const err = handleDrawDeckAction(room, player, playerSeat);
   if (err) return err;
@@ -4284,6 +5660,18 @@ case "swapJoker": {
 
 case "addToMeld": {
   const err = handleAddToMeldAction(room, player, playerSeat, action);
+  if (err) return err;
+  break;
+}
+
+case "startBatidaComViraAttempt": {
+  const err =
+    handleStartBatidaComViraAttempt(
+      room,
+      player,
+      playerSeat
+    );
+
   if (err) return err;
   break;
 }
@@ -4945,6 +6333,14 @@ if (msg.type === "keepSeatForNextMatch") {
   p.hand = [];
   p.jogosBaixados = [];
   p.obrigacaoBaixar = false;
+
+  // Cachetão Pro
+  p.vidas = 10;
+  p.participando = false;
+  p.passouRodada = false;
+  p.marrou = false;
+
+  // Mantém zerado só para não quebrar telas antigas ainda
   p.totalPoints = 0;
   p.lastRoundPoints = 0;
 
@@ -5060,33 +6456,3 @@ if (msg.type === "keepSeatForNextMatch") {
   server.listen(PORT, () => {
     console.log(`🃏 Cachetão Pro rodando em http://localhost:${PORT}`);
   });
-
-
-
-function collectMiniAnte(room) {
-  const miniAnte = getMiniAnte(room);
-  const buyIn = Number(room?.buyIn) || 0;
-  const mesaStack = buyIn * 10;
-  const mesaStackLiquido = mesaStack - buyIn;
-  let collected = 0;
-
-  for (const p of room.playersBySeat || []) {
-    if (!p) continue;
-    if (p.eliminated) continue;
-
-    if (typeof p.tableChips !== "number") {
-      p.tableChips = mesaStackLiquido;
-    }
-
-    const paid = Math.min(p.tableChips, miniAnte);
-
-    p.tableChips -= paid;
-    collected += paid;
-
-  }
-
-  room.matchPot = Number(room.matchPot) || 0;
-  room.matchPot += collected;
-
-  return collected;
-}

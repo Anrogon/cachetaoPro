@@ -1,75 +1,130 @@
-import { initDeck, shuffleDeck } from "./deck.js";
-
+/* =========================================================
+   ESTADO GLOBAL DO JOGO
+========================================================= */
 
 export const state = {
+  /* =======================================================
+     JOGADORES E POSIÇÃO
+  ======================================================= */
+
   players: [],
   currentPlayer: 0,
+
+  mySeat: null,
+  currentSeat: null,
+
+  tableId: null,
+  room: null,
+
+  spectator: false,
+
+  /* =======================================================
+     CARTAS E MESA
+  ======================================================= */
+
   deck: [],
   lixo: [],
   table: [],
+  hand: [],
+
   selectedCards: [],
-  faseTurno: "COMPRAR",
+
   origemCompra: null,
- // =============================
-// TIMER DE TURNO (OFICIAL)
-// =============================
-turnSecondsLeft: 0,
-turnTimerId: null,
-turnDurationSec: 30,
-turnOwnerId: null,
-turnTimerToken: 0,
-// ===== FICHAS / APOSTA (MVP) =====
-pot: 0,
-ante: 0,
-matchPot: 0, // ✅ pote único (antes + rebuys)
-lastWinnerId: null,
-rebuyDecisionUntil: 0,
-// ===== controle de próxima rodada (anti-duplicação) =====
-nextRoundTimeoutId: null,
-nextRoundLock: false,
-rebuyDecisionUntil: 0,
-houseRakePct: 0.05,        // 5% da casa (ajuste aqui)
-matchFinalized: false,     // trava: finaliza 1x
-houseTake: 0,              // quanto a casa levou no final
-winnerPayout: 0,           // quanto o vencedor recebeu no final
-winnerNet: 0,              // lucro líquido (se tiver chipsStart)
-jaComprouNoTurno: false,
-turnoTravado: false,
-rodadaEncerrada: false,
-partidaEncerrada: false,
-  
+  cartaDoLixo: null,
+  baixouComLixo: false,
+  obrigacaoBaixar: false,
+
+  /* =======================================================
+     TURNO E RODADA
+  ======================================================= */
+
+  fase: null,
+  faseTurno: "COMPRAR",
+
+  jaComprouNoTurno: false,
+  turnoTravado: false,
+
+  rodadaEncerrada: false,
+  partidaEncerrada: false,
+
+  /* =======================================================
+     TIMER DE TURNO
+  ======================================================= */
+
+  turnSecondsLeft: 0,
+  turnTimerId: null,
+  turnDurationSec: 30,
+  turnOwnerId: null,
+  turnTimerToken: 0,
+
+  /* =======================================================
+     FICHAS, POTE E RESULTADO
+  ======================================================= */
+
+  pot: 0,
+  ante: 0,
+
+  matchPot: 0,
+  lastWinnerId: null,
+
+  houseRakePct: 0.05,
+  matchFinalized: false,
+
+  houseTake: 0,
+  winnerPayout: 0,
+  winnerNet: 0,
+
+  vencedor: null,
+
+  /* =======================================================
+     REBUY
+  ======================================================= */
+
+  rebuyDecisionUntil: 0,
+
+  /* =======================================================
+     CONTROLE DA PRÓXIMA RODADA
+  ======================================================= */
+
+  nextRoundTimeoutId: null,
+  nextRoundLock: false
 };
 
 
+/*
+ * Mantido por compatibilidade com trechos antigos que acessam
+ * o estado através de window.state.
+ */
 window.state = state;
 
-// =============================
-// INICIALIZA ESTADO DO JOGO
-// =============================
-export function initState(playerName) {
-  state.player.name = playerName;
-  state.table = [];
-  state.lixo = [];
-  state.selectedCards = [];
-  state.faseTurno = "COMPRAR";
-  state.origemCompra = null;
-  state.cartadoLixo = null;
-  state.baixoucomLixo = false;
-  state.obrigacaoBaixar = null;
-  state.rodadaEncerrada = true;
-  
 
+/* =========================================================
+   JOGADOR ATUAL
+========================================================= */
 
-
-}
-
-state.table = [
-  {
-    type: "TRINCA", // ou "SEQUENCIA"
-    cards: [ /* cartas */ ]
-  }
-];
 export function currentPlayer() {
-  return state.players[state.currentPlayer];
-}
+  const mySeat = Number(state.mySeat || 0);
+  const tableId = state.tableId || state.room?.id;
 
+  const tablePlayer =
+    tableId && mySeat > 0
+      ? window.state?.tables?.[tableId]?.seats?.[mySeat - 1]
+      : null;
+
+  const localPlayer =
+    state.players?.[state.currentPlayer] || null;
+
+  /*
+   * Quando existem dados públicos da mesa e dados locais da mão,
+   * combina os dois sem perder as cartas privadas do jogador.
+   */
+  if (tablePlayer && localPlayer) {
+    return {
+      ...localPlayer,
+      ...tablePlayer,
+      hand: localPlayer.hand || []
+    };
+  }
+
+  return localPlayer || tablePlayer || null;
+}

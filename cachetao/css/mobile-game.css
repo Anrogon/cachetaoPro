@@ -58,91 +58,91 @@
 @media (max-width: 520px) and (orientation: portrait) {
 
   #table {
-    position: fixed !important;
+  position: fixed !important;
 
-    left: 10px !important;
-    right: 10px !important;
+  left: 22px !important;
+  right: 22px !important;
 
-    top: calc(10px + env(safe-area-inset-top) + 150px) !important;
-    bottom: calc(10px + env(safe-area-inset-bottom) + 220px) !important;
+  top: 275px !important;
+  height: 110px !important;
 
-    display: flex !important;
-    flex-direction: row !important;
-    flex-wrap: nowrap !important;
+  bottom: auto !important;
+  width: auto !important;
+  transform: none !important;
 
-    align-items: flex-end !important;
-    justify-content: flex-start !important;
+  display: flex !important;
+  flex-direction: row !important;
+  flex-wrap: nowrap !important;
 
-    gap: 18px !important;
+  align-items: center !important;
+  justify-content: center !important;
 
-    overflow-x: auto !important;
-    overflow-y: hidden !important;
+  gap: 14px !important;
 
-    padding: 8px 6px !important;
-    margin: 0 !important;
+  overflow-x: auto !important;
+  overflow-y: hidden !important;
 
-    background: transparent !important;
+  padding: 8px 10px !important;
+  margin: 0 !important;
 
-    z-index: 16000 !important;
-    pointer-events: auto !important;
-  }
+  background: rgba(0, 0, 0, 0.18) !important;
+  /*border: 2px dashed rgba(255, 255, 255, 0.25) !important;*/
+  border-radius: 22px !important;
+
+  z-index: 16000 !important;
+  pointer-events: auto !important;
+}
 
   .grupo-table {
-    position: relative !important;
+  position: relative !important;
 
-    width: 60px !important;
-    min-width: 60px !important;
-    height: 250px !important;
+  width: auto !important;
+  min-width: auto !important;
+  height: 70px !important;
 
-    display: block !important;
-    overflow: visible !important;
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  justify-content: center !important;
 
-    background: transparent !important;
+  overflow: visible !important;
+  background: transparent !important;
 
-    pointer-events: auto !important;
-  }
+  pointer-events: auto !important;
+}
 
   .grupo-table .card {
-    position: absolute !important;
-    left: 0 !important;
+  position: relative !important;
+  left: auto !important;
+  top: auto !important;
 
-    width: 60px !important;
-    height: 86px !important;
+  width: 48px !important;
+  height: 68px !important;
 
-    margin: 0 !important;
-    border-radius: 5px !important;
+  margin-left: -40px !important;
+  border-radius: 5px !important;
 
-    box-shadow: 0 2px 4px rgba(0,0,0,0.4) !important;
-    transition: transform 0.10s !important;
-  }
+  box-shadow: 0 2px 4px rgba(0,0,0,0.4) !important;
+  transition: transform 0.10s !important;
+}
 
-  .grupo-table .card:nth-child(1)  { top: 0px;   z-index: 1;  }
-  .grupo-table .card:nth-child(2)  { top: 18px;  z-index: 2;  }
-  .grupo-table .card:nth-child(3)  { top: 36px;  z-index: 3;  }
-  .grupo-table .card:nth-child(4)  { top: 54px;  z-index: 4;  }
-  .grupo-table .card:nth-child(5)  { top: 72px;  z-index: 5;  }
-  .grupo-table .card:nth-child(6)  { top: 90px;  z-index: 6;  }
-  .grupo-table .card:nth-child(7)  { top: 108px; z-index: 7;  }
-  .grupo-table .card:nth-child(8)  { top: 126px; z-index: 8;  }
-  .grupo-table .card:nth-child(9)  { top: 144px; z-index: 9;  }
-  .grupo-table .card:nth-child(10) { top: 162px; z-index: 10; }
-  .grupo-table .card:nth-child(11) { top: 180px; z-index: 11; }
-  .grupo-table .card:nth-child(12) { top: 198px; z-index: 12; }
-  .grupo-table .card:nth-child(13) { top: 216px; z-index: 13; }
+.grupo-table .card:first-child {
+  margin-left: 0 !important;
+}
+
 }
 
 /* =========================================================
-   MOBILE PORTRAIT - MÃO + MONTE/LIXO
+   MOBILE PORTRAIT - MÃO + MONTE/LIXO/VIRA
 ========================================================= */
 
 @media (max-width: 520px) and (orientation: portrait) {
 
   #hand {
     position: fixed !important;
-
     left: 8px !important;
     right: 8px !important;
-    bottom: calc(10px + env(safe-area-inset-bottom)) !important;
+    bottom: calc(15px + env(safe-area-inset-bottom)) !important;
 
     width: auto !important;
     max-width: none !important;
@@ -170,27 +170,27 @@
   }
 
   #hand .card {
-    width: 70px !important;
-    height: 100px !important;
+    width: 60px !important;
+    height: 93.6px !important;
 
     position: relative !important;
-    z-index: 1 !important;
 
     flex: 0 0 auto !important;
-    margin-left: -45px !important;
+    margin-left: -42px !important;
 
     border-radius: 5px !important;
 
     pointer-events: auto !important;
   }
 
+  #hand .card.selected {
+    transform: translateY(-18px) !important;
+  }
+
   #hand .card:first-child {
     margin-left: 0 !important;
   }
 
-  #hand .card.selected {
-    transform: translateY(-4px) !important;
-  }
 
   #hand .card.touch-dragging {
     transform: translateY(-10px) scale(1.04) !important;
@@ -212,41 +212,285 @@
     position: fixed !important;
 
     left: 50% !important;
-    bottom: calc(10px + env(safe-area-inset-bottom) + 165px) !important;
+    bottom: calc(10px + env(safe-area-inset-bottom) + 150px) !important;
     transform: translateX(-50%) !important;
 
     display: flex !important;
+    flex-direction: column !important;
     justify-content: center !important;
     align-items: center !important;
-    gap: 16px !important;
+    gap: 3px !important;
 
+    width: 100vw !important;
     margin: 0 !important;
 
     z-index: 25000 !important;
+    pointer-events: none !important;
+  }
+
+  #deck-row {
+    display: flex !important;
+    flex-direction: row !important;
+    justify-content: center !important;
+    align-items: center !important;
+    gap: 8px !important;
+
     pointer-events: auto !important;
   }
 
-  .pile-slot,
-  #monte,
+  #monte.monte-horizontal {
+    width: 74px !important;
+    height: 48px !important;
+
+    border: none !important;
+    background-image: url("/assets/image/monte-v.png") !important;
+    background-size: contain !important;
+    background-position: center !important;
+    background-repeat: no-repeat !important;
+
+    pointer-events: auto !important;
+  }
+
   #lixo {
-    width: 60px !important;
-    height: 86px !important;
+    width: 54px !important;
+    height: 76px !important;
     border-radius: 5px !important;
-  }
 
-  #monte,
-  #lixo {
-    position: relative !important;
-    z-index: 25001 !important;
+    background-size: cover !important;
+    background-position: center !important;
+    background-repeat: no-repeat !important;
+
     pointer-events: auto !important;
   }
-  #monte .card,
-    #lixo .card,
-    #monte img,
-    #lixo img {
+
+  #vira-area {
+    width: 65px !important;
+    height: 95px !important;
+    min-height: 76px !important;
+
+    border-radius: 5px !important;
+
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+
+    pointer-events: none !important;
+  }
+
+  #vira-card {
     width: 60px !important;
-    height: 86px !important;
-    }
+    height: 93.6px !important;
+
+    border-radius: 5px !important;
+
+    background-size: cover !important;
+    background-position: center !important;
+    background-repeat: no-repeat !important;
+  }
+
+  #vira-joker {
+    width: 100vw !important;
+
+    font-size: 10px !important;
+    line-height: 1 !important;
+
+    color: #fff !important;
+    font-weight: 800 !important;
+    text-align: center !important;
+
+    white-space: nowrap !important;
+    text-shadow: 0 2px 4px rgba(0,0,0,.75) !important;
+
+    pointer-events: none !important;
+  }
+
+/* =========================
+   VIRA MOBILE
+========================= */
+
+#mobileViraBox {
+  position: fixed !important;
+
+  top: calc(10px + env(safe-area-inset-top) + 100px) !important;
+  left: 50% !important;
+  transform: translateX(-50%) !important;
+
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+
+  gap: 3px !important;
+  pointer-events: auto !important;
+  z-index: 26000 !important;
+}
+
+#mobileViraCard {
+  width: 60px !important;
+  height: 93.6px !important;
+
+  border-radius: 4px !important;
+
+  background-size: cover !important;
+  background-position: center !important;
+  background-repeat: no-repeat !important;
+  position: relative !important;
+  z-index: 26001 !important;
+  pointer-events: auto !important;
+  cursor: pointer !important;
+  touch-action: manipulation !important;
+  -webkit-tap-highlight-color: transparent !important;
+  box-shadow: 0 2px 6px rgba(0,0,0,.45) !important;
+  outline: 2px solid rgba(255, 215, 0, 0.70) !important;
+  outline-offset: 4px !important;
+  box-shadow:
+    0 2px 6px rgba(0,0,0,.45),
+    0 0 8px rgba(255,215,0,.25) !important;
+}
+
+#mobileViraCard.vira-selectable {
+  pointer-events: auto !important;
+  cursor: pointer !important;
+}
+
+#mobileViraCard.selected {
+  transform: translateY(-8px) !important;
+  outline: 3px solid #ffd54a !important;
+  box-shadow:
+    0 2px 6px rgba(0,0,0,.45),
+    0 0 14px rgba(255,213,74,.9) !important;
+}
+
+#mobileViraJoker {
+  font-size: 10px !important;
+  font-weight: 800 !important;
+
+  color: #fff !important;
+
+  text-align: center !important;
+  white-space: nowrap !important;
+
+  text-shadow: 0 2px 4px rgba(0,0,0,.8) !important;
+}
+
+#mobileDeckBox {
+  position: fixed !important;
+
+  left: 40px !important;
+  bottom: calc(-7px + env(safe-area-inset-bottom) + 140px) !important;
+
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  justify-content: flex-start !important;
+  gap: 8px !important;
+
+  z-index: 36000 !important;
+  pointer-events: auto !important;
+}
+
+#mobileDeckBox #monte.monte-horizontal {
+  width: 78px !important;
+  height: 57px !important;
+}
+
+#mobileDeckBox #lixo {
+  width: 65px !important;
+  height: 97px !important;
+}
+
+#mobileDeckBox #pot-area {
+  transform: scale(0.75);
+  transform-origin: center;
+}
+
+#mobileActionButtons {
+  position: fixed !important;
+  right: 18px !important;
+  bottom: calc(10px + env(safe-area-inset-bottom) + 118px) !important;
+
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 6px !important;
+
+  z-index: 38000 !important;
+  pointer-events: auto !important;
+}
+
+#mobileActionButtons button {
+  width: 74px !important;
+  height: 30px !important;
+
+  border: 1px solid rgba(255,255,255,0.22) !important;
+  border-radius: 999px !important;
+
+  color: #fff !important;
+  font-size: 10px !important;
+  line-height: 1 !important;
+  white-space: nowrap !important;
+  padding: 0 5px !important;
+  font-weight: 900 !important;
+
+  transition:
+  transform 0.08s ease,
+  filter 0.08s ease,
+  box-shadow 0.08s ease;
+
+  transition: background .18s ease, border-color .18s ease !important;
+
+  /* Cor padrão (CORRER) */
+  background: linear-gradient(180deg, #666, #3b3b3b) !important;
+}
+
+#mobileActionButtons #mobileBatiBtn {
+  font-size: 10px !important;
+}
+
+#mobileActionButtons #mobileJogarViraBtn {
+  display: none;
+
+  background: linear-gradient(180deg, #666, #3b3b3b) !important;
+
+  font-size: 10px !important;
+  line-height: 1 !important;
+  white-space: nowrap !important;
+  padding: 0 4px !important;
+}
+
+#mobileActionButtons button:active {
+  transform: translateY(2px);
+  filter: brightness(0.88);
+}
+
+#mobileActionButtons #mobileBatiBtn {
+  background: linear-gradient(180deg, #2d7df7, #0d47a1) !important;
+}
+
+#mobileActionButtons #mobileJogarBtn {
+  background: linear-gradient(180deg, #34c759, #198f38) !important;
+}
+
+#mobileActionButtons #mobileJogarBtn.is-marra {
+  background: linear-gradient(180deg, #e53935, #a80000) !important;
+}
+
+#mobileActionButtons #mobileCorrerBtn {
+  background: linear-gradient(180deg, #666, #3b3b3b) !important;
+}
+
+#mobileActionButtons #mobileBatiBtn.is-active {
+  background: linear-gradient(180deg, #ffd54a, #c49000) !important;
+  color: #1c1400 !important;
+}
+
+#mobileActionButtons #mobileBatiBtn.is-burned {
+  background: linear-gradient(180deg, #e53935, #a80000) !important;
+  color: #fff !important;
+}
+
+#mobileActionButtons #mobileBatiBtn.is-disabled-ui {
+  opacity: .55 !important;
+}
 }
 
 /* =========================================================
@@ -255,28 +499,6 @@
 ========================================================= */
 
 @media (max-width: 520px) and (orientation: portrait) {
-
-  body.mobile-table-mode #mobileBottomHud {
-    position: fixed !important;
-
-    left: 14px !important;
-    right: auto !important;
-    top: auto !important;
-    bottom: calc(10px + env(safe-area-inset-bottom) + 155px) !important;
-    transform: none !important;
-
-    width: 100px !important;
-    height: 40px !important;
-
-    z-index: 36000 !important;
-  }
-
-  body.mobile-table-mode #mobileBottomHud.is-current-turn {
-    border: 1px solid #ffd700 !important;
-    box-shadow:
-      0 0 0 2px rgba(255, 215, 0, 0.35),
-      0 0 14px rgba(255, 215, 0, 0.85) !important;
-  }
 
   body.mobile-table-mode #mobileSortButtonsHud {
     position: fixed !important;
@@ -300,28 +522,6 @@
     z-index: 37000 !important;
   }
 
-  body.mobile-table-mode #bottomArea .sort-btn {
-    position: fixed !important;
-
-    top: auto !important;
-    bottom: calc(10px + env(safe-area-inset-bottom) + 115px) !important;
-    transform: none !important;
-
-    width: 30px !important;
-    height: 30px !important;
-
-    z-index: 37000 !important;
-  }
-
-  body.mobile-table-mode #bottomArea .sort-btn:nth-of-type(1) {
-    left: 38px !important;
-    right: auto !important;
-  }
-
-  body.mobile-table-mode #bottomArea .sort-btn:nth-of-type(2) {
-    left: 76px !important;
-    right: auto !important;
-  }
 
   body.mobile-table-mode #mobileBatiBtnHud,
   body.mobile-table-mode .sb-mobile-bati-btn {
@@ -368,7 +568,7 @@
   body.mobile-table-mode .sb-mobile-bati-btn.is-disabled-ui {
     background: linear-gradient(180deg, #e53935, #b71c1c) !important;
   }
-
+/*
   body.mobile-table-mode #mobileBottomHud {
   overflow: visible !important;
   }
@@ -377,7 +577,7 @@
     min-width: 0 !important;
     flex: 1 1 auto !important;
   }
-
+*/
   body.mobile-table-mode .mobile-seat-timebar {
   position: absolute !important;
 
@@ -434,4 +634,224 @@
 
   vertical-align: middle !important;
 }
+}
+
+/* =========================================================
+   MOBILE — ORDENAÇÃO AO LADO DA MÃO
+========================================================= */
+
+@media (max-width:700px){
+
+  body.mobile-table-mode #sortPanel{
+    position:fixed !important;
+
+    left:7px !important;
+    bottom:calc(25px + env(safe-area-inset-bottom)) !important;
+
+    display:flex !important;
+    flex-direction:column !important;
+    align-items:center !important;
+    gap:3px !important;
+
+    width:auto !important;
+    height:auto !important;
+
+    margin:0 !important;
+    padding:0 !important;
+
+    transform:none !important;
+
+    z-index:1200 !important;
+  }
+
+  body.mobile-table-mode #sortPanel .sort-title{
+    position:static !important;
+
+    margin:0 !important;
+    padding:0 !important;
+
+    color:#ffd86b;
+
+    font-size:9px;
+    font-weight:900;
+    line-height:1;
+
+    pointer-events:none;
+  }
+
+  body.mobile-table-mode #sortPanel .sort-buttons{
+    position:static !important;
+
+    display:flex !important;
+    flex-direction:column !important;
+    align-items:center !important;
+    gap:9px !important;
+
+    margin:0 !important;
+    padding:0 !important;
+  }
+
+  body.mobile-table-mode #sortPanel .sort-btn{
+    position:static !important;
+
+    left:auto !important;
+    right:auto !important;
+    top:auto !important;
+    bottom:auto !important;
+
+    width:31px !important;
+    height:39px !important;
+
+    margin:0 !important;
+    padding:0 !important;
+
+    transform:none;
+  }
+
+  body.mobile-table-mode #sortPanel .sort-btn:hover{
+    transform:none;
+  }
+
+  body.mobile-table-mode #sortPanel .sort-btn:active{
+    transform:scale(.94);
+  }
+
+  body.mobile-table-mode #sortPanel .sort-card{
+    width:29px !important;
+    height:37px !important;
+  }
+
+  body.mobile-table-mode #sortPanel .sort-values-grid{
+    width:21px;
+
+    gap:1px 4px;
+
+    font-size:11px;
+  }
+
+  body.mobile-table-mode #sortPanel .sort-suit-column{
+    gap:1px;
+
+    font-size:11px;
+  }
+
+  /* Garante o clique nos botões de ordenação */
+
+body.mobile-table-mode #sortPanel{
+  pointer-events:auto !important;
+  z-index:99999 !important;
+}
+
+body.mobile-table-mode #sortPanel .sort-title{
+  pointer-events:none !important;
+}
+
+body.mobile-table-mode #sortPanel .sort-buttons,
+body.mobile-table-mode #sortPanel .sort-btn,
+body.mobile-table-mode #sortPanel .sort-card,
+body.mobile-table-mode #sortPanel .sort-card *{
+  pointer-events:auto !important;
+}
+
+body.mobile-table-mode #sortPanel .sort-btn{
+  touch-action:manipulation !important;
+  cursor:pointer !important;
+}
+}
+
+/* =========================================================
+   MOBILE — MELHOR LEGIBILIDADE DA MÃO
+========================================================= */
+
+@media (max-width:700px){
+
+  body.mobile-table-mode #hand{
+    display:flex !important;
+    align-items:flex-end !important;
+    justify-content:center !important;
+
+    overflow:visible !important;
+
+    padding:0 4px !important;
+  }
+
+  body.mobile-table-mode #hand .card{
+    flex:0 0 60px !important;
+
+    width:60px !important;
+    height:88px !important;
+
+    background-size:100% 100% !important;
+    background-position:center !important;
+    background-repeat:no-repeat !important;
+
+    border:1px solid rgba(255,255,255,.92) !important;
+    border-radius:5px !important;
+
+    box-shadow:
+      -2px 0 4px rgba(0,0,0,.32),
+      0 2px 5px rgba(0,0,0,.28) !important;
+
+    image-rendering:auto;
+
+    transition:
+      transform .12s ease,
+      filter .12s ease !important;
+  }
+
+  /*
+   * Sobreposição moderada:
+   * cada carta deixa aproximadamente 28px visíveis.
+   */
+  body.mobile-table-mode #hand .card + .card{
+    margin-left:-42px !important;
+  }
+
+  body.mobile-table-mode #hand .card:first-child{
+    margin-left:0 !important;
+  }
+
+  body.mobile-table-mode #hand .card.selected{
+    position:relative !important;
+    z-index:100 !important;
+
+    transform:translateY(-10px) !important;
+
+    border-color:#ffd86b !important;
+
+    box-shadow:
+      0 0 0 2px rgba(255,216,107,.75),
+      0 5px 10px rgba(0,0,0,.45) !important;
+  }
+
+  body.mobile-table-mode #hand .card.touch-dragging{
+    position:relative !important;
+    z-index:200 !important;
+
+    transform:translateY(-14px) scale(1.04) !important;
+  }
+}
+
+#mobileJogarViraBtn {
+  display: none;
+  align-items: center;
+  justify-content: center;
+
+  width: 74px;
+  min-height: 32px;
+
+  padding: 4px 5px;
+  border: 0;
+  border-radius: 18px;
+
+  font-size: 9px;
+  font-weight: 800;
+  line-height: 1;
+  text-align: center;
+  white-space: normal;
+}
+
+#mobileJogarViraBtn:disabled {
+  opacity: 0.45;
+  cursor: default;
 }

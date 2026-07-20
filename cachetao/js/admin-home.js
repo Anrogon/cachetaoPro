@@ -1,4 +1,7 @@
-const API_BASE = "/api";
+const API_BASE =
+  window.location.hostname === "localhost"
+    ? "http://localhost:3001/api"
+    : "/api";
 
 function setMsg(text, isError = false) {
   const el = document.getElementById("adminHomeMsg");

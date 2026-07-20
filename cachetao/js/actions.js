@@ -1,12 +1,23 @@
-import { state } from "./state.js";
-import { currentPlayer } from "./state.js";
-import { isSequenciaComCoringaValida, valorIndex, guardiaoRegra4 } from "./rules.js";
-import { ordenarSequenciaComCoringa, canPlaceCardOnTable } from "./rules.js";
-import { isValidSequence, isValidTrinca, normalizeSequence, isSequenciaComCoringa } from "./rules.js";
-import { guardiaoRodadaEncerrada, validaBatida, maoPermiteBatida, applyRoundScoring, finalizeMatchIfNeeded } from "./endgame.js";
-import { initDeck, shuffleDeck } from "./deck.js"; 
+import { state, currentPlayer } from "./state.js";
+import {
+  isSequenciaComCoringaValida,
+  valorIndex,
+  guardiaoRegra4,
+  canPlaceCardOnTable,
+  isValidSequence,
+  isValidTrinca,
+  normalizeSequence,
+  isSequenciaComCoringa
+} from "./rules.js";
+import {
+  guardiaoRodadaEncerrada,
+  validaBatida,
+  applyRoundScoring,
+  finalizeMatchIfNeeded
+} from "./endgame.js";
+import { initDeck, shuffleDeck } from "./deck.js";
 import { renderAll } from "./app.js";
-import { startTurnTimer, stopTurnTimer } from "./turnTimer.js";
+import { stopTurnTimer } from "./turnTimer.js";
 import { flyCard } from "./render.js";
 
 
@@ -23,11 +34,9 @@ export function initPlayers(qtd) {
       jogosBaixados: [],
       totalPoints: 0,
       roundPoints: [],
-      eliminated: false,    
-      chips: 150000, // 💰 fichas (ajuste o valor inicial como quiser)     
-      avatarUrl: `https://i.pravatar.cc/80?img=${3 + i}`, // 🧑 avatar (placeholder online por enquanto)
-      /*isBot: i !== 0*/
-      /*isBot: false*/
+      eliminated: false,
+      chips: 150000, // 💰 fichas (ajuste o valor inicial como quiser)
+      avatarUrl: `https://i.pravatar.cc/80?img=${3 + i}`,
       rebuyCount: 0,
       pendingRebuy: false,
       rebuyDeclined: false,
@@ -166,7 +175,6 @@ export function playVictorySound() {
 }
 
 
-
 function revertPendingJokerSwap() {
   const swap = state?.pendingJokerSwap;
   if (!swap) return false;
@@ -249,19 +257,63 @@ export function dealInitialCards(qtd = 9) {
       player.hand.push(card);
     }
   });
-  function playDealBurst(n = 9) {
-  let i = 0;
-  const t = setInterval(() => {
-    playCardSound("deal");
-    i++;
-    if (i >= n) clearInterval(t);
-  }, 35);
-}
-playDealBurst(9);
 
+  playDealBurst(qtd);
 }
 
 
+export function jogarComAVira() {
+  if (!(state?.room?.id)) {
+    showGameNotice("Esta ação só funciona em uma mesa online.");
+    return false;
+  }
+
+  if (state.spectator) {
+    showGameNotice("Você está assistindo. Não pode jogar.");
+    return false;
+  }
+
+  if (
+    Number(state.mySeat) !==
+    Number(state.primeiroCompradorSeat)
+  ) {
+    showGameNotice(
+      "Somente o primeiro jogador pode jogar com a vira."
+    );
+    return false;
+  }
+
+  if (
+    Number(state.mySeat) !==
+    Number(state.currentSeat)
+  ) {
+    showGameNotice("Aguarde sua vez.");
+    return false;
+  }
+
+  if (state.faseTurno !== "COMPRAR") {
+    showGameNotice("A opção de jogar com a vira não está disponível.");
+    return false;
+  }
+
+  if (!state.viraDisponivelParaJogar) {
+    showGameNotice("A opção de jogar com a vira já foi encerrada.");
+    return false;
+  }
+
+  if (typeof window.wsSendAction !== "function") {
+    showGameNotice("Conexão online indisponível.");
+    return false;
+  }
+
+  state.selectedCards = [];
+
+  window.wsSendAction({
+    type: "playWithVira"
+  });
+
+  return true;
+}
 
 export function comprarDoMonte() {
   // =============================
@@ -298,7 +350,6 @@ export function comprarDoMonte() {
     window.wsSendAction({ type: "drawDeck" });
     return;
   }
-
 
 
   // =============================
@@ -354,6 +405,28 @@ export function toggleSelectCard(cardId) {
   else state.selectedCards.splice(idx, 1);
 }
 
+export function toggleSelectVira() {
+  if (!Array.isArray(state.selectedCards)) {
+    state.selectedCards = [];
+  }
+
+  const marcador = "__VIRA__";
+
+  const idx = state.selectedCards.findIndex(
+    id => String(id) === marcador
+  );
+
+  if (idx >= 0) {
+    state.selectedCards.splice(idx, 1);
+  } else {
+    state.selectedCards.push(marcador);
+  }
+
+  if (typeof window.renderAll === "function") {
+    window.renderAll();
+  }
+}
+
 export function discardSelectedCard() {
   console.log("🔥 DISCARD ENVIADO");
   // =============================
@@ -382,23 +455,44 @@ export function discardSelectedCard() {
 
     const player = currentPlayer();
     const selectedId = state.selectedCards[0];
+    const descartandoVira =
+      String(selectedId) === "__VIRA__";
 
     // DEBUG
     console.log("[CLIENT] selectedId =", selectedId);
     console.log("[CLIENT] hand ids =", (player?.hand || []).map(c => c.id));
 
     // acha a carta na mão atual
-    const found = (player?.hand || []).find(c => String(c.id) === String(selectedId));
+    const found = descartandoVira
+      ? (state.room?.cartaVira || state.cartaVira || null)
+      : (player?.hand || []).find(
+          c => String(c.id) === String(selectedId)
+        );
+
     if (!found) {
-      showGameNotice("Carta inválida (cliente): selecione novamente.");
+      showGameNotice(
+        descartandoVira
+          ? "A vira não está disponível."
+          : "Carta inválida: selecione novamente."
+      );
+
       state.selectedCards = [];
-      if (typeof window.renderAll === "function") window.renderAll();
+
+      if (typeof window.renderAll === "function") {
+        window.renderAll();
+      }
+
       return;
     }
 
     // ✅ ENVIO CORRETO: se parece número, manda como NÚMERO
-    const num = Number(found.id);
-    const cardIdToSend = Number.isFinite(num) ? num : found.id;
+    const cardIdToSend = descartandoVira
+    ? "__VIRA__"
+    : (
+        Number.isFinite(Number(found.id))
+          ? Number(found.id)
+          : found.id
+      );
 
     console.log("[CLIENT] discard -> cardId:", cardIdToSend, " (type:", typeof cardIdToSend, ")");
     window.wsSendAction({ type: "discard", cardId: cardIdToSend });
@@ -446,13 +540,6 @@ export function discardSelectedCard() {
   // 🚫 não pode descartar coringa
   if (card.isJoker) {
     showGameNotice("Não é permitido descartar o coringa");
-    return;
-  }
-
-  // 🚫 pegou do lixo e não baixou
-  if (state.origemCompra === "LIXO" && !state.baixouComLixo) {
-    // ✅ fallback automático: volta pro lixo e passa
-    desistirDoLixoEPassar();
     return;
   }
 
@@ -703,7 +790,6 @@ if (!type) {
 }
 
 
-
   // =============================
   // VALIDAÇÃO FINAL DE SEQUÊNCIA
   // =============================
@@ -785,7 +871,7 @@ if (handEl && tableEl) {
     c => !state.selectedCards.includes(c.id)
   );
 
-  
+
   // =============================
 // ADICIONA NA MESA
 // =============================
@@ -858,7 +944,6 @@ if (type === "TRINCA") {
 state.table.push(novoJogo);
 for (const c of cards) animMark(c, "table");
 playCardSound("table");
-
 
 
   // =============================
@@ -1019,9 +1104,6 @@ function avisarLixoSeTravado() {
 }
 
 
-
-
-
   // =============================
 // 🏁 REGRA 9 — 2 CORINGAS + 1 CARTA
 // - Se for a ÚLTIMA jogada (mão tem 3): é batida e encerra rodada
@@ -1031,7 +1113,7 @@ if (
   state.selectedCards.length === 3 &&
   selecionadas.filter(c => c.isJoker).length === 2 &&
   selecionadas.filter(c => !c.isJoker).length === 1
-) 
+)
 {  console.log("🧨 REGRA 9 — 2 coringas + 1 carta");
 
   // ✅ Caso 1: é a última jogada => BATIDA
@@ -1054,7 +1136,7 @@ if (
     tentarEncerrarRodadaSeMaoZerou();
     return;
   }
-  
+
 
 // ✅ Caso 2: NÃO é a última jogada => permitido SOMENTE se sobrar 1 carta (para descartar e bater)
 if (mao.length !== 4) {
@@ -1085,7 +1167,6 @@ tentarEncerrarRodadaSeMaoZerou(); // não vai encerrar ainda (mão tem 1)
 return;
 
 
-  
 }
 
 
@@ -1346,7 +1427,6 @@ if (jogo.type === "SEQUENCIA") {
 }
 
 
-
 // =============================
 // ✅ NOVA REGRA — 1 CORINGA SOZINHO EM SEQUÊNCIA (sem gaveta)
 // Permite encaixar o coringa em qualquer sequência existente.
@@ -1384,7 +1464,6 @@ if (selecionadas.length === 1 && selecionadas[0].isJoker) {
 }
 
 
-
     // =============================
     // ADIÇÃO NORMAL (1 carta)
     // =============================
@@ -1412,8 +1491,6 @@ if (selecionadas.length === 1 && selecionadas[0].isJoker) {
       return;
     }
   }
-
-
 
 
   // =============================
@@ -1501,6 +1578,55 @@ export function collectAnte() {
 //apostas com fichas// -> termina aqui
 
 
+export function requestStartBatidaComViraAttempt() {
+  if (!(state?.room?.id)) {
+    showGameNotice(
+      "BATI com a vira só funciona dentro de uma mesa online."
+    );
+
+    return false;
+  }
+
+  if (state.spectator) {
+    showGameNotice(
+      "Você está assistindo e não pode bater."
+    );
+
+    return false;
+  }
+
+  if (
+    state.phase !== "COMPRAR" ||
+    !state.viraDisponivelParaJogar
+  ) {
+    showGameNotice(
+      "BATI com a vira só está disponível antes da primeira compra."
+    );
+
+    return false;
+  }
+
+  if (
+    typeof window.wsSendAction !== "function"
+  ) {
+    showGameNotice(
+      "Conexão online indisponível."
+    );
+
+    return false;
+  }
+
+  state.selectedCards = [];
+
+  window.wsSendAction({
+    type: "startBatidaComViraAttempt"
+  });
+
+  return true;
+}
+
+
+
 export function requestStartCrazyBatidaAttempt() {
   console.log("[BATI] entrou em requestStartCrazyBatidaAttempt");
 
@@ -1537,7 +1663,6 @@ export function requestStartCrazyBatidaAttempt() {
 }
 
 
-
 export function requestCancelCrazyBatidaAttempt() {
   if (!(state?.room?.id)) {
     if (typeof showGameNotice === "function") {
@@ -1563,7 +1688,6 @@ export function requestCancelCrazyBatidaAttempt() {
   window.wsSendAction({ type: "cancelCrazyBatidaAttempt" });
   return true;
 }
-
 
 
 // ============================
@@ -1635,10 +1759,10 @@ export function applyPendingRebuys() {
     }
 
     // paga o rebuy
-    pl.chips -= cost;   
+    pl.chips -= cost;
     state.matchPot = Number(state.matchPot) || 0;// ✅ rebuy vai pro pote (fica bonito e faz sentido)
     state.matchPot += cost;
-    
+
 
     // volta pro jogo na próxima rodada
     pl.eliminated = false;
@@ -1816,7 +1940,6 @@ export async function nextPlayer() {
 }
 
 
-
 // =============================
 // BOT (MVP) — sem coringa
 // compra do monte -> tenta baixar sequência/trinca simples -> descarta
@@ -1941,7 +2064,6 @@ function canPlaceCardOnAnyTableGame(card) {
 }
 
 
-
 function pickDiscardCard(hand) {
   const cards = (hand || []).filter(c => c && !c.isJoker);
   if (!cards.length) return null;
@@ -2029,7 +2151,6 @@ export async function botTakeTurn() {
 
 
 }
-
 
 
 export function pegarDoLixo() {
@@ -2219,7 +2340,7 @@ export async function dealInitialCardsAnimated(qtd = 9) {
           toEl,
           card,
           sfx: null,
-          duration: 240
+          duration: 120
         });
       } else {
         // fallback: se não houver animação, toca pelo menos o som
@@ -2227,7 +2348,7 @@ export async function dealInitialCardsAnimated(qtd = 9) {
       }
 
       // delay entre cartas
-      await new Promise(r => setTimeout(r, 90));
+      await new Promise(r => setTimeout(r, 50));
     }
   }
 }

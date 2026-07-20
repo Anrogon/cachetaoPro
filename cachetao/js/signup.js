@@ -26,7 +26,7 @@ async function doSignup() {
   const username = document.getElementById("signupUsername")?.value?.trim() || "";
   const email = document.getElementById("signupEmail")?.value?.trim() || "";
   const password = document.getElementById("signupPassword")?.value || "";
-  const avatarUrl = document.getElementById("signupAvatarUrl")?.value?.trim() || "";
+  const avatarUrl = "./assets/avatars/avatar-01.png";
   const acceptTerms = document.getElementById("acceptTerms");
 
   if (!username || !email || !password) {

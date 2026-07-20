@@ -1,11 +1,31 @@
-
 import { initDeck, shuffleDeck } from "./deck.js";
-import { renderHand, renderTable, renderMonte, renderLixo, renderPlayerInfo, bindTableUI, renderRoundInfo } from "./render.js";
 import { state } from "./state.js";
-import { initPlayers,  nextPlayer, unlockAudio, dealInitialCardsAnimated, collectAnte, requestRebuy } from "./actions.js";
-import { renderNextPlayerButton, renderPot, renderRebuyOverlay, renderEndMatchOverlay, renderScoreboard, renderDealOverlay } from "./render.js";
+import {
+  initPlayers,
+  nextPlayer,
+  unlockAudio,
+  dealInitialCardsAnimated,
+  collectAnte
+} from "./actions.js";
+import {
+  renderHand,
+  renderTable,
+  renderMonte,
+  renderLixo,
+  renderPlayerInfo,
+  bindTableUI,
+  renderRoundInfo,
+  renderNextPlayerButton,
+  renderPot,
+  renderRebuyOverlay,
+  renderEndMatchOverlay,
+  renderScoreboard,
+  renderDealOverlay,
+  playPendingDrawAnimation,
+  playPendingDiscardDrawAnimation,
+  playPendingHandToTableAnimation
+} from "./render.js";
 import { startTurnTimer } from "./turnTimer.js";
-import { renderRebuyButton, playPendingDrawAnimation, playPendingDiscardDrawAnimation, playPendingHandToTableAnimation } from "./render.js";
 import { showScreen } from "./screens.js";
 
 window.openTablesFromHome = function () {
@@ -32,7 +52,6 @@ let nextActionSeq = 1;
 window.socket = null; // debug
 
 
-
 // Conecta no WebSocket do MESMO host do site
 export function connectWS() {
   if (socket && (socket.readyState === 0 || socket.readyState === 1)) return;
@@ -44,19 +63,15 @@ export function connectWS() {
   window.state = state;   // debug
 
   socket.addEventListener("open", () => {
-    console.log("[WS] conectado");
   });
 
   socket.addEventListener("close", () => {
-    console.log("[WS] desconectado");
   });
 
   socket.addEventListener("message", (ev) => {
     let msg;
     try { msg = JSON.parse(ev.data); } catch { return; }
-    console.log("[WS] <-", msg.type, msg.payload); // ✅ add aqui
 
-    
 
 // 1) hello
 if (msg.type === "hello") {
@@ -81,12 +96,6 @@ if (msg.type === "hello") {
   });
 
   state.online = msg.payload?.online || 0;
-
-  console.log("[WS] hello clientId=", myClientId);
-  console.log("[WS] hello tables=", tables);
-  console.log("[WS] state.tableList=", state.tableList);
-  console.log("[WS] state.tables(byId)=", state.tables);
-
   // ✅ redesenha a sala de mesas imediatamente
   if (typeof renderTablesScreen === "function") {
     renderTablesScreen();
@@ -152,8 +161,6 @@ if (msg.type === "table_public") {
 
 // 2) joined
 if (msg.type === "joined") {
-  console.log("[WS] joined recebido", msg.payload);
-
   const { tableId, mode, seat, reconnectToken } = msg.payload || {};
 
   // ✅ Se estava tentando assistir outra mesa e chegou joined antigo, ignora
@@ -163,11 +170,7 @@ if (msg.type === "joined") {
     tableId !== pendingSpectatorJoinTableId &&
     !String(tableId || "").startsWith(String(pendingSpectatorJoinTableId) + "#")
   ) {
-    console.log("[WS] joined spectator ignorado:", {
-      pending: pendingSpectatorJoinTableId,
-      received: tableId
-    });
-    return;
+return;
   }
 
   state.room = state.room || {};
@@ -192,10 +195,7 @@ if (msg.type === "joined") {
   window.state = window.state || {};
   window.state.tables = window.state.tables || {};
   window.state.tables[tableId] = window.state.tables[tableId] || { id: tableId };
-
-  console.log("[WS] joined", { tableId, mode, seat, reconnectToken });
-
-  if (mode === "spectator") {
+if (mode === "spectator") {
     showScreen("game");
     updateSpectatorUI();
   } else {
@@ -213,8 +213,7 @@ if (msg.type === "state_public") {
   const pub = msg.payload || {};
 
   if (state.room === null && state.spectator === false) {
-  console.log("[CLIENT] ignorando state_public fora da mesa:", pub.tableId);
-  return;
+return;
   }
 
   if (
@@ -223,12 +222,32 @@ if (msg.type === "state_public") {
     state.room === null &&
     state.spectator === false
   ) {
-    console.log("[CLIENT] ignorando state_public após sair do espectador:", pub.tableId);
-    return;
+return;
   }
 
   state.tableId = pub.tableId || state.tableId;
   state.matchPot = Number(pub.matchPot) || state.matchPot || 0;
+
+  // Cachetão Pro - Vira / Coringa da rodada
+  state.cartaVira = pub.cartaVira || null;
+
+  state.viraDisponivelParaJogar =
+    !!pub.viraDisponivelParaJogar;
+
+  state.primeiroCompradorSeat =
+    Number(pub.primeiroCompradorSeat) || 0;
+
+  state.viraEmUsoPorSeat =
+    Number(pub.viraEmUsoPorSeat) || 0;
+
+  state.viraNaMesa =
+    pub.viraNaMesa !== false;
+
+  state.coringaValor = pub.coringaValor || "";
+  state.coringaNaipes =
+    Array.isArray(pub.coringaNaipes)
+      ? pub.coringaNaipes
+      : [];
 
   // 🔥 ATUALIZA LOBBY (tables) COM ESTADO DO SERVIDOR
 if (pub.tableId) {
@@ -261,7 +280,7 @@ if (pub.tableId) {
     tableMelds: Array.isArray(pub.tableMelds)
       ? pub.tableMelds
       : (prev.tableMelds || []),
-    
+
     discardTop: pub.discardTop ?? prev.discardTop ?? null,
     deckCount: pub.deckCount ?? prev.deckCount ?? 0,
     matchPot: Number(pub.matchPot) || 0,
@@ -282,8 +301,10 @@ if (pub.tableId) {
   }
 
   // turn/fase
+  // turn/fase
   state.faseTurno = pub.phase || "WAITING";
   state.currentSeat = pub.currentSeat ?? null;
+  state.dealerSeat = Number(pub.dealerSeat) || 0;
   state.variant = String(pub.variant || "CLASSIC").toUpperCase();
   state.turnEndsAt = Number(pub.turnEndsAt) || 0;
   state.buyEndsAt = Number(pub.buyEndsAt) || 0;
@@ -301,8 +322,23 @@ if (pub.tableId) {
   state.batidaAnnouncement = String(pub.batidaAnnouncement || "");
   state.batidaAnnouncementEndsAt = Number(pub.batidaAnnouncementEndsAt) || 0;
   state.phase = String(pub.phase || "");
-  state.currentSeat = Number(pub.currentSeat) || 0;
+
+// Cachetão Pro - som de embaralhamento antes do duelo
+if (
+  state.phase === "AGUARDANDO_DUELO" &&
+  window.lastCachetaoDuelAudioPhase !== "AGUARDANDO_DUELO"
+) {
+  window.lastCachetaoDuelAudioPhase = "AGUARDANDO_DUELO";
+  window.playSfx?.("shuffle");
+}
+
+if (state.phase !== "AGUARDANDO_DUELO") {
+  window.lastCachetaoDuelAudioPhase = state.phase || "";
+}
+
+state.currentSeat = Number(pub.currentSeat) || 0;
   state.crazyBatidaAttemptActive = !!pub.crazyBatidaAttemptActive;
+  state.crazyBatidaAttemptUsesVira = !!pub.crazyBatidaAttemptUsesVira;
   state.crazyBatidaAttemptSeat = Number(pub.crazyBatidaAttemptSeat) || 0;
   state.crazyBatidaAttemptPrioritySeat = Number(pub.crazyBatidaAttemptPrioritySeat) || 0;
   state.crazyBatidaAttemptExpiresAt = Number(pub.crazyBatidaAttemptExpiresAt) || 0;
@@ -345,12 +381,6 @@ state.deckCount = pub.deckCount ?? 0;
     nextRoundAnnouncementEndsAt > now
   ) {
     state._lastShownRoundAnnouncement = nextRoundAnnouncement;
-
-    try {
-      showMessage(nextRoundAnnouncement);
-    } catch (err) {
-      console.error("[ROUND ANNOUNCEMENT] erro ao mostrar mensagem", err);
-    }
   }
 
   if (!nextRoundAnnouncement) {
@@ -448,9 +478,6 @@ if (state.room?.id) {
   matchPot: Number(pub.matchPot) || 0,
   roundNumber: Number(pub.roundNumber) || 0
 };
-/*
-  console.log("[WS] lobby sync table", state.room.id, window.state.tables[state.room.id]);
-*/
   // redesenha as mesas imediatamente
   if (typeof renderTablesScreen === "function") {
     renderTablesScreen();
@@ -538,7 +565,6 @@ if (msg.type === "state_private") {
   const payload = msg.payload || {};
 
   if (state.room === null && state.spectator === false) {
-    console.log("[CLIENT] ignorando state_private fora da mesa");
     return;
   }
 
@@ -626,8 +652,6 @@ if (msg.type === "state_private") {
 
 //5) Error
 if (msg.type === "error") {
-  console.log("[WS ERROR FULL]", msg);
-
   const serverMsg =
     msg?.payload?.message ??
     msg?.message ??
@@ -665,9 +689,6 @@ export function wsSendAction(action) {
     ...(action || {}),
     seq: nextActionSeq++
   };
-
-  console.log("[WS] -> action", actionWithSeq);
-
   socket.send(JSON.stringify({
     type: "action",
     payload: { tableId: state.room.id, action: actionWithSeq }
@@ -682,7 +703,7 @@ window.wsSendAction = wsSendAction;
 // RENDER GERAL
 // =============================
 export function renderAll() {
-  
+
   renderPlayerInfo();
   renderHand();
   renderTable();
@@ -692,7 +713,7 @@ export function renderAll() {
   renderScoreboard();
   updateSpectatorUI();
   renderNextPlayerButton();
-  
+
 
   const gameEl = document.getElementById("game");
   const gameVisible = !!gameEl && gameEl.style.display !== "none";
@@ -916,7 +937,6 @@ function openTablesAndFocus(tableId) {
   // dá um tempinho pro layout estabilizar e então foca
   setTimeout(() => focusTable(tableId), 80);
 }
-
 
 
 // =============================
@@ -1261,8 +1281,6 @@ async function validateCurrentSession() {
 }
 
 
-
-
 (async function bootstrapApp() {
   if (enforceForcedPasswordChange()) return;
 
@@ -1279,10 +1297,7 @@ async function validateCurrentSession() {
   showScreen("home");
 
   setTimeout(() => {
-    if (typeof ensureHomeStatusFeed === "function") {
-      ensureHomeStatusFeed();
-    }
-  }, 100);
+}, 100);
   })();
 
 
@@ -1327,7 +1342,7 @@ async function openWalletModal() {
   if (walletPixQrImg) walletPixQrImg.removeAttribute("src");
   if (walletPixCode) walletPixCode.value = "";
   if (walletMsg) walletMsg.textContent = "Carregando pacotes...";
-  
+
 
   try {
     const res = await fetch(`${API_BASE}/wallet/packages`, {
@@ -1400,9 +1415,6 @@ async function openWalletModal() {
               );
 
               const statusData = await statusRes.json();
-
-              console.log("[PIX STATUS]", statusData);
-
               if (statusData.status === "approved") {
                 clearInterval(pollInterval);
 
@@ -1465,7 +1477,6 @@ async function openWalletModal() {
 }
 
 
-
 function bindHomeButtons() {
   const btnLogin = document.getElementById("btnLogin");
   if (btnLogin) {
@@ -1508,13 +1519,6 @@ function bindHomeButtons() {
       walletModal?.classList.add("hidden");
     };
   }
-
-  /*const btnSettings = document.getElementById("btnSettings");
-  if (btnSettings) {
-    btnSettings.onclick = () => {
-      window.location.href = "./settings.html";
-    };
-  }*/
 
   const btnCachetao = document.getElementById("btnCachetao");
   if (btnCachetao) {
@@ -1602,17 +1606,8 @@ function renderHomeLiveTables() {
   // Mudar para mesas reais
 
 //delete esse bloco depois
-  /*let tables = Object.values(state.tables || {}).slice(0, 3);
-
-  if (!tables.length) {
-    tables = [
-      { name: "Mesa 1", seatedCount: 2, maxSeats: 6, stake: 1000, variant: "CLASSIC" },
-      { name: "Mesa 2", seatedCount: 3, maxSeats: 6, stake: 5000, variant: "CLASSIC" },
-      { name: "Mesa 3", seatedCount: 1, maxSeats: 6, stake: 10000, variant: "CRAZY" }
-    ];
-  }*/
   //até aqui
-  
+
 
   if (!tables.length) {
     el.innerHTML = `
@@ -1710,7 +1705,7 @@ async function refreshHomeUser() {
   const btnBuyChips = document.getElementById("btnBuyChips");
   const walletModal = document.getElementById("walletModal");
   const walletCloseBtn = document.getElementById("walletCloseBtn");
- 
+
 
   function setLoggedOutHome() {
     if (homeUserName) homeUserName.textContent = "Visitante";
@@ -1761,7 +1756,7 @@ async function refreshHomeUser() {
     if (btnProfile) btnProfile.style.display = "";
     if (btnBuyChips) btnBuyChips.style.display = "";
     if (btnCachetao) btnCachetao.style.display = "";
-  
+
   }
 
   try {
@@ -1812,9 +1807,6 @@ async function refreshHomeUser() {
 bindGameControls();
 bindHomeButtons();
 refreshHomeUser();
-
-
-
 
 
 function getCardValueForSort(card) {
@@ -1932,7 +1924,6 @@ function getLoggedPlayerName() {
 }
 
 
-
 export function renderTablesScreen() {
   const tablesScreenEl = document.getElementById("tablesScreen");
 
@@ -1975,7 +1966,7 @@ export function renderTablesScreen() {
         showScreen("home");
       };
     }
-    
+
   }
 
   let selected = { tableId: null, seat: null };
@@ -2038,19 +2029,9 @@ export function renderTablesScreen() {
 }
 
   if (t.id === "S1") {
-  console.log("[COUNTDOWN CHECK]", {
-    tableId: t.id,
-    started: liveTable.started,
-    seatedCount,
-    minPlayersToStart,
-    startAt,
-    shouldShowTimer,
-    countdownHtml
-  });
-  }
+}
 
     const tableTitle = t.name;
-
 
 
     card.innerHTML = `
@@ -2067,14 +2048,16 @@ export function renderTablesScreen() {
         <div class="seats-overlay" data-table="${t.id}"></div>
       </div>
 
-      <div class="table-value">Aposta: ${formatBR((Number(t.buyIn) || 0) * 10)}</div>
+      <div class="table-value">
+        <span class="chip"></span>
+        <strong>${formatBR((Number(t.buyIn) || 0) * 10)}</strong>
+    </div>
       <div class="table-hint">Clique em um assento vazio para entrar</div>
 
       <div class="table-actions">
         <button class="secondary" data-watch="${t.id}">Assistir</button>
       </div>
     `;
-
 
 
     const seatsEl = card.querySelector(".seats-overlay");
@@ -2208,5 +2191,3 @@ socket.send(JSON.stringify({
 
 // deixa acessível para onclick no HTML (e evita o erro)
 window.renderTablesScreen = renderTablesScreen;
-/*window.TablesScreenrender = renderTablesScreen; // compatibilidade com o nome errado*/
-

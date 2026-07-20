@@ -3,379 +3,204 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
   <title>Cachetão Pro - Admin Usuários</title>
-  <style>
-    body {
-      margin: 0;
-      min-height: 100vh;
-      background: linear-gradient(180deg, #0b3c66, #0a2238);
-      font-family: Arial, Helvetica, sans-serif;
-      color: #fff;
-      padding: 20px;
-      box-sizing: border-box;
-    }
 
-    .wrap {
-      max-width: 1200px;
-      margin: 0 auto;
-    }
-
-    .topbar {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      gap: 12px;
-      margin-bottom: 20px;
-      flex-wrap: wrap;
-    }
-
-    .brand h1 {
-      margin: 0 0 6px;
-      font-size: 32px;
-    }
-
-    .brand p {
-      margin: 0;
-      color: #dbeafe;
-      font-size: 14px;
-    }
-
-    .badge-admin {
-      display: inline-block;
-      padding: 8px 12px;
-      border-radius: 999px;
-      background: rgba(240,193,75,0.18);
-      border: 1px solid rgba(240,193,75,0.35);
-      color: #ffe08a;
-      font-weight: 700;
-      font-size: 13px;
-    }
-
-    .msg {
-      text-align: center;
-      margin-bottom: 18px;
-      color: #ffd38a;
-      min-height: 22px;
-      font-size: 14px;
-    }
-
-    .hero {
-      background: rgba(255,255,255,0.08);
-      border: 1px solid rgba(255,255,255,0.12);
-      border-radius: 16px;
-      padding: 22px;
-      box-shadow: 0 10px 30px rgba(0,0,0,0.25);
-      margin-bottom: 20px;
-    }
-
-    .hero h2 {
-      margin: 0 0 8px;
-      font-size: 24px;
-    }
-
-    .hero p {
-      margin: 0;
-      color: #dbeafe;
-      line-height: 1.6;
-      font-size: 14px;
-    }
-
-    .toolbar {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      gap: 12px;
-      flex-wrap: wrap;
-      margin-bottom: 18px;
-    }
-
-    .toolbar-left,
-    .toolbar-right {
-      display: flex;
-      gap: 12px;
-      flex-wrap: wrap;
-      align-items: center;
-    }
-
-    .counter-box {
-      background: rgba(255,255,255,0.08);
-      border: 1px solid rgba(255,255,255,0.12);
-      border-radius: 12px;
-      padding: 12px 14px;
-      font-size: 14px;
-      color: #dbeafe;
-    }
-
-    .table-card {
-      background: rgba(255,255,255,0.08);
-      border: 1px solid rgba(255,255,255,0.12);
-      border-radius: 16px;
-      padding: 16px;
-      box-shadow: 0 10px 30px rgba(0,0,0,0.25);
-      overflow: hidden;
-    }
-
-    .table-wrap {
-      width: 100%;
-      overflow-x: auto;
-      border-radius: 12px;
-    }
-
-    table {
-      width: 100%;
-      min-width: 900px;
-      border-collapse: collapse;
-      background: rgba(255,255,255,0.04);
-      border-radius: 12px;
-      overflow: hidden;
-    }
-
-    th,
-    td {
-      padding: 12px 14px;
-      border-bottom: 1px solid rgba(255,255,255,0.10);
-      text-align: left;
-      font-size: 14px;
-      white-space: nowrap;
-    }
-
-    th {
-      background: rgba(255,255,255,0.10);
-      color: #fff;
-      font-size: 13px;
-      text-transform: uppercase;
-      letter-spacing: 0.4px;
-    }
-
-    tbody tr:hover {
-      background: rgba(255,255,255,0.05);
-    }
-
-    .empty {
-      text-align: center;
-      color: #dbeafe;
-      padding: 24px;
-    }
-
-    .admin-pill,
-    .user-pill {
-      display: inline-block;
-      padding: 6px 10px;
-      border-radius: 999px;
-      font-size: 12px;
-      font-weight: 700;
-    }
-
-    .admin-pill {
-      background: rgba(240,193,75,0.18);
-      border: 1px solid rgba(240,193,75,0.35);
-      color: #ffe08a;
-    }
-
-    .user-pill {
-      background: rgba(255,255,255,0.10);
-      border: 1px solid rgba(255,255,255,0.16);
-      color: #fff;
-    }
-
-    button {
-      padding: 12px 14px;
-      border: 0;
-      border-radius: 10px;
-      font-weight: 700;
-      cursor: pointer;
-      font-size: 15px;
-    }
-
-    .btn-primary {
-      background: #f0c14b;
-      color: #1a1a1a;
-    }
-
-    .btn-secondary {
-      background: rgba(255,255,255,0.12);
-      color: #fff;
-      border: 1px solid rgba(255,255,255,0.16);
-    }
-
-    .btn-danger {
-      background: #b91c1c;
-      color: #fff;
-      border: 1px solid rgba(255,255,255,0.16);
-    }
-
-    .footer-actions {
-      display: flex;
-      justify-content: center;
-      gap: 12px;
-      flex-wrap: wrap;
-      margin-top: 20px;
-    }
-
-    @media (max-width: 900px) {
-      .topbar,
-      .toolbar {
-        flex-direction: column;
-        align-items: flex-start;
-      }
-    }
-
-    .action-btn {
-    padding: 6px 8px;
-    font-size: 12px;
-    border-radius: 8px;
-    white-space: nowrap;
-    min-height: auto;
-    line-height: 1.1;
-    }
-
-  </style>
+  <link rel="stylesheet" href="./css/reset.css">
+  <link rel="stylesheet" href="./css/admin.css">
 </head>
-<body>
-  <div class="wrap">
-    <div class="topbar">
-      <div class="brand">
-        <h1>Admin • Usuários</h1>
-        <p>Cachetão Pro • gerenciamento administrativo de contas cadastradas</p>
+
+<body class="admin-theme">
+  <main class="admin-wrap">
+
+    <header class="admin-topbar">
+      <div class="admin-brand">
+        <h1>👥 Admin • Usuários</h1>
+
+        <p>
+          Cachetão Pro • gerenciamento administrativo de contas cadastradas
+        </p>
       </div>
 
-      <div class="badge-admin">Área administrativa</div>
+      <div class="admin-badge">
+        Área administrativa
+      </div>
+    </header>
+
+    <div id="adminMsg" class="admin-msg">
+      Carregando usuários...
     </div>
 
-    <div id="adminMsg" class="msg">Carregando usuários...</div>
-
-    <section class="hero">
+    <section class="admin-hero">
       <h2>Usuários cadastrados</h2>
+
       <p>
-        Esta tela lista os usuários do sistema para consulta administrativa.
+        Esta tela lista os usuários do sistema para consulta e gerenciamento
+        administrativo.
       </p>
     </section>
 
-    <div class="toolbar">
-  <div class="toolbar-left">
-    <div class="counter-box">
-      Total de usuários: <strong id="usersCount">0</strong>
-    </div>
-
-    <input
-      type="text"
-      id="userSearchInput"
-      placeholder="Buscar por usuário ou e-mail"
-      style="
-        padding: 12px 14px;
-        border-radius: 10px;
-        border: 1px solid rgba(255,255,255,0.16);
-        background: rgba(255,255,255,0.10);
-        color: #fff;
-        font-size: 14px;
-        min-width: 280px;
-        outline: none;
-      "
+    <nav
+      class="admin-users-toolbar"
+      aria-label="Filtros e ações dos usuários"
     >
+      <div class="admin-users-toolbar-left">
 
-    <select
-      id="userFilterSelect"
-      style="
-        padding: 12px 14px;
-        border-radius: 10px;
-        border: 1px solid rgba(255,255,255,0.16);
-        background: rgba(255,255,255,0.10);
-        color: #fff;
-        font-size: 14px;
-        min-width: 170px;
-        outline: none;
-      "
-    >
-      <option value="all" style="color:#111;">Todos</option>
-      <option value="admin" style="color:#111;">Somente admins</option>
-      <option value="blocked" style="color:#111;">Somente bloqueados</option>
-      <option value="active" style="color:#111;">Somente ativos</option>
-    </select>
-  </div>
+        <div class="admin-counter">
+          Total de usuários:
+          <strong id="usersCount">0</strong>
+        </div>
 
-  <div class="toolbar-right">
-  <button id="btnClearFilters" class="btn-secondary" type="button">Limpar filtros</button>
-  <button id="btnReloadUsers" class="btn-secondary" type="button">Atualizar lista</button>
-  <button id="btnGoDashboard" class="btn-secondary" type="button">Dashboard</button>
-  <button id="btnBackHomeTop" class="btn-primary" type="button">Voltar</button>
-</div>
-</div>
+        <input
+          type="text"
+          id="userSearchInput"
+          class="admin-field admin-search"
+          placeholder="Buscar por usuário ou e-mail"
+          autocomplete="off"
+        >
 
-    <section class="table-card">
-      <div class="table-wrap">
-        <table>
+        <select
+          id="userFilterSelect"
+          class="admin-field admin-select"
+          aria-label="Filtrar usuários"
+        >
+          <option value="all">Todos</option>
+          <option value="admin">Somente admins</option>
+          <option value="blocked">Somente bloqueados</option>
+          <option value="active">Somente ativos</option>
+        </select>
+
+      </div>
+
+      <div class="admin-users-toolbar-right">
+
+        <button
+          id="btnClearFilters"
+          class="admin-btn admin-btn-secondary"
+          type="button"
+        >
+          Limpar filtros
+        </button>
+
+        <button
+          id="btnReloadUsers"
+          class="admin-btn admin-btn-secondary"
+          type="button"
+        >
+          🔄 Atualizar lista
+        </button>
+
+        <button
+          id="btnGoDashboard"
+          class="admin-btn admin-btn-secondary"
+          type="button"
+        >
+          📊 Dashboard
+        </button>
+
+        <button
+          id="btnBackHomeTop"
+          class="admin-btn admin-btn-primary"
+          type="button"
+        >
+          ← Voltar
+        </button>
+
+      </div>
+    </nav>
+
+    <section class="admin-users-table-card">
+      <div class="admin-users-table-wrap">
+
+        <table class="admin-users-table">
           <thead>
             <tr>
               <th>ID</th>
-                <th>Usuário</th>
-                <th>E-mail</th>
-                <th>Status</th>
-                <th>Saldo</th>
-                <th>Perfil</th>
-                <th>Criado em</th>
-                <th>Ações</th>
+              <th>Usuário</th>
+              <th>E-mail</th>
+              <th>Status</th>
+              <th>Saldo</th>
+              <th>Perfil</th>
+              <th>Criado em</th>
+              <th>Ações</th>
             </tr>
           </thead>
+
           <tbody id="adminUsersBody">
             <tr>
-              <td colspan="8" class="empty">Carregando...</td>
+              <td colspan="8" class="admin-empty-cell">
+                Carregando...
+              </td>
             </tr>
           </tbody>
         </table>
+
       </div>
     </section>
 
-    <div
-  style="
-    display:flex;
-    justify-content:space-between;
-    align-items:center;
-    gap:12px;
-    flex-wrap:wrap;
-    margin-top:20px;
-  "
->
-  <div
-    style="
-      display:flex;
-      align-items:center;
-      gap:10px;
-      flex-wrap:wrap;
-    "
-  >
-    <span style="color:#dbeafe; font-size:14px;">
-      Página <strong id="currentPageLabel">1</strong> de <strong id="totalPagesLabel">1</strong>
-    </span>
+    <div class="admin-pagination">
 
-    <button id="btnPrevPage" class="btn-secondary" type="button">Anterior</button>
-    <button id="btnNextPage" class="btn-secondary" type="button">Próxima</button>
+      <div class="admin-pagination-controls">
 
-    <select
-      id="pageSizeSelect"
-      style="
-        padding: 12px 14px;
-        border-radius: 10px;
-        border: 1px solid rgba(255,255,255,0.16);
-        background: rgba(255,255,255,0.10);
-        color: #fff;
-        font-size: 14px;
-        min-width: 150px;
-        outline: none;
-      "
-    >
-      <option value="10" style="color:#111;">10 por página</option>
-      <option value="20" selected style="color:#111;">20 por página</option>
-      <option value="50" style="color:#111;">50 por página</option>
-      <option value="100" style="color:#111;">100 por página</option>
-    </select>
-  </div>
+        <span class="admin-pagination-label">
+          Página
+          <strong id="currentPageLabel">1</strong>
+          de
+          <strong id="totalPagesLabel">1</strong>
+        </span>
 
-  <div class="footer-actions" style="margin-top:0;">
-    <button id="btnBackHome" class="btn-primary" type="button">Voltar para a Administração</button>
-    <button id="btnLogout" class="btn-danger" type="button">Sair</button>
-  </div>
-</div>
-  </div>
+        <button
+          id="btnPrevPage"
+          class="admin-btn admin-btn-secondary"
+          type="button"
+        >
+          Anterior
+        </button>
+
+        <button
+          id="btnNextPage"
+          class="admin-btn admin-btn-secondary"
+          type="button"
+        >
+          Próxima
+        </button>
+
+        <select
+          id="pageSizeSelect"
+          class="admin-field admin-select admin-page-size"
+          aria-label="Quantidade de usuários por página"
+        >
+          <option value="10">10 por página</option>
+          <option value="20" selected>20 por página</option>
+          <option value="50">50 por página</option>
+          <option value="100">100 por página</option>
+        </select>
+
+      </div>
+
+      <div class="admin-footer-actions">
+
+        <button
+          id="btnBackHome"
+          class="admin-btn admin-btn-primary"
+          type="button"
+        >
+          ← Voltar para a Administração
+        </button>
+
+        <button
+          id="btnLogout"
+          class="admin-btn admin-btn-danger"
+          type="button"
+        >
+          Sair
+        </button>
+
+      </div>
+
+    </div>
+
+  </main>
 
   <script src="./js/admin-users.js"></script>
 </body>

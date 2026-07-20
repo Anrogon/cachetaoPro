@@ -42,6 +42,9 @@
     width: 100%;
     max-width: 320px;
 
+    background: linear-gradient(180deg,#a51f36,#731726);
+    border: 1px solid rgba(212,175,55,.30);
+
     display: flex;
     align-items: center;
     justify-content: flex-start;
@@ -56,7 +59,36 @@
     white-space: nowrap;
     box-sizing: border-box;
 
-    box-shadow: 0 4px 10px rgba(0,0,0,0.18);
+    box-shadow: 0 8px 18px rgba(0,0,0,.20);
+
+    transition:
+      transform .10s ease,
+      box-shadow .10s ease,
+      filter .10s ease,
+      background .10s ease;
+}
+
+  /* Desktop */
+  #homeScreen .home-menu button:hover{
+      background: linear-gradient(180deg,#bd2941,#8b1d2f);
+      transform: translateY(-2px);
+      box-shadow: 0 12px 24px rgba(0,0,0,.28);
+  }
+
+  /* Celular */
+  #homeScreen .home-menu button:active{
+      transform: scale(.97);
+      filter: brightness(.88);
+
+      box-shadow:
+          inset 0 3px 8px rgba(0,0,0,.35),
+          0 2px 6px rgba(0,0,0,.15);
+  }
+
+  #homeScreen .home-menu button:active{
+    background: linear-gradient(180deg,#bd2941,#8b1d2f);
+    filter: brightness(.95);
+    transform: scale(.97);
   }
 
   #homeScreen .home-menu button[style*="display:none"],

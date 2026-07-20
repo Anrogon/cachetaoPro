@@ -3,272 +3,147 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
   <title>Cachetão Pro - Admin Dashboard</title>
-  <style>
-    body {
-      margin: 0;
-      min-height: 100vh;
-      background: linear-gradient(180deg, #0b3c66, #0a2238);
-      font-family: Arial, Helvetica, sans-serif;
-      color: #fff;
-      padding: 20px;
-      box-sizing: border-box;
-    }
 
-    .wrap {
-      max-width: 1200px;
-      margin: 0 auto;
-    }
-
-    .topbar {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      gap: 12px;
-      margin-bottom: 20px;
-      flex-wrap: wrap;
-    }
-
-    .brand h1 {
-      margin: 0 0 6px;
-      font-size: 32px;
-    }
-
-    .brand p {
-      margin: 0;
-      color: #dbeafe;
-      font-size: 14px;
-    }
-
-    .badge-admin {
-      display: inline-block;
-      padding: 8px 12px;
-      border-radius: 999px;
-      background: rgba(240,193,75,0.18);
-      border: 1px solid rgba(240,193,75,0.35);
-      color: #ffe08a;
-      font-weight: 700;
-      font-size: 13px;
-    }
-
-    .msg {
-      text-align: center;
-      margin-bottom: 18px;
-      color: #ffd38a;
-      min-height: 22px;
-      font-size: 14px;
-    }
-
-    .hero {
-      background: rgba(255,255,255,0.08);
-      border: 1px solid rgba(255,255,255,0.12);
-      border-radius: 16px;
-      padding: 22px;
-      box-shadow: 0 10px 30px rgba(0,0,0,0.25);
-      margin-bottom: 20px;
-    }
-
-    .hero h2 {
-      margin: 0 0 8px;
-      font-size: 24px;
-    }
-
-    .hero p {
-      margin: 0;
-      color: #dbeafe;
-      line-height: 1.6;
-      font-size: 14px;
-    }
-
-    .toolbar {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      gap: 12px;
-      flex-wrap: wrap;
-      margin-bottom: 20px;
-    }
-
-    .stats-grid {
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 18px;
-      margin-bottom: 20px;
-    }
-
-    .stat-card,
-    .panel-card {
-      background: rgba(255,255,255,0.08);
-      border: 1px solid rgba(255,255,255,0.12);
-      border-radius: 16px;
-      padding: 20px;
-      box-shadow: 0 10px 30px rgba(0,0,0,0.25);
-    }
-
-    .stat-title {
-      color: #dbeafe;
-      font-size: 14px;
-      margin-bottom: 10px;
-    }
-
-    .stat-value {
-      font-size: 32px;
-      font-weight: 800;
-    }
-
-    .panel-card h3 {
-      margin: 0 0 14px;
-      font-size: 20px;
-    }
-
-    .actions-list {
-      display: grid;
-      gap: 10px;
-    }
-
-    .action-item {
-      padding: 12px 14px;
-      border-radius: 12px;
-      background: rgba(255,255,255,0.05);
-      border: 1px solid rgba(255,255,255,0.08);
-    }
-
-    .action-main {
-      font-size: 14px;
-      font-weight: 700;
-      margin-bottom: 6px;
-    }
-
-    .action-sub {
-      font-size: 13px;
-      color: #dbeafe;
-      line-height: 1.5;
-    }
-
-    .empty-box {
-      color: #dbeafe;
-      font-size: 14px;
-      padding: 12px 0;
-    }
-
-    button {
-      padding: 12px 14px;
-      border: 0;
-      border-radius: 10px;
-      font-weight: 700;
-      cursor: pointer;
-      font-size: 15px;
-    }
-
-    .btn-primary {
-      background: #f0c14b;
-      color: #1a1a1a;
-    }
-
-    .btn-secondary {
-      background: rgba(255,255,255,0.12);
-      color: #fff;
-      border: 1px solid rgba(255,255,255,0.16);
-    }
-
-    .btn-danger {
-      background: #b91c1c;
-      color: #fff;
-      border: 1px solid rgba(255,255,255,0.16);
-    }
-
-    .footer-actions {
-      display: flex;
-      justify-content: center;
-      gap: 12px;
-      flex-wrap: wrap;
-      margin-top: 20px;
-    }
-
-    @media (max-width: 1000px) {
-      .stats-grid {
-        grid-template-columns: repeat(2, 1fr);
-      }
-    }
-
-    @media (max-width: 700px) {
-      .stats-grid {
-        grid-template-columns: 1fr;
-      }
-
-      .topbar,
-      .toolbar {
-        flex-direction: column;
-        align-items: flex-start;
-      }
-    }
-  </style>
+  <link rel="stylesheet" href="./css/reset.css">
+  <link rel="stylesheet" href="./css/admin.css">
 </head>
-<body>
-  <div class="wrap">
-    <div class="topbar">
-      <div class="brand">
-        <h1>Admin • Dashboard</h1>
-        <p>Cachetão Pro • visão geral do ambiente administrativo</p>
+
+<body class="admin-theme">
+  <main class="admin-wrap">
+
+    <header class="admin-topbar">
+      <div class="admin-brand">
+        <h1>📊 Admin • Dashboard</h1>
+
+        <p>
+          Cachetão Pro • visão geral do ambiente administrativo
+        </p>
       </div>
 
-      <div class="badge-admin">Área administrativa</div>
+      <div class="admin-badge">
+        Área administrativa
+      </div>
+    </header>
+
+    <div id="adminDashboardMsg" class="admin-msg">
+      Carregando Dashboard...
     </div>
 
-    <div id="adminDashboardMsg" class="msg">Carregando Dashboard...</div>
-
-    <section class="hero">
+    <section class="admin-hero">
       <h2>Resumo administrativo</h2>
+
       <p>
-        Este painel mostra os principais números do sistema e as últimas ações executadas pela administração.
+        Este painel mostra os principais números do sistema e as últimas
+        ações executadas pela administração.
       </p>
     </section>
 
-    <div class="toolbar">
-      <div style="display:flex; gap:12px; flex-wrap:wrap;">
-        <button id="btnReloadDashboard" class="btn-secondary" type="button">Atualizar Dashboard</button>
-        <button id="btnGoUsers" class="btn-primary" type="button">Abrir administração de usuários</button>
+    <nav class="admin-toolbar" aria-label="Ações do Dashboard">
+      <div class="admin-toolbar-group">
+        <button
+          id="btnReloadDashboard"
+          class="admin-btn admin-btn-secondary"
+          type="button"
+        >
+          🔄 Atualizar Dashboard
+        </button>
+
+        <button
+          id="btnGoUsers"
+          class="admin-btn admin-btn-primary"
+          type="button"
+        >
+          👥 Administração de usuários
+        </button>
       </div>
 
-      <div style="display:flex; gap:12px; flex-wrap:wrap;">
-        <button id="btnBackHomeTop" class="btn-secondary" type="button">Voltar a Administração</button>
+      <div class="admin-toolbar-group">
+        <button
+          id="btnBackHomeTop"
+          class="admin-btn admin-btn-secondary"
+          type="button"
+        >
+          ← Voltar à Administração
+        </button>
       </div>
-    </div>
+    </nav>
 
-    <section class="stats-grid">
-      <div class="stat-card">
-        <div class="stat-title">Total de usuários</div>
-        <div id="statTotalUsers" class="stat-value">0</div>
-      </div>
+    <section
+      class="admin-stats-grid"
+      aria-label="Estatísticas administrativas"
+    >
+      <article class="admin-stat-card">
+        <div class="admin-stat-title">
+          Total de usuários
+        </div>
 
-      <div class="stat-card">
-        <div class="stat-title">Administradores</div>
-        <div id="statTotalAdmins" class="stat-value">0</div>
-      </div>
+        <div id="statTotalUsers" class="admin-stat-value">
+          0
+        </div>
+      </article>
 
-      <div class="stat-card">
-        <div class="stat-title">Bloqueados</div>
-        <div id="statTotalBlocked" class="stat-value">0</div>
-      </div>
+      <article class="admin-stat-card">
+        <div class="admin-stat-title">
+          Administradores
+        </div>
 
-      <div class="stat-card">
-        <div class="stat-title">Ativos</div>
-        <div id="statTotalActive" class="stat-value">0</div>
+        <div id="statTotalAdmins" class="admin-stat-value">
+          0
+        </div>
+      </article>
+
+      <article class="admin-stat-card">
+        <div class="admin-stat-title">
+          Bloqueados
+        </div>
+
+        <div id="statTotalBlocked" class="admin-stat-value">
+          0
+        </div>
+      </article>
+
+      <article class="admin-stat-card">
+        <div class="admin-stat-title">
+          Ativos
+        </div>
+
+        <div id="statTotalActive" class="admin-stat-value">
+          0
+        </div>
+      </article>
+    </section>
+
+    <section class="admin-panel">
+      <h2>Últimas ações administrativas</h2>
+
+      <div id="recentActionsList" class="admin-actions-list">
+        <div class="admin-empty">
+          Carregando...
+        </div>
       </div>
     </section>
 
-    <section class="panel-card">
-      <h3>Últimas ações administrativas</h3>
-      <div id="recentActionsList" class="actions-list">
-        <div class="empty-box">Carregando...</div>
-      </div>
-    </section>
+    <div class="admin-footer-actions">
+      <button
+        id="btnBackHome"
+        class="admin-btn admin-btn-primary"
+        type="button"
+      >
+        ← Voltar para a Administração
+      </button>
 
-    <div class="footer-actions">
-      <button id="btnBackHome" class="btn-primary" type="button">Voltar para a Administração</button>
-      <button id="btnLogout" class="btn-danger" type="button">Sair</button>
+      <button
+        id="btnLogout"
+        class="admin-btn admin-btn-danger"
+        type="button"
+      >
+        Sair
+      </button>
     </div>
-  </div>
+
+  </main>
 
   <script src="./js/admin-dashboard.js"></script>
 </body>

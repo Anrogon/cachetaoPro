@@ -1,9 +1,24 @@
 
-import { toggleSelectCard, comprarDoMonte, discardSelectedCard, layDownSelectedSet, pegarDoLixo } from "./actions.js";
-import { addCardToTableGame, onClickLixo, reorderHandByIds, getRebuyCost, requestRebuy, playVictorySound } from "./actions.js";
-import { handPoints } from "./endgame.js"; 
+import {
+  toggleSelectCard,
+  comprarDoMonte,
+  discardSelectedCard,
+  layDownSelectedSet,
+  pegarDoLixo,
+  addCardToTableGame,
+  onClickLixo,
+  reorderHandByIds,
+  requestRebuy,
+  swapJokerOnTable,
+  jogarComAVira,
+  toggleSelectVira,
+  requestCancelCrazyBatidaAttempt,
+  requestStartCrazyBatidaAttempt,
+  requestStartBatidaComViraAttempt,
+  declineRebuy
+} from "./actions.js";
+
 import { state, currentPlayer } from "./state.js";
-import { swapJokerOnTable, requestCancelCrazyBatidaAttempt, requestStartCrazyBatidaAttempt, declineRebuy } from "./actions.js";
 
 // =============================
 // RESOLVER IMAGEM DA CARTA
@@ -46,9 +61,9 @@ let dealAudioPlaying = false;
 
 function getDealAudio() {
   if (!dealAudio) {
-    dealAudio = new Audio("/assets/sfx/carta.mp3");
+    dealAudio = new Audio("/assets/sfx/playing-cards.mp3");
     dealAudio.loop = true;
-    dealAudio.volume = 0.2;
+    dealAudio.volume = 0.5;
   }
   return dealAudio;
 }
@@ -108,12 +123,39 @@ function beep({ freq = 700, duration = 0.03, type = "square", gain = 0.03 } = {}
   }
 }
 
+const shuffleAudio = new Audio("./assets/sfx/shuffle.mp3");
+shuffleAudio.volume = 0.4;
+
 function playSfx(name) {
   try {
     unlockAudioOnce();
   } catch (_) {}
 
   console.log("[SFX] playSfx", name);
+
+  if (name === "shuffle") {
+  try {
+
+    const playShuffle = (delay) => {
+      setTimeout(() => {
+        try {
+          shuffleAudio.pause();
+          shuffleAudio.currentTime = 0;
+          shuffleAudio.play().catch(() => {});
+        } catch (_) {}
+      }, delay);
+    };
+
+    // toca 4 vezes durante os 10 segundos
+    playShuffle(0);
+    playShuffle(5000);
+    /*playShuffle(5000);
+    playShuffle(7500);*/
+
+  } catch (_) {}
+
+  return;
+}
 
   // sons mais audíveis
   if (name === "deal") {
@@ -355,12 +397,19 @@ export function renderHand() {
     return;
   }
 
-  player.hand.forEach(card => {
-    const div = createCardElement(card, { selectable: true });
+ player.hand.forEach((card, index) => {
+  const div = createCardElement(card, { selectable: true });
 
-    if (state.selectedCards.includes(card.id)) {
-      div.classList.add("selected");
-    }
+  div.style.setProperty(
+    "z-index",
+    String(index + 1),
+    "important"
+  );
+
+  if (state.selectedCards.includes(card.id)) {
+    div.classList.add("selected");
+  }
+
 
     div.draggable = true;
     div.dataset.cardId = String(card.id);
@@ -492,7 +541,7 @@ export function renderTable() {
     const winner = state.seats?.[state.matchWinnerSeat - 1];
 
     if (winner) {
-      showMessage(`🏆 ${winner.name} venceu a partida!`);
+      showMessage(`🏆 ${winner.name} Vencedor a partida!`);
     }
 
     return;
@@ -528,9 +577,7 @@ export function renderTable() {
   }
 
   const totalMelds = state.table.length;
-  const splitIndex = isMobilePortrait
-  ? 6
-  : totalMelds;
+  const splitIndex = totalMelds;
 
   state.table.forEach((jogo, index) => {
     const group = document.createElement("div");
@@ -560,11 +607,7 @@ export function renderTable() {
     };
 
     if (isMobilePortrait) {
-      if (index < splitIndex) {
-        bottomLayer.appendChild(group);
-      } else {
-        topLayer.appendChild(group);
-      }
+      bottomLayer.appendChild(group);
     } else {
       el.appendChild(group);
     }
@@ -634,8 +677,20 @@ export function renderTable() {
       document.body.appendChild(roundBanner);
     }
 
-    if (roundBanner.textContent !== state.roundAnnouncement) {
-      roundBanner.textContent = state.roundAnnouncement;
+    const isMobileRoundBanner =
+      document.body.classList.contains("mobile-table-mode") ||
+      window.matchMedia?.("(max-width: 520px) and (orientation: portrait)")?.matches;
+
+    let roundText = String(state.roundAnnouncement || "");
+
+    if (isMobileRoundBanner) {
+      roundText = roundText
+        .replace("Embaralhando... Duelo começa em instantes.", "Embaralhando...\nDuelo em instantes")
+        .replace("Rodada sem duelo. Nova rodada em instantes.", "Nova rodada em instantes");
+    }
+
+    if (roundBanner.textContent !== roundText) {
+      roundBanner.textContent = roundText;
     }
 
     const msLeft = Math.max(
@@ -654,6 +709,98 @@ export function renderTable() {
       window.__roundBannerHideTimer = null;
     }, msLeft);
   }
+
+// =============================
+// CACHETÃO PRO - VIRA / CORINGA / POTE
+// =============================
+const viraCardEl = document.getElementById("vira-card");
+const viraJokerEl = document.getElementById("vira-joker");
+
+const cartaVira =
+  state.room?.cartaVira ||
+  state.cartaVira ||
+  null;
+
+const coringaValor =
+  state.room?.coringaValor ||
+  state.coringaValor ||
+  "";
+
+const coringaNaipes = Array.isArray(state.room?.coringaNaipes)
+  ? state.room.coringaNaipes
+  : (Array.isArray(state.coringaNaipes) ? state.coringaNaipes : []);
+
+if (viraCardEl) {
+  const viraNaMesa =
+    state.room?.viraNaMesa ??
+    state.viraNaMesa ??
+    true;
+
+  const minhaVira =
+    Number(
+      state.room?.viraEmUsoPorSeat ??
+      state.viraEmUsoPorSeat
+    ) === Number(state.mySeat);
+
+  const podeSelecionarVira =
+    !!cartaVira &&
+    viraNaMesa &&
+    minhaVira &&
+    (
+      state.faseTurno === "BAIXAR" ||
+      state.faseTurno === "DESCARTAR"
+    );
+
+  const viraSelecionada = (state.selectedCards || []).some(
+    id => String(id) === "__VIRA__"
+  );
+
+  if (cartaVira && viraNaMesa) {
+    viraCardEl.style.backgroundImage =
+      `url('${getCardImage(cartaVira)}')`;
+
+    viraCardEl.textContent = "";
+    viraCardEl.style.display = "";
+
+    viraCardEl.classList.toggle(
+      "selected",
+      viraSelecionada
+    );
+
+    viraCardEl.classList.toggle(
+      "vira-selectable",
+      podeSelecionarVira
+    );
+
+    viraCardEl.onclick = podeSelecionarVira
+      ? () => toggleSelectVira()
+      : null;
+  } else {
+    viraCardEl.style.backgroundImage = "";
+    viraCardEl.textContent = "—";
+    viraCardEl.classList.remove(
+      "selected",
+      "vira-selectable"
+    );
+    viraCardEl.onclick = null;
+  }
+}
+
+if (viraJokerEl) {
+  const naipeSimbolo = {
+    espadas: "♠",
+    paus: "♣",
+    copas: "♥",
+    ouros: "♦"
+  };
+
+  const coringaTexto =
+    coringaValor && coringaNaipes.length >= 2
+      ? `${coringaValor}${naipeSimbolo[coringaNaipes[0]] || coringaNaipes[0]} e ${coringaValor}${naipeSimbolo[coringaNaipes[1]] || coringaNaipes[1]}`
+      : "—";
+
+  viraJokerEl.textContent = `Coringas: ${coringaTexto}`;
+}
 
   playPendingHandToTableAnimation();
 
@@ -855,18 +1002,6 @@ export function renderLixo() {
       return;
     }
 
-    // travado no lixo (pegou do lixo e ainda não baixou): clicar no lixo devolve
-    if (
-      state.faseTurno === "BAIXAR" &&
-      state.origemCompra === "LIXO" &&
-      state.cartaDoLixo &&
-      !state.baixouComLixo
-    ) {
-      onClickLixo(); // devolve + passa (pela sua regra nova)
-      if (typeof window.renderAll === "function") window.renderAll();
-      return;
-    }
-
     // fora desses casos, não faz nada
   };
 
@@ -963,14 +1098,23 @@ function applyAnimIfQueued(el, cardId) {
 
 
 function getCrazyBatidaUi() {
-  const variant = String(state.room?.variant || state.variant || "").toUpperCase();
+  const variant = String(
+    state.room?.variant ||
+    state.variant ||
+    ""
+  ).toUpperCase();
 
-  if (variant !== "CRAZY") {
+  if (
+    variant !== "CRAZY" &&
+    variant !== "CACHETAO" &&
+    variant !== "CACHETAO_PRO"
+  ) {
     return {
       show: false,
       active: false,
       mine: false,
       disabled: true,
+      withVira: false,
       label: "BATI"
     };
   }
@@ -981,17 +1125,74 @@ function getCrazyBatidaUi() {
       active: false,
       mine: false,
       disabled: true,
+      withVira: false,
       label: "BATI"
     };
   }
 
-  const active = !!state.crazyBatidaAttemptActive;
-  const claimantSeat = Number(state.crazyBatidaAttemptSeat || 0);
-  const prioritySeat = Number(state.crazyBatidaAttemptPrioritySeat || 0);
-  const mySeat = Number(state.mySeat || 0);
-  const mine = active && claimantSeat === mySeat;
-  const iHavePriority = active && prioritySeat === mySeat && claimantSeat !== mySeat;
-  const burned = !!state.crazyBatidaBurnedBySeat?.[state.mySeat];
+  const active =
+    !!state.crazyBatidaAttemptActive;
+
+  const claimantSeat =
+    Number(
+      state.crazyBatidaAttemptSeat || 0
+    );
+
+  const attemptUsesVira =
+    !!state.crazyBatidaAttemptUsesVira;
+
+  const prioritySeat =
+    Number(
+      state.crazyBatidaAttemptPrioritySeat || 0
+    );
+
+  const mySeat =
+    Number(state.mySeat || 0);
+
+  const mine =
+    active &&
+    claimantSeat === mySeat;
+
+  const iHavePriority =
+    active &&
+    prioritySeat === mySeat &&
+    claimantSeat !== mySeat;
+
+  const burned =
+    !!state.crazyBatidaBurnedBySeat?.[
+      state.mySeat
+    ];
+
+  const meuPlayer =
+    currentPlayer?.() ||
+    (state.seats || []).find(
+      p =>
+        p &&
+        Number(p.seat) === mySeat
+    ) ||
+    null;
+
+  const viraDisponivelParaBatida =
+    !!(
+      state.viraDisponivelParaJogar ??
+      state.room?.viraDisponivelParaJogar
+    );
+
+  const estaParticipandoDaRodada =
+    !!meuPlayer &&
+    !meuPlayer.eliminated &&
+    !meuPlayer.passouRodada &&
+    (
+      meuPlayer.participando === true ||
+      state.phase === "COMPRAR"
+    );
+
+  const possoBaterComVira =
+    !active &&
+    state.phase === "COMPRAR" &&
+    viraDisponivelParaBatida &&
+    estaParticipandoDaRodada &&
+    !burned;
 
   if (mine) {
     return {
@@ -999,18 +1200,23 @@ function getCrazyBatidaUi() {
       active: true,
       mine: true,
       disabled: false,
+      withVira: attemptUsesVira,
       label: "CANCELAR"
     };
   }
 
-  // mesmo com outro tentando, o jogador prioritário ainda pode clicar
+  // Mesmo com outro tentando, o primeiro comprador
+  // ainda mantém a prioridade.
   if (iHavePriority) {
     return {
       show: true,
       active: true,
       mine: false,
       disabled: false,
-      label: "BATI"
+      withVira: attemptUsesVira,
+      label: attemptUsesVira
+        ? "BATI COMA VIRA"
+        : "BATI"
     };
   }
 
@@ -1020,35 +1226,50 @@ function getCrazyBatidaUi() {
       active: true,
       mine: false,
       disabled: true,
-      label: "BATI"
+      withVira: attemptUsesVira,
+      label: attemptUsesVira
+        ? "BATI COM A VIRA"
+        : "BATI"
     };
   }
 
   if (burned) {
-  return {
-    show: true,
-    active: false,
-    mine: false,
-    disabled: true,
-    label: "QUEIMOU"
-  };
-}
+    return {
+      show: true,
+      active: false,
+      mine: false,
+      disabled: true,
+      withVira: false,
+      label: "QUEIMOU"
+    };
+  }
+
+  if (possoBaterComVira) {
+    return {
+      show: true,
+      active: false,
+      mine: false,
+      disabled: false,
+      withVira: true,
+      label: "BATER VIRA"
+    };
+  }
 
   return {
     show: true,
     active: false,
     mine: false,
     disabled: false,
+    withVira: false,
     label: "BATI"
   };
 }
 
-
 export function renderScoreboard() {
-  
+
   const el = document.getElementById("scoreboard");
   if (!el) return;
-  
+
   if (state.spectator) {
   el.style.display = "";
   }
@@ -1064,8 +1285,7 @@ export function renderScoreboard() {
   const nomeBase = pl.name || "Jogador";
   const nome = pl.disconnected ? `${nomeBase} (Offline)` : nomeBase;
   const inicial = (nomeBase[0] || "?").toUpperCase();
-  const ptsMao = handPoints(pl.hand);
-  const ptsTotal = typeof pl.totalPoints === "number" ? pl.totalPoints : 0;
+  const vidas = typeof pl.vidas === "number" ? pl.vidas : 10;
   const buyIn = typeof state.room?.buyIn === "number" ? state.room.buyIn : null;
   const chips = typeof pl.tableChips === "number"
   ? pl.tableChips
@@ -1093,65 +1313,120 @@ export function renderScoreboard() {
   if (!isMobilePortrait) el.dataset.open = "1"; // fora do mobile: sempre aberto
 
   const isOpen = el.dataset.open === "1";
- 
+
   el.classList.toggle("sb-open", isOpen);
 
  const batiUi = getCrazyBatidaUi();
-  el.innerHTML = `
-        <div class="sb-title">
-        <span>${mesaTitulo}</span>
 
-        ${!isMobilePortrait && batiUi.show ? `
-          <button
-            type="button"
-            class="sb-pill sb-bati-btn ${batiUi.mine ? "is-active" : ""} ${batiUi.disabled ? "is-disabled-ui" : ""}"
-            data-disabled-ui="${batiUi.disabled ? "1" : "0"}"
-          >${batiUi.label}</button>
-        ` : ""}
+  const podeDecidirRodada =
+  state.phase === "DECISAO_PARTICIPAR" &&
+  Number(state.currentSeat) === Number(state.mySeat);
 
-        <span style="display:flex; gap:8px; align-items:center;">
+  const jaDecidiuRodada =
+  !!pl.participando ||
+  !!pl.passouRodada;
 
-        ${isMobilePortrait && batiUi.show ? `
-          <button
-            type="button"
-            class="sb-mobile-bati-btn ${batiUi.mine ? "is-active" : ""} ${batiUi.disabled ? "is-disabled-ui" : ""}"
-            data-disabled-ui="${batiUi.disabled ? "1" : "0"}"
-          >${batiUi.label}</button>
-        ` : ""}
-        <span class="sb-timer" id="sbTimerText">⏱ ${tempo}s</span>
-      </span>
+  const estaNaMarra =
+  !!pl.marra ||
+  !!pl.naMarra ||
+  Number(pl.vidas ?? pl.totalPoints ?? 0) === 1;
+
+
+  const podeJogarComVira =
+  !!(
+    state.room?.viraDisponivelParaJogar ??
+    state.viraDisponivelParaJogar
+  ) &&
+  Number(state.mySeat) === Number(
+    state.room?.primeiroCompradorSeat ??
+    state.primeiroCompradorSeat
+  ) &&
+  Number(state.currentSeat) === Number(state.mySeat) &&
+  (
+    state.phase === "COMPRAR" ||
+    state.faseTurno === "COMPRAR"
+  ) &&
+  !state.spectator;
+
+
+el.innerHTML = `
+  <div class="sb-title">
+    <span>${mesaTitulo}</span>
+
+    ${!isMobilePortrait && batiUi.show ? `
+      <button
+        type="button"
+        class="sb-pill sb-bati-btn ${batiUi.mine ? "is-active" : ""} ${batiUi.disabled ? "is-disabled-ui" : ""}"
+        data-disabled-ui="${batiUi.disabled ? "1" : "0"}"
+      >${batiUi.label}</button>
+    ` : ""}
+
+    <span style="display:flex; gap:8px; align-items:center;">
+      <span class="sb-timer" id="sbTimerText">⏱ ${tempo}s</span>
+    </span>
     </div>
 
-    <div class="sb-turnbar">
-      <div class="sb-turnbar-fill" id="sbTimerBar" style="width:${Math.max(0, Math.min(100, (tempo/dur)*100))}%"></div>
-    </div>
+  <div class="sb-turnbar">
+    <div class="sb-turnbar-fill" id="sbTimerBar" style="width:${Math.max(0, Math.min(100, (tempo / dur) * 100))}%"></div>
+  </div>
 
-    <div class="sb-card">
-      <div class="sb-avatar">${avatarHtml}</div>
+  <div class="sb-card">
+    <div class="sb-avatar">${avatarHtml}</div>
 
-      <div class="sb-info">
-        <div class="sb-name">${nome}</div>
+    <div class="sb-info">
+      <div class="sb-name">${nome}</div>
 
-                <div class="sb-sub sb-sub-desktop">
-          <div class="sb-sub-row">
-            <span class="sb-pill">Fichas: ${chips.toLocaleString("pt-BR")}</span>
-            <span class="sb-pill">Ante: ${ante.toLocaleString("pt-BR")}</span>
-          </div>
-
-          <div class="sb-sub-row">
-            <span class="sb-pill sb-detail">Mão: ${ptsMao}</span>
-            <span class="sb-pill sb-detail">Total de Pontos: ${ptsTotal}</span>
-          </div>
-
-          <div class="sb-sub-row">
-          ${!isMobilePortrait ? `<span class="sb-pill sb-bati-placeholder" aria-hidden="true"></span>` : ""}
+      <div class="sb-sub sb-sub-desktop">
+        <div class="sb-sub-row">
+          <span class="sb-pill">Fichas: ${chips.toLocaleString("pt-BR")}</span>
+          <span class="sb-pill">Pontos: ${vidas}</span>
         </div>
+
+        <div class="sb-sub-row">
+          ${state.phase === "DECISAO_PARTICIPAR" && !jaDecidiuRodada ? `
+          ${estaNaMarra ? `
+            <button
+              type="button"
+              class="sb-pill sb-cachetao-marra-btn sb-marra-red ${!podeDecidirRodada ? "is-disabled-ui" : ""}"
+              data-disabled-ui="${podeDecidirRodada ? "0" : "1"}"
+            >MARRA</button>
+          ` : `
+            <button
+              type="button"
+              class="sb-pill sb-cachetao-jogar-btn ${!podeDecidirRodada ? "is-disabled-ui" : ""}"
+              data-disabled-ui="${podeDecidirRodada ? "0" : "1"}"
+            >JOGAR</button>
+
+            <button
+              type="button"
+              class="sb-pill sb-cachetao-correr-btn ${!podeDecidirRodada ? "is-disabled-ui" : ""}"
+              data-disabled-ui="${podeDecidirRodada ? "0" : "1"}"
+            >CORRER</button>
+          `}
+        ` : ""}
+        </div>
+
+        <div class="sb-sub-row">
+          ${!isMobilePortrait && podeJogarComVira ? `
+            <button
+              type="button"
+              class="sb-pill sb-jogar-vira-btn"
+            >
+              JOGAR COM A VIRA
+            </button>
+          ` : ""}
+
+          ${!isMobilePortrait && !podeJogarComVira ? `
+            <span
+              class="sb-pill sb-bati-placeholder"
+              aria-hidden="true"
+            ></span>
+          ` : ""}
         </div>
       </div>
     </div>
-  `;
-
-
+  </div>
+`;
   // bind do botão (uma vez)
   if (isMobilePortrait && el.dataset.bound !== "1") {
     el.dataset.bound = "1";
@@ -1201,7 +1476,10 @@ export function renderScoreboard() {
     });
 
     try {
-      const ok = requestStartCrazyBatidaAttempt();
+      const ok =
+        batiUi.withVira
+          ? requestStartBatidaComViraAttempt()
+          : requestStartCrazyBatidaAttempt();
       console.log("[BATI] retorno requestStartCrazyBatidaAttempt", { ok });
 
       if (!ok && typeof showGameNotice === "function") {
@@ -1218,6 +1496,25 @@ export function renderScoreboard() {
   const batiBtn = el.querySelector(".sb-bati-btn");
   if (batiBtn) {
     batiBtn.onclick = handleBatiButtonClick;
+  }
+
+  const jogarViraBtn =
+    el.querySelector(".sb-jogar-vira-btn");
+
+  if (jogarViraBtn) {
+    jogarViraBtn.onclick = (ev) => {
+      ev.preventDefault();
+      ev.stopPropagation();
+
+      if (!podeJogarComVira) {
+        showGameNotice?.(
+          "A opção de jogar com a vira não está disponível."
+        );
+        return;
+      }
+
+      jogarComAVira();
+    };
   }
 
   const mobileBatiBtn = el.querySelector(".sb-mobile-bati-btn");
@@ -1243,6 +1540,60 @@ export function renderScoreboard() {
       }
     }
   }
+
+const jogarBtn = el.querySelector(".sb-cachetao-jogar-btn");
+
+if (jogarBtn) {
+  jogarBtn.onclick = (ev) => {
+    ev.preventDefault();
+    ev.stopPropagation();
+
+    if (!podeDecidirRodada) {
+      showGameNotice?.("Aguarde sua vez de decidir.");
+      return;
+    }
+
+    window.wsSendAction({
+      type: "jogarRodada"
+    });
+  };
+}
+
+const marraBtn = el.querySelector(".sb-cachetao-marra-btn");
+
+if (marraBtn) {
+  marraBtn.onclick = (ev) => {
+    ev.preventDefault();
+    ev.stopPropagation();
+
+    if (!podeDecidirRodada) {
+      showGameNotice?.("Aguarde sua vez de decidir.");
+      return;
+    }
+
+    window.wsSendAction({
+      type: "marraRodada"
+    });
+  };
+}
+
+const correrBtn = el.querySelector(".sb-cachetao-correr-btn");
+
+if (correrBtn) {
+  correrBtn.onclick = (ev) => {
+    ev.preventDefault();
+    ev.stopPropagation();
+
+    if (!podeDecidirRodada) {
+      showGameNotice?.("Aguarde sua vez de decidir.");
+      return;
+    }
+
+    window.wsSendAction({
+      type: "correrRodada"
+    });
+  };
+}
 
   // =========================================================
   // DOUBLE TAP NA MESA (MOBILE)
@@ -1322,7 +1673,7 @@ mobilePortraitMediaQuery.addEventListener("change", () => {
 });
 
 function getPublicStateSafe() {
-  return window.state_public || window.state || state_public || state || {};
+  return window.state_public || window.state || state || {};
 }
 
 function getPlayersForMobileTable() {
@@ -1342,33 +1693,8 @@ function getPlayersForMobileTable() {
   return s.players || s.seats || [];
 }
 
-function getMobilePlayerName(p, index) {
-  return (
-    p?.name ||
-    p?.username ||
-    p?.playerName ||
-    `Jogador ${index + 1}`
-  );
-}
 
-function getMobilePlayerChips(p) {
-  return Number(
-    p?.chips ??
-    p?.stack ??
-    p?.tableChips ??
-    p?.chips_balance ??
-    0
-  );
-}
 
-function getMobilePlayerPoints(p) {
-  return Number(
-    p?.points ??
-    p?.totalPoints ??
-    p?.score ??
-    0
-  );
-}
 
 function getMobileTurnTimerInfo(s = getPublicStateSafe()) {
   const endsAt = Number(s.turnEndsAt || state.turnEndsAt || 0);
@@ -1444,6 +1770,28 @@ function renderMobileTableLayout() {
         <span id="mobileAnteInfo"></span>
       </div>
 
+      <div id="mobileViraBox">
+        <div id="mobileViraCard"></div>
+        <div id="mobileViraJoker">Coringas: —</div>
+      </div>
+
+      <div id="mobileDeckBox"></div>
+
+      <div id="mobileActionButtons">
+        <button id="mobileBatiBtn" type="button">BATI</button>
+
+        <button
+          id="mobileJogarViraBtn"
+          type="button"
+          style="display:none;"
+        >
+          JOGAR VIRA
+        </button>
+
+        <button id="mobileJogarBtn" type="button">JOGAR</button>
+        <button id="mobileCorrerBtn" type="button">CORRER</button>
+      </div>
+
       <div class="mobile-seat-layer">
         <div class="mobile-seat pos1" data-seat-pos="1"></div>
         <div class="mobile-seat pos2" data-seat-pos="2"></div>
@@ -1495,7 +1843,7 @@ const miniAnte = Number(
   const anteEl = document.getElementById("mobileAnteInfo");
 
   if (mesaEl) mesaEl.textContent = `Mesa: ${mesaValor.toLocaleString("pt-BR")}`;
-  if (anteEl) anteEl.textContent = `Ante: ${miniAnte.toLocaleString("pt-BR")}`;
+  if (anteEl) anteEl.remove();
 
   // ==============================
   // JOGADORES (SEM VOCÊ)
@@ -1509,27 +1857,33 @@ const miniAnte = Number(
     for (let seat = 1; seat <= 10; seat++) {
     const el = root.querySelector(`[data-seat-pos="${seat}"]`);
     const p = players.find(player => Number(player?.seat) === seat);
-    
+    console.log("[MOBILE SEAT]", seat, p);
 
     if (!el) continue;
 
-    if (!p) {
+    const seatOcupado =
+      p &&
+      (
+        p.name ||
+        p.userId ||
+        p.id ||
+        p.avatarUrl ||
+        p.avatar_url
+      );
+
+    if (!seatOcupado) {
       el.innerHTML = "";
+      el.style.setProperty("display", "none", "important");
       el.classList.add("empty");
       el.classList.remove("is-current-turn");
       continue;
     }
 
+    el.style.setProperty("display", "flex", "important");
+
+
     el.classList.remove("empty");
     el.classList.toggle("is-current-turn", Number(s.currentSeat) === Number(p.seat));
-
-    if (!p) {
-      el.innerHTML = "";
-      el.classList.add("empty");
-      continue;
-    }
-
-    el.classList.remove("empty");
 
     const avatar =
       p.avatarUrl ||
@@ -1542,6 +1896,7 @@ const miniAnte = Number(
 
     const handCount = Number(p.handCount ?? 0);
     const isCurrentTurn = Number(s.currentSeat) === Number(p.seat);
+    const isDealer = Number(s.dealerSeat) === Number(p.seat);
 
       el.innerHTML = `
         ${isCurrentTurn && timerInfo.show ? `
@@ -1559,22 +1914,399 @@ const miniAnte = Number(
 
         <div class="mobile-seat-avatar">
           <img src="${avatar}">
+
+          ${isDealer ? `
+            <span
+              class="dealer-chip dealer-chip-mobile"
+              aria-label="Carteador"
+            >
+              D
+            </span>
+          ` : ""}
         </div>
 
         <div>
           <div class="mobile-seat-name">
-          ${p.name || "Jogador"}
+            ${p.name || "Jogador"}
 
-          ${isOffline ? `
-            <span class="mobile-seat-offline">OFF</span>
-          ` : ""}
-        </div>
+            ${isOffline ? `
+              <span class="mobile-seat-offline">OFF</span>
+            ` : ""}
+
+          </div>
           <div class="mobile-seat-meta">${chips} · ${pts} pts</div>
+          ${(
+          !!p.marra ||
+          !!p.naMarra ||
+          Number(p.vidas ?? p.totalPoints ?? 0) === 1
+        ) ? `
+          <div class="mobile-seat-marra">MARRA</div>
+        ` : ""}
         </div>
       `;
         }
 
-  renderMobileBottomHudClean(tableData, s);
+
+      const mobileViraCard = document.getElementById("mobileViraCard");
+      const mobileViraJoker = document.getElementById("mobileViraJoker");
+
+      const cartaVira = s.cartaVira || window.state?.cartaVira || null;
+      const coringaValor = s.coringaValor || window.state?.coringaValor || "";
+      const coringaNaipes = Array.isArray(s.coringaNaipes)
+        ? s.coringaNaipes
+        : (Array.isArray(window.state?.coringaNaipes) ? window.state.coringaNaipes : []);
+
+      if (mobileViraCard) {
+        mobileViraCard.style.backgroundImage = cartaVira
+          ? `url('${getCardImage(cartaVira)}')`
+          : "";
+      }
+
+    const viraNaMesa =
+        window.state?.viraNaMesa ??
+        s.viraNaMesa ??
+        s.room?.viraNaMesa ??
+        true;
+
+      const viraEmUsoPorSeatMobile =
+        Number(
+          window.state?.viraEmUsoPorSeat ??
+          s.viraEmUsoPorSeat ??
+          s.room?.viraEmUsoPorSeat ??
+          0
+        );
+
+      const meuSeatViraMobile =
+        Number(
+          window.state?.mySeat ??
+          s.mySeat ??
+          0
+        );
+
+      const faseViraMobile =
+        window.state?.phase ??
+        window.state?.faseTurno ??
+        s.phase ??
+        s.faseTurno ??
+        "";
+
+      const minhaVira =
+        viraEmUsoPorSeatMobile === meuSeatViraMobile;
+
+      const podeSelecionarVira =
+        !!cartaVira &&
+        viraNaMesa &&
+        minhaVira &&
+        (
+          faseViraMobile === "BAIXAR" ||
+          faseViraMobile === "DESCARTAR"
+        );
+
+      const viraSelecionada = (
+        window.state?.selectedCards ??
+        s.selectedCards ??
+        []
+      ).some(
+        id => String(id) === "__VIRA__"
+      );
+
+    if (mobileViraCard) {
+  mobileViraCard.style.display =
+    cartaVira && viraNaMesa ? "block" : "none";
+
+  mobileViraCard.classList.toggle(
+    "selected",
+    viraSelecionada
+  );
+
+  mobileViraCard.classList.toggle(
+    "vira-selectable",
+    podeSelecionarVira
+  );
+
+  // Garante que a vira fique acima dos elementos da mesa
+  // e receba toque/clique no mobile.
+  mobileViraCard.style.position = "relative";
+  mobileViraCard.style.zIndex = "300";
+  mobileViraCard.style.pointerEvents =
+    podeSelecionarVira ? "auto" : "none";
+
+  mobileViraCard.style.cursor =
+    podeSelecionarVira ? "pointer" : "default";
+
+  mobileViraCard.onclick = null;
+  mobileViraCard.ontouchend = null;
+
+  if (podeSelecionarVira) {
+    const selecionarViraMobile = (ev) => {
+      ev.preventDefault();
+      ev.stopPropagation();
+
+      toggleSelectVira();
+    };
+
+    mobileViraCard.onclick =
+      selecionarViraMobile;
+
+    mobileViraCard.ontouchend =
+      selecionarViraMobile;
+  }
+}
+
+    const podeJogarComVira =
+      !!cartaVira &&
+      (
+        s.viraDisponivelParaJogar ??
+        s.room?.viraDisponivelParaJogar
+      ) &&
+      Number(s.mySeat) === Number(
+        s.primeiroCompradorSeat ??
+        s.room?.primeiroCompradorSeat
+      ) &&
+      Number(s.mySeat) === Number(s.currentSeat) &&
+      s.faseTurno === "COMPRAR" &&
+      !s.spectator;
+
+          if (mobileViraJoker) {
+            const naipeSimbolo = {
+              espadas: "♠",
+              paus: "♣",
+              copas: "♥",
+              ouros: "♦"
+            };
+
+            const texto = coringaValor && coringaNaipes.length >= 2
+              ? `Coringas: ${coringaValor}${naipeSimbolo[coringaNaipes[0]] || coringaNaipes[0]} e ${coringaValor}${naipeSimbolo[coringaNaipes[1]] || coringaNaipes[1]}`
+              : "Coringas: —";
+
+            mobileViraJoker.textContent = texto;
+          }
+
+      const mobileDeckBox = document.getElementById("mobileDeckBox");
+
+      const monte = document.getElementById("monte");
+      const lixo = document.getElementById("lixo");
+      const potArea = document.getElementById("pot-area");
+
+      const viraArea = document.getElementById("vira-area");
+      const viraJoker = document.getElementById("vira-joker");
+
+      if (mobileDeckBox && monte && lixo && potArea) {
+
+        if (!mobileDeckBox.contains(monte)) {
+          mobileDeckBox.appendChild(monte);
+        }
+
+        if (!mobileDeckBox.contains(lixo)) {
+          mobileDeckBox.appendChild(lixo);
+        }
+
+        if (!mobileDeckBox.contains(potArea)) {
+          mobileDeckBox.appendChild(potArea);
+        }
+      }
+
+      if (viraArea) {
+        viraArea.remove();
+      }
+
+      if (viraJoker) {
+        viraJoker.remove();
+      }
+
+
+      const mobileBatiBtn =
+        document.getElementById("mobileBatiBtn");
+
+      const mobileJogarViraBtn =
+        document.getElementById("mobileJogarViraBtn");
+
+      const mobileJogarBtn =
+        document.getElementById("mobileJogarBtn");
+
+      const mobileCorrerBtn =
+        document.getElementById("mobileCorrerBtn");
+
+      const podeDecidirRodada =
+        s.phase === "DECISAO_PARTICIPAR" &&
+        Number(s.currentSeat) === Number(s.mySeat);
+
+      const meuPlayerMobile =
+        (s.seats || []).find(p => p && Number(p.seat) === Number(s.mySeat)) || null;
+
+      const estaNaMarraMobile =
+        !!meuPlayerMobile?.marra ||
+        !!meuPlayerMobile?.naMarra ||
+        Number(meuPlayerMobile?.vidas ?? meuPlayerMobile?.totalPoints ?? 0) === 1;
+
+      const faseMobile =
+      window.state?.phase ??
+      s.phase ??
+      "";
+
+    const meuSeatMobile =
+      Number(
+        window.state?.mySeat ??
+        s.mySeat
+      );
+
+    const turnoSeatMobile =
+      Number(
+        window.state?.currentSeat ??
+        s.currentSeat
+      );
+
+    const primeiroCompradorMobile =
+      Number(
+        window.state?.primeiroCompradorSeat ??
+        s.primeiroCompradorSeat ??
+        s.room?.primeiroCompradorSeat
+      );
+
+    const viraDisponivelMobile =
+      !!(
+        window.state?.viraDisponivelParaJogar ??
+        s.viraDisponivelParaJogar ??
+        s.room?.viraDisponivelParaJogar
+      );
+
+    const podeJogarComViraMobile =
+      viraDisponivelMobile &&
+      primeiroCompradorMobile === meuSeatMobile &&
+      turnoSeatMobile === meuSeatMobile &&
+      faseMobile === "COMPRAR" &&
+      !(
+        window.state?.spectator ??
+        s.spectator
+      );
+
+        const batiUi = getCrazyBatidaUi();
+/*
+        if (mobileBatiBtn) {
+          mobileBatiBtn.textContent =
+          batiUi.label === "BATI C/ VIRA"
+            ? "BATI VIRA"
+            : (batiUi.label || "BATI");
+          mobileBatiBtn.disabled = !!batiUi.disabled;
+
+          mobileBatiBtn.classList.toggle("is-active", !!batiUi.mine);
+          mobileBatiBtn.classList.toggle("is-disabled-ui", !!batiUi.disabled);
+          mobileBatiBtn.classList.toggle("is-burned", batiUi.label === "QUEIMOU");
+        }
+*/
+        if (mobileBatiBtn) {
+          const batiUi = getCrazyBatidaUi();
+
+          mobileBatiBtn.textContent =
+          batiUi.label === "BATI C/ VIRA"
+            ? "BATI VIRA"
+            : (batiUi.label || "BATI");
+          mobileBatiBtn.disabled = !!batiUi.disabled;
+
+          mobileBatiBtn.classList.toggle("is-active", batiUi.label === "CANCELAR");
+          mobileBatiBtn.classList.toggle("is-burned", batiUi.label === "QUEIMOU");
+          mobileBatiBtn.classList.toggle("is-disabled-ui", !!batiUi.disabled);
+
+          mobileBatiBtn.onclick = (ev) => {
+            ev.preventDefault();
+            ev.stopPropagation();
+
+            const atual = getCrazyBatidaUi();
+
+            if (atual.mine) {
+              requestCancelCrazyBatidaAttempt();
+              return;
+            }
+
+            if (atual.disabled) {
+              showGameNotice?.(
+                atual.label === "QUEIMOU"
+                  ? "Você queimou. Agora só pode comprar do monte."
+                  : "BATI indisponível."
+              );
+              return;
+            }
+
+            if (atual.withVira) {
+              requestStartBatidaComViraAttempt();
+            } else {
+              requestStartCrazyBatidaAttempt();
+            }
+          };
+        }
+
+      if (mobileJogarViraBtn) {
+        mobileJogarViraBtn.textContent = "JOGAR VIRA";
+        mobileJogarViraBtn.style.display =
+        podeJogarComViraMobile ? "inline-flex" : "none";
+
+        mobileJogarViraBtn.disabled =
+          !podeJogarComViraMobile;
+
+        mobileJogarViraBtn.onclick = (ev) => {
+          ev.preventDefault();
+          ev.stopPropagation();
+
+          if (!podeJogarComViraMobile) {
+            showGameNotice?.(
+              "A opção de jogar com a vira não está disponível."
+            );
+            return;
+          }
+
+          jogarComAVira();
+        };
+      }
+
+
+      if (mobileJogarBtn) {
+        mobileJogarBtn.style.display =
+          faseMobile === "DECISAO_PARTICIPAR"
+            ? ""
+            : "none";
+
+        mobileJogarBtn.textContent =
+          estaNaMarraMobile
+            ? "MARRA"
+            : "JOGAR";
+
+        mobileJogarBtn.disabled =
+          !podeDecidirRodada;
+        mobileJogarBtn.classList.toggle("is-marra", estaNaMarraMobile);
+        mobileJogarBtn.onclick = (ev) => {
+          ev.preventDefault();
+          ev.stopPropagation();
+
+          if (!podeDecidirRodada) {
+            showGameNotice?.("Aguarde sua vez de decidir.");
+            return;
+          }
+
+          window.wsSendAction({ type: estaNaMarraMobile ? "marraRodada" : "jogarRodada" });
+        };
+      }
+
+      if (mobileCorrerBtn) {
+        mobileCorrerBtn.style.display =
+          faseMobile === "DECISAO_PARTICIPAR" &&
+          !estaNaMarraMobile
+            ? ""
+            : "none";
+
+        mobileCorrerBtn.disabled =
+          !podeDecidirRodada;
+        mobileCorrerBtn.onclick = (ev) => {
+          ev.preventDefault();
+          ev.stopPropagation();
+
+          if (!podeDecidirRodada) {
+            showGameNotice?.("Aguarde sua vez de decidir.");
+            return;
+          }
+
+          window.wsSendAction({ type: "correrRodada" });
+        };
+      }
   moveMobilePotToTableTop();
 }
 
@@ -1650,6 +2382,10 @@ function renderDesktopTableLayout() {
     const pts = Number(p.totalPoints ?? 0);
 
     const isMe = Number(p.seat) === Number(s.mySeat);
+
+    const isDealer =
+    Number(s.dealerSeat) === Number(p.seat);
+
     const handCount = Number(
     p.handCount ??
     p.cardsCount ??
@@ -1661,6 +2397,16 @@ function renderDesktopTableLayout() {
     el.innerHTML = `
       <div class="desktop-seat-avatar">
         <img src="${avatar}">
+
+        ${isDealer ? `
+          <span
+            class="dealer-chip dealer-chip-desktop"
+            title="Carteador"
+            aria-label="Carteador"
+          >
+            D
+          </span>
+        ` : ""}
       </div>
 
       <div class="desktop-seat-info">
@@ -1672,6 +2418,16 @@ function renderDesktopTableLayout() {
         <div class="desktop-offline">
           OFFLINE
         </div>
+      ` : ""}
+
+            ${(
+          !!p.marra ||
+          !!p.naMarra ||
+          Number(p.vidas ?? p.totalPoints ?? 0) === 1
+        ) ? `
+          <div class="desktop-marra">
+            MARRA
+          </div>
       ` : ""}
         <div class="desktop-seat-meta">${chips.toLocaleString("pt-BR")} · ${pts} pts</div>
 
@@ -1731,123 +2487,7 @@ function moveMobilePotToTableTop() {
   potItems.forEach(el => holder.appendChild(el));
 }
 
-function getMobileCurrentPlayerForHud() {
-  const pl = typeof currentPlayer === "function" ? currentPlayer() : null;
-  if (pl) return pl;
 
-  const s = getPublicStateSafe();
-  const players = getPlayersForMobileTable();
-
-  const mySeat =
-    s.mySeat ||
-    s.seat ||
-    s.playerSeat ||
-    s.currentPlayerSeat ||
-    null;
-
-  return players.find(p => {
-    if (!p) return false;
-    const pSeat = Number(p.seat || p.seatIndex || 0);
-    return (
-      p.isYou ||
-      p.me ||
-      p.isMe ||
-      p.id === s.myPlayerId ||
-      pSeat === Number(mySeat)
-    );
-  }) || null;
-}
-
-
-function renderMobileBottomHudClean(tableData, s) {
-  if (!isMobilePortraitTable()) {
-    const old = document.getElementById("mobileBottomHud");
-    if (old) old.remove();
-    return;
-  }
-
-  const bottomArea = document.getElementById("bottomArea") || document.body;
-
-  let hud = document.getElementById("mobileBottomHud");
-
-  if (!hud) {
-    hud = document.createElement("div");
-    hud.id = "mobileBottomHud";
-    bottomArea.appendChild(hud);
-  }
-
-  const mySeat = s.mySeat;
-
-  const me = Array.isArray(tableData?.seats)
-    ? tableData.seats.find(p => Number(p?.seat) === Number(mySeat))
-    : null;
-
-  if (!me) {
-    hud.innerHTML = "";
-    return;
-  }
-
-  const avatar =
-    me.avatarUrl ||
-    me.avatar_url ||
-    "/assets/avatar-default.png";
-
-  const chips = Number(me.tableChips ?? me.stack ?? 0);
-  const pts = Number(me.totalPoints ?? 0);
-  const isMyTurn = Number(s.currentSeat) === Number(s.mySeat);
-
-  const timerInfo = getMobileTurnTimerInfo(s);
-  ensureMobileTurnBarTicker();
-
-  hud.innerHTML = `
-    <div class="mobile-bottom-avatar">
-      <img src="${avatar}">
-    </div>
-
-    <div class="mobile-bottom-info">
-      <div class="mobile-bottom-name">${me.name || "Você"}</div>
-      <div class="mobile-bottom-meta">${chips} · ${pts} pts</div>
-
-      ${isMyTurn && timerInfo.show ? `
-        <div class="mobile-hud-timebar">
-          <div
-            class="mobile-hud-timebar-fill"
-            data-mobile-turnbar-fill
-            style="width:${timerInfo.pct}%"
-          ></div>
-        </div>
-      ` : ""}
-    </div>
-  `;
-
-  hud.classList.toggle("is-current-turn", isMyTurn);
-}
-
-function moveMobileSortButtonsToDeckArea() {
-  if (!isMobilePortraitTable()) return;
-
-  const bottomArea = document.getElementById("bottomArea") || document.body;
-
-  let holder = document.getElementById("mobileSortButtonsHud");
-
-  if (!holder) {
-    holder = document.createElement("div");
-    holder.id = "mobileSortButtonsHud";
-    bottomArea.appendChild(holder);
-  }
-
-  const buttons = Array.from(document.querySelectorAll("button")).filter(btn => {
-    const cls = String(btn.className || "").toLowerCase();
-    const id = String(btn.id || "").toLowerCase();
-
-    return id.includes("sort") || cls.includes("sort-btn");
-  });
-
-  buttons.forEach(btn => {
-    if (btn.closest("#mobileSortButtonsHud")) return;
-    holder.appendChild(btn);
-  });
-}
 
 function moveMobileBatiButtonToBottomArea() {
   if (!isMobilePortraitTable()) return;
@@ -2048,10 +2688,19 @@ export function renderRebuyOverlay() {
     gameEl.appendChild(overlay);
   }
 
-  const ativos = (state.players || []).filter(pl => pl && !pl.eliminated);
+  const ativos = (state.players || []).filter(pl =>
+    pl &&
+    !pl.eliminated &&
+    !pl.pendingRebuy
+  );
+
   const pontosRetorno = ativos.length
-    ? Math.max(...ativos.map(pl => Number(pl.totalPoints) || 0))
-    : 0;
+    ? Math.min(
+        ...ativos
+          .map(pl => Number(pl.vidas ?? pl.totalPoints ?? 0))
+          .filter(v => v > 0)
+      )
+    : 1;
 
   const secondsLeft = Math.max(0, Math.ceil((state.rebuyDecisionUntil - Date.now()) / 1000));
 
@@ -2172,7 +2821,7 @@ export function renderEndMatchOverlay() {
 
       <div class="endmatch-body">
         <div class="endmatch-line"><b>${winnerName}</b></div>
-        <div class="endmatch-line">🏆 venceu a partida</div>
+        <div class="endmatch-line">🏆 Vencedor da partida</div>
 
         <div class="endmatch-line" style="margin-top:10px;">
           Pote final: <b>${matchPot.toLocaleString("pt-BR")}</b>
@@ -2295,18 +2944,23 @@ export function renderDealOverlay() {
   if (!el) {
     el = document.createElement("div");
     el.id = "deal-overlay";
-    el.style.position = "absolute";
+    /*el.style.position = "absolute";
     el.style.top = "50%";
     el.style.left = "50%";
     el.style.transform = "translate(-50%, -50%)";
     el.style.zIndex = "10000";
-    el.style.background = "rgba(0,0,0,0.82)";
+
+    // visual ajustado
+    el.style.background = "rgba(8, 10, 8, 0.88)";
     el.style.color = "#fff";
-    el.style.padding = "18px 24px";
-    el.style.borderRadius = "14px";
+    el.style.padding = "18px 26px";
+    el.style.borderRadius = "16px";
     el.style.textAlign = "center";
-    el.style.minWidth = "220px";
-    el.style.boxShadow = "0 10px 30px rgba(0,0,0,0.35)";
+    el.style.minWidth = "260px";
+    el.style.border = "1px solid rgba(255, 215, 80, 0.22)";
+    el.style.boxShadow = "0 14px 34px rgba(0,0,0,0.42)";*/
+    el.style.backdropFilter = "blur(4px)";
+
     document.body.appendChild(el);
   }
 
@@ -2322,20 +2976,39 @@ export function renderDealOverlay() {
     return;
   }
 
-  // 🔊 som da distribuição no fluxo ONLINE real
   startDealSfxLoop();
 
   const leftMs = Math.max(0, Number(state.dealEndsAt || 0) - Date.now());
   const leftSec = (leftMs / 1000).toFixed(1);
 
-  el.innerHTML = `
-    <div style="font-size:18px; font-weight:800; margin-bottom:8px;">
-      🂠 Distribuindo cartas...
+  const isMobileDeal =
+  document.body.classList.contains("mobile-table-mode") ||
+  window.matchMedia?.("(max-width: 520px) and (orientation: portrait)")?.matches;
+
+el.innerHTML = `
+  <div class="deal-title">
+    ${isMobileDeal ? "Nova rodada" : "Distribuindo cartas..."}
+  </div>
+
+  <div class="deal-progress">
+    <div
+      class="deal-progress-fill"
+      style="width:${Math.max(
+        0,
+        Math.min(
+          100,
+          (leftMs / Number(state.dealMs || 6000)) * 100
+        )
+      )}%">
     </div>
-    <div style="font-size:13px; opacity:.92;">
-      Nova rodada começa em ${leftSec}s
-    </div>
-  `;
+  </div>
+
+  <div class="deal-subtitle">
+    ${isMobileDeal ? "Começando em" : "Nova rodada começa em"}
+    <span class="deal-time">${leftSec}s</span>
+  </div>
+`;
+
 
   el.style.display = "block";
 
@@ -2344,17 +3017,6 @@ export function renderDealOverlay() {
   }, 120);
 }
 
-let lastRoundVictorySoundTs = 0;
-
-function playRoundVictoryOnce(summary) {
-  const ts = Number(summary?.timestamp || 0);
-  if (!ts) return;
-
-  if (ts === lastRoundVictorySoundTs) return;
-
-  lastRoundVictorySoundTs = ts;
-  playVictorySound();
-}
 
 export function renderRoundInfo() {
   const el = document.getElementById("round-info");
@@ -2363,63 +3025,6 @@ export function renderRoundInfo() {
   }
 }
 
-/*
-export function renderRoundInfo() {
-  let el = document.getElementById("round-info");
-
-  if (!el) {
-    el = document.createElement("div");
-    el.id = "round-info";
-    el.style.position = "absolute";
-    el.style.top = "12px";
-    el.style.left = "50%";
-    el.style.transform = "translateX(-50%)";
-    el.style.background = "rgba(0,0,0,0.75)";
-    el.style.color = "#fff";
-    el.style.padding = "10px 16px";
-    el.style.borderRadius = "10px";
-    el.style.fontSize = "14px";
-    el.style.zIndex = "9999";
-    el.style.maxWidth = "80%";
-    el.style.textAlign = "center";
-    document.body.appendChild(el);
-  }
-
-  const summary = state.lastRoundSummary;
-  if (!summary) {
-    el.style.display = "none";
-    return;
-  }
-
-  const age = Date.now() - summary.timestamp;
-if (age > 4000) {
-  el.style.display = "none";
-  return;
-}
-
-
-  playRoundWinSfxOnce(summary);
-
-  const winner = state.players?.find(p => p.seat === summary.winnerSeat);
-  const winnerName = winner?.name || `Jogador ${summary.winnerSeat}`;
-
-  const lines = [];
-  lines.push(`🃏 ${winnerName} bateu!`);
-
-  const others = (state.players || []).filter(p => p.seat !== summary.winnerSeat);
-
-  if (others.length) {
-    lines.push(
-      others
-        .map(p => `${p.name}: +${p.lastRoundPoints || 0} (total ${p.totalPoints || 0})${p.eliminated ? " ❌ eliminado" : ""}`)
-        .join(" | ")
-    );
-  }
-
-  el.innerHTML = lines.join("<br>");
-  el.style.display = "block";
-}
-*/
 export function renderRebuyButton() {
   let box = document.getElementById("rebuy-box");
 
@@ -2460,8 +3065,9 @@ export function renderRebuyButton() {
     ? 1000 * Math.pow(2, me.rebuyCount || 0)
     : 1000;
 
-  box.innerHTML = `
+    box.innerHTML = `
     <div style="font-weight:bold; margin-bottom:8px;">REBUY</div>
+    <div style="margin-bottom:8px;">Você voltará com o menor ponto entre os jogadores ativos.</div>
     <div style="margin-bottom:8px;">Tempo: ${secs}s</div>
     <div style="margin-bottom:8px;">Custo: ${cost}</div>
     <button id="rebuy-yes-btn" style="padding:6px 12px; cursor:pointer;">SIM</button>
