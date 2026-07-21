@@ -32,7 +32,7 @@ app.get("/api/health", async (req, res) => {
 
 app.use("/api/auth", authRoutes);
 
-const port = Number(process.env.PORT) || 3001;
+const port = Number(process.env.AUTH_PORT) || 3003;
 
 app.listen(port, () => {
   console.log(`Auth server rodando em http://localhost:${port}`);
