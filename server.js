@@ -4159,7 +4159,7 @@ const initialTableChips = Math.max(0, stake - getBuyIn(room));
 
   setupCachetaoRoundJoker(room);
 
-  rroom.dealMs = 1200;
+  room.dealMs = 1200;
   room.dealEndsAt = Date.now() + room.dealMs;
 
   broadcastRoomState(room);
