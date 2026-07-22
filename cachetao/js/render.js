@@ -2979,6 +2979,16 @@ export function renderDealOverlay() {
   startDealSfxLoop();
 
   const leftMs = Math.max(0, Number(state.dealEndsAt || 0) - Date.now());
+
+  console.log("[DEAL UI]", {
+  faseTurno: state.faseTurno,
+  dealMs: state.dealMs,
+  dealEndsAt: state.dealEndsAt,
+  agora: Date.now(),
+  leftMs
+});
+
+
   const leftSec = (leftMs / 1000).toFixed(1);
 
   const isMobileDeal =
