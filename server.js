@@ -290,7 +290,7 @@ function startNewRound(room) {
   room.started = true;
 
   // fase visual entre rodadas
-  room.dealMs = Number(room.dealMs) > 0 ? Number(room.dealMs) : 1200;
+  room.dealMs = 1200;
   room.dealEndsAt = Date.now() + room.dealMs;
   room.phase = "DEALING";
 
@@ -400,35 +400,39 @@ if (cartasDevolvidas > 0) {
   }
 
   if (!room.cachetaoDuelCountdownDone) {
-    room.cachetaoDuelCountdownDone = true;
+  room.cachetaoDuelCountdownDone = true;
 
-    clearAutoTurnTimer(room);
+  clearAutoTurnTimer(room);
 
-    room.phase = "AGUARDANDO_DUELO";
-    room.dealMs = 10000;
-    room.dealEndsAt = Date.now() + 10000;
-    room.turnEndsAt = 0;
-    room.buyEndsAt = 0;
+  const duelDelayMs = 10000;
 
-    room.roundAnnouncement = "Embaralhando... Duelo começa em instantes.";
-    room.roundAnnouncementEndsAt = room.dealEndsAt;
+  room.phase = "AGUARDANDO_DUELO";
+  room.dealEndsAt = Date.now() + duelDelayMs;
+  room.turnEndsAt = 0;
+  room.buyEndsAt = 0;
 
-    sendState(room.id);
+  room.roundAnnouncement =
+    "Embaralhando... Duelo começa em instantes.";
 
-    setTimeout(() => {
-      if (!room || room.matchEnded || room.roundEnded) return;
-      if (room.phase !== "AGUARDANDO_DUELO") return;
+  room.roundAnnouncementEndsAt =
+    room.dealEndsAt;
 
-      room.phase = "DECISAO_PARTICIPAR";
-      room.dealEndsAt = 0;
-      room.roundAnnouncement = "";
-      room.roundAnnouncementEndsAt = 0;
+  sendState(room.id);
 
-      tryFinishCachetaoDecision(room);
-    }, 10000);
+  setTimeout(() => {
+    if (!room || room.matchEnded || room.roundEnded) return;
+    if (room.phase !== "AGUARDANDO_DUELO") return;
 
-    return;
-  }
+    room.phase = "DECISAO_PARTICIPAR";
+    room.dealEndsAt = 0;
+    room.roundAnnouncement = "";
+    room.roundAnnouncementEndsAt = 0;
+
+    tryFinishCachetaoDecision(room);
+  }, duelDelayMs);
+
+  return;
+}
 
   room.tableMelds = [];
   room.discard = [];
@@ -4155,7 +4159,7 @@ const initialTableChips = Math.max(0, stake - getBuyIn(room));
 
   setupCachetaoRoundJoker(room);
 
-  room.dealMs = Number(room.dealMs) > 0 ? Number(room.dealMs) : 1200;
+  rroom.dealMs = 1200;
   room.dealEndsAt = Date.now() + room.dealMs;
 
   broadcastRoomState(room);
