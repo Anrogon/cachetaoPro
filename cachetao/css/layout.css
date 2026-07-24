@@ -876,14 +876,17 @@ top: 120px;
   background: hsl(0, 14%, 96%); /* ou seu fundo verde */
 }
 
-.home-logo img{
+.home-logo img {
   max-width: 280px;
   width: 80%;
   height: auto;
-  margin-top: 20px;
-  border-radius: 12px;
-  border-radius: 10px;
-  box-shadow: 0 15px 35px rgba(0,0,0,.30);
+  display: block;
+  margin: 20px auto 0;
+
+  background: transparent;
+  border-radius: 0;
+  box-shadow: none;
+
   transition: .25s;
 }
 
