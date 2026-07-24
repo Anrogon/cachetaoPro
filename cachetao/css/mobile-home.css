@@ -21,11 +21,16 @@
     gap: 14px;
   }
 
+ #homeScreen .home-logo picture,
   #homeScreen .home-logo img {
-    width: 72%;
-    max-width: 260px;
-    display: block;
-    margin: 0 auto;
+      display: block;
+      margin: 0 auto;
+  }
+
+  #homeScreen .home-logo img {
+      width: 72%;
+      max-width: 260px;
+      height: auto;
   }
 
   #homeScreen .home-menu {
