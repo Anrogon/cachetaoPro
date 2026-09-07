@@ -23,6 +23,7 @@ import {
   renderDealOverlay,
   playPendingDrawAnimation,
   playPendingDiscardDrawAnimation,
+  playPendingHudDrawAnimation,
   playPendingHandToTableAnimation
 } from "./render.js";
 import { startTurnTimer } from "./turnTimer.js";
@@ -39,7 +40,7 @@ window.openTablesFromHome = function () {
 
 const API_BASE =
   window.location.hostname === "localhost"
-    ? "http://localhost:3001/api"
+    ? "http://localhost:3003/api"
     : "/api";
 
 // =============================
@@ -73,6 +74,64 @@ export function connectWS() {
     try { msg = JSON.parse(ev.data); } catch { return; }
 
 
+    // ===== STATUS ONLINE DA HOME =====
+    if (msg.type === "online_status") {
+      const onlinePlayersEl =
+        document.getElementById("onlinePlayers");
+
+      const openTablesEl =
+        document.getElementById("openTables");
+
+      if (onlinePlayersEl) {
+        onlinePlayersEl.textContent =
+          Number(msg.payload?.onlinePlayers) || 0;
+      }
+
+      if (openTablesEl) {
+        openTablesEl.textContent =
+          Number(msg.payload?.openTables) || 0;
+      }
+
+      return;
+    }
+
+
+    // 1) hello
+    if (msg.type === "hello") {
+      myClientId = msg.payload?.clientId || null;
+
+      // garante estrutura
+      if (!window.state) window.state = state;
+
+      const tables = Array.isArray(msg.payload?.tables)
+        ? msg.payload.tables
+        : [];
+
+      // ✅ lista base das mesas para o render
+      state.tableList = tables.map(table => ({
+        id: table.id,
+        name: table.name,
+        buyIn: table.buyIn
+      }));
+
+      // ✅ estado dinâmico por id
+      state.tables = {};
+      tables.forEach((table) => {
+        state.tables[table.id] = table;
+      });
+
+      state.online = msg.payload?.online || 0;
+
+      // ✅ redesenha a sala de mesas imediatamente
+      if (typeof renderTablesScreen === "function") {
+        renderTablesScreen();
+      }
+
+      return;
+    }
+
+
+      
 // 1) hello
 if (msg.type === "hello") {
   myClientId = msg.payload?.clientId || null;
@@ -162,7 +221,6 @@ if (msg.type === "table_public") {
 // 2) joined
 if (msg.type === "joined") {
   const { tableId, mode, seat, reconnectToken } = msg.payload || {};
-
   // ✅ Se estava tentando assistir outra mesa e chegou joined antigo, ignora
   if (
     mode === "spectator" &&
@@ -173,11 +231,60 @@ if (msg.type === "joined") {
 return;
   }
 
+  // Se o espectador está mudando de mesa,
+  // limpa o estado visual deixado pela mesa anterior.
+  if (
+    mode === "spectator" &&
+    state.room?.id &&
+    String(state.room.id) !== String(tableId)
+  ) {
+    state.players = [];
+    state.lixo = [];
+    state.table = [];
+    state.deckCount = 0;
+
+    state.cartaVira = null;
+    state.coringaValor = "";
+    state.coringaNaipes = [];
+
+    state.currentSeat = null;
+    state.faseTurno = "WAITING";
+    state.turnEndsAt = 0;
+
+    state.started = false;
+    state.roundEnded = false;
+    state.winnerSeat = null;
+
+    state.selectedCards = [];
+  }
+
   state.room = state.room || {};
   state.room.id = tableId;
+  state.tableId = tableId;
 
   state.spectator = (mode === "spectator");
   state.mySeat = seat ?? null;
+
+  if (mode === "spectator") {
+  state.tableId = tableId;
+
+  // limpa qualquer estado visual da mesa assistida anteriormente
+  state.players = [];
+  state.table = [];
+  state.lixo = [];
+  state.deckCount = 0;
+  state.matchPot = 0;
+  state.pot = 0;
+
+  // limpa imediatamente os HUDs desktop da mesa anterior
+  document
+    .querySelectorAll("#desktopTableLayout .desktop-seat")
+    .forEach(el => {
+      el.innerHTML = "";
+      el.classList.add("empty");
+      el.classList.remove("is-current-turn");
+    });
+}
 
   // ✅ entrou de fato como espectador
   if (mode === "spectator") {
@@ -195,8 +302,13 @@ return;
   window.state = window.state || {};
   window.state.tables = window.state.tables || {};
   window.state.tables[tableId] = window.state.tables[tableId] || { id: tableId };
-if (mode === "spectator") {
+  if (mode === "spectator") {
     showScreen("game");
+
+    // redesenha imediatamente com o estado da nova mesa,
+    // evitando manter o DOM da mesa assistida anteriormente
+    renderAll();
+
     updateSpectatorUI();
   } else {
     showScreen("tables");
@@ -212,6 +324,16 @@ if (mode === "spectator") {
 if (msg.type === "state_public") {
   const pub = msg.payload || {};
 
+  // Não deixa estado de outra mesa contaminar
+  // a mesa em que este cliente está.
+  if (
+    state.room?.id &&
+    pub.tableId &&
+    String(pub.tableId) !== String(state.room.id)
+  ) {
+    return;
+  }
+
   if (state.room === null && state.spectator === false) {
 return;
   }
@@ -219,15 +341,15 @@ return;
   if (
     ignoredRoomAfterSpectatorExit &&
     pub.tableId === ignoredRoomAfterSpectatorExit &&
-    state.room === null &&
+    state.room &&
     state.spectator === false
   ) {
 return;
   }
 
   state.tableId = pub.tableId || state.tableId;
-  state.matchPot = Number(pub.matchPot) || state.matchPot || 0;
-
+  state.matchPot = Number(pub.matchPot) || 0;
+  state.pot = state.matchPot;
   // Cachetão Pro - Vira / Coringa da rodada
   state.cartaVira = pub.cartaVira || null;
 
@@ -348,8 +470,48 @@ state.currentSeat = Number(pub.currentSeat) || 0;
   state.selectedCards = [];
 
   // lixo / mesa / deck
-const oldDiscardId = state.lixo?.[0]?.id ? String(state.lixo[0].id) : null;
-const newDiscardId = pub.discardTop?.id ? String(pub.discardTop.id) : null;
+  const oldDiscardId = state.lixo?.[0]?.id ? String(state.lixo[0].id) : null;
+  const newDiscardId = pub.discardTop?.id ? String(pub.discardTop.id) : null;
+  // =========================================================
+  // IDENTIFICA SE ESTE STATE TROUXE UMA NOVA COMPRA
+  // =========================================================
+  const incomingDrawSeq =
+    Number(pub.lastDrawSeq) || 0;
+
+  const previousDrawSeq =
+    Number(state.lastHudDrawSeq) || 0;
+
+  if (
+    incomingDrawSeq > 0 &&
+    incomingDrawSeq !== previousDrawSeq &&
+    pub.lastDrawSeat &&
+    pub.lastDrawSource &&
+    Number(pub.lastDrawSeat) !== Number(state.mySeat)
+  ) {
+    state.lastHudDrawSeq = incomingDrawSeq;
+
+
+    console.log("[BOT-DRAW APP] evento recebido", {
+  lastDrawSeat: pub.lastDrawSeat,
+  lastDrawSource: pub.lastDrawSource,
+  lastDrawSeq: pub.lastDrawSeq,
+  previousSeq: state.lastHudDrawSeq
+});
+
+    state.pendingHudDrawAnim = {
+      seat: Number(pub.lastDrawSeat),
+      source: String(pub.lastDrawSource),
+      card: pub.lastDrawCard || null
+    };
+
+
+    console.log(
+  "[BOT-DRAW APP] pending criado",
+  state.pendingHudDrawAnim
+);
+
+
+  }
 
 if (newDiscardId && oldDiscardId !== newDiscardId) {
   state.pendingDiscardFlyAnim = {
@@ -531,13 +693,24 @@ if (state.room?.id) {
   }
 
   // ✅ só entra no jogo quando a mesa começou E não está em matchEnded
-if (pub.started && !pub.matchEnded) {
-  showScreen("game");
-  renderAll();
-  playPendingHandToTableAnimation?.();
+  if (pub.started && !pub.matchEnded) {
+    showScreen("game");
+    renderAll();
+    playPendingHudDrawAnimation?.();
+    playPendingHandToTableAnimation?.();
 
-// se a partida acabou, mas estou na tela de mesas, NÃO reabre overlay
+  // se a partida acabou, mas estou na tela de mesas, NÃO reabre overlay
   } else {
+
+    // ESPECTADOR:
+    // mesmo uma mesa vazia precisa ser renderizada,
+    // senão fica visualmente a mesa assistida anteriormente.
+    if (state.spectator) {
+      showScreen("game");
+      renderAll();
+      return;
+    }
+
     const tables = document.getElementById("tablesScreen");
     const game = document.getElementById("game");
 
@@ -564,7 +737,7 @@ if (pub.started && !pub.matchEnded) {
 if (msg.type === "state_private") {
   const payload = msg.payload || {};
 
-  if (state.room === null && state.spectator === false) {
+  if (!state.room && state.spectator === false) {
     return;
   }
 
@@ -1048,6 +1221,7 @@ window.backToTables = function backToTables() {
 
   // limpa estado local
   state.room = null;
+  state.tableId = null;
   state.selectedSeat = null;
   state.mySeat = null;
   state.spectator = false;
@@ -1132,6 +1306,13 @@ window.alert = function (message) {
 
 function updateSpectatorUI() {
   const isSpectator = !!state.spectator;
+
+  // Espectador não possui mão para ordenar
+  const sortPanel = document.getElementById("sortPanel");
+
+  if (sortPanel) {
+    sortPanel.style.display = isSpectator ? "none" : "";
+  }
 
   // scoreboard
   const scoreboard = document.getElementById("scoreboard");
@@ -1292,8 +1473,6 @@ async function validateCurrentSession() {
 
   connectWS();
   renderTablesScreen();
-  renderHomeLiveTables();
-  bindHomeLiveTables();
   showScreen("home");
 
   setTimeout(() => {
@@ -1598,95 +1777,7 @@ function bindHomeButtons() {
 }
 
 
-function renderHomeLiveTables() {
-  const el = document.getElementById("homeLiveTables");
-  if (!el) return;
 
-  const tables = Object.values(state.tables || {}).slice(0, 3);
-  // Mudar para mesas reais
-
-//delete esse bloco depois
-  //até aqui
-
-
-  if (!tables.length) {
-    el.innerHTML = `
-      <div class="home-live-empty">
-        Nenhuma mesa aberta no momento.
-      </div>
-    `;
-    return;
-  }
-
-  el.innerHTML = tables.map((t, index) => {
-    const seated = Number(t.seatedCount ?? t.playersCount ?? 0);
-    const max = Number(t.maxSeats ?? 10);
-    const stake = Number(
-      t.stake ??
-      t.mesaValor ??
-      t.tableValue ??
-      ((Number(t.buyIn) || 100) * 10)
-    );
-
-    const variant = String(t.variant || "CLASSIC").toUpperCase();
-    const tableName = t.name || `Mesa ${index + 1}`;
-
-    const seatsHtml = Array.from({ length: 10 }).map((_, i) => {
-      const seatNum = i + 1;
-      const occupied = seatNum <= seated;
-
-      return `
-        <div class="home-live-seat home-live-seat-${seatNum} ${occupied ? "occupied" : ""}">
-          ${occupied ? `<img src="/assets/avatars/avatar-01.png" alt="Jogador">` : ""}
-        </div>
-      `;
-    }).join("");
-
-    return `
-      <div class="home-live-card-visual" data-variant="${variant}">
-        <div class="home-live-count">👥 ${seated}/${max}</div>
-
-        <div class="home-live-table-visual">
-          <div class="home-live-table-felt"></div>
-          ${seatsHtml}
-        </div>
-
-        <div class="home-live-name">${tableName}</div>
-        <div class="home-live-stake">
-          Aposta: <strong>${stake.toLocaleString("pt-BR")}</strong>
-        </div>
-
-        <button type="button" class="home-live-watch">Assistir</button>
-      </div>
-    `;
-  }).join("");
-}
-
-function bindHomeLiveTables() {
-  const el = document.getElementById("homeLiveTables");
-  if (!el) return;
-
-  el.onclick = (ev) => {
-  const btn = ev.target.closest(".home-live-watch");
-  if (!btn) return;
-
-  const card = btn.closest(".home-live-card-visual");
-  const variant = card?.dataset?.variant || "CLASSIC";
-
-  // opcional: exigir login até para assistir
-  const user = JSON.parse(localStorage.getItem("pontinhoAuthUser") || "null");
-
-  if (!user) {
-    alert("Faça login para assistir às mesas.");
-    window.location.href = "./login.html";
-    return;
-  }
-
-  state.selectedVariant = variant;
-  renderTablesScreen();
-  showScreen("tables");
-  };
-}
 
 async function refreshHomeUser() {
   const homeUserName = document.getElementById("homeUserName");
@@ -2178,7 +2269,7 @@ socket.send(JSON.stringify({
       ignoredRoomAfterSpectatorExit = null;
 
       socket.send(JSON.stringify({
-        type: "joinTable",
+        type: "joinSpectatorTableGroup",
         payload: { tableId: t.id, mode: "spectator", name: nome }
       }));
     };

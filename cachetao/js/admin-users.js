@@ -1,6 +1,6 @@
 const API_BASE =
   window.location.hostname === "localhost"
-    ? "http://localhost:3001/api"
+    ? "http://localhost:3003/api"
     : "/api";
 
 let allAdminUsers = [];
@@ -219,7 +219,7 @@ async function handleResetPassword(userId, username) {
 
   try {
     setMsg("Redefinindo senha...");
-    const data = await adminPost(`${API_BASE}/admin/users/${userId}/reset-password`, {
+    const data = await adminPost(`${API_BASE}/auth/admin/users/${userId}/reset-password`, {
       newPassword: newPassword.trim(),
     });
     setMsg(`${data.message || "Senha redefinida com sucesso."} Senha temporária definida.`);
@@ -240,7 +240,20 @@ async function handleEndSessions(userId) {
   }
 }
 
+function isDeletedUser(user) {
+  return (
+    user?.blocked_reason === "Conta excluída pelo usuário" ||
+    /^usuario_excluido_\d+$/.test(String(user?.username || "")) ||
+    /^deleted_\d+@deleted\.invalid$/i.test(String(user?.email || ""))
+  );
+}
+
+
 function buildStatusHtml(user) {
+  if (isDeletedUser(user)) {
+    return `<span style="color:#ffb3b3;font-weight:700;">Excluída</span>`;
+  }
+
   if (isBlockedUser(user)) {
     const reason = user?.blocked_reason ? ` • ${user.blocked_reason}` : "";
     return `<span style="color:#ffb3b3;font-weight:700;">Bloqueado${reason}</span>`;
@@ -250,6 +263,9 @@ function buildStatusHtml(user) {
 }
 
 function buildActionsHtml(user) {
+  if (isDeletedUser(user)) {
+    return "—";
+  }
   const blocked = isBlockedUser(user);
 
   return `
@@ -284,18 +300,20 @@ function renderUsers(users) {
       ? `<span class="admin-pill">Administrador</span>`
       : `<span class="user-pill">Usuário</span>`;
 
-    return `
-      <tr>
-        <td>${user.id ?? "—"}</td>
-        <td>${user.username ?? "—"}</td>
-        <td>${user.email ?? "—"}</td>
-        <td>${buildStatusHtml(user)}</td>
-        <td>${formatBalance(user.chipsBalance)}</td>
-        <td>${profileHtml}</td>
-        <td>${formatDate(user.createdAt)}</td>
-        <td>${buildActionsHtml(user)}</td>
-      </tr>
-    `;
+    const deleted = isDeletedUser(user);
+
+      return `
+        <tr>
+          <td>${user.id ?? "—"}</td>
+          <td>${deleted ? "Excluído" : (user.username ?? "—")}</td>
+          <td>${deleted ? "—" : (user.email ?? "—")}</td>
+          <td>${buildStatusHtml(user)}</td>
+          <td>${deleted ? "0" : formatBalance(user.chipsBalance)}</td>
+          <td>${profileHtml}</td>
+          <td>${formatDate(user.createdAt)}</td>
+          <td>${buildActionsHtml(user)}</td>
+        </tr>
+      `;
   }).join("");
 
   bindRowActions();

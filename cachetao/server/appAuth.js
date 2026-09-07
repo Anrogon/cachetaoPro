@@ -22,8 +22,12 @@ app.use("/api/admin/finance", adminFinanceRoutes);
 
 app.get("/api/health", async (req, res) => {
   try {
-    await pool.query("SELECT 1");
-    return res.json({ ok: true, db: "up" });
+    const result = await pool.query("SELECT current_database() AS database");
+    return res.json({
+      ok: true,
+      db: "up",
+      database: result.rows[0].database
+    });
   } catch (err) {
     console.error("Health check DB error:", err);
     return res.status(500).json({ ok: false, db: "down" });

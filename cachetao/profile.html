@@ -160,6 +160,17 @@ button{
   border:1px solid rgba(255,255,255,.18);
 }
 
+.danger{
+  background:#b42318;
+  color:#fff;
+  border:1px solid rgba(212,175,55,.30);
+}
+
+.danger:hover{
+  background:#d02b1f;
+  transform:translateY(-1px);
+}
+
 .msg{
   min-height:22px;
   margin-top:14px;
@@ -271,6 +282,28 @@ button{
 
       <div class="actions" style="margin-top:14px;">
         <button id="btnChangePassword" class="primary" type="button">Salvar nova senha</button>
+      </div>
+    </div>
+
+        <div class="password-wrap" style="margin-top:18px;">
+      <div class="password-title">Excluir conta</div>
+
+      <div class="profile-line">
+        A exclusão da conta é permanente e não poderá ser desfeita.
+      </div>
+
+      <div class="password-fields">
+        <input
+          type="password"
+          id="deleteAccountPassword"
+          placeholder="Digite sua senha para confirmar"
+        >
+      </div>
+
+      <div class="actions" style="margin-top:14px;">
+        <button id="btnDeleteAccount" class="danger" type="button">
+          Excluir minha conta
+        </button>
       </div>
     </div>
 

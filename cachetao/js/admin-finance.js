@@ -1,6 +1,6 @@
 const API_BASE =
   window.location.hostname === "localhost"
-    ? "http://localhost:3001/api"
+    ? "http://localhost:3003/api"
     : "/api";
 
 const financeMessage = document.getElementById("financeMessage");

@@ -26,7 +26,7 @@ import { state, currentPlayer } from "./state.js";
 export function getCardImage(card) {
   if (!card) {
     console.warn("⚠️ getCardImage recebeu carta inválida:", card);
-    return "assets/cards/back.png";
+    return "assets/cards/back-01.png";
   }
 
   if (card.isJoker) {
@@ -225,16 +225,25 @@ function playRoundWinSfxOnce(summary) {
 /**
  * Faz uma carta “voar” do elemento fromEl até toEl
  */
-export function flyCard({ fromEl, toEl, card, sfx = null, duration = 280 }) {
-  if (!fromEl || !toEl || !card) return;
+export function flyCard({
+  fromEl,
+  toEl,
+  card = null,
+  imageUrl = null,
+  sfx = null,
+  duration = 280,
+  className = ""
+}) {
+  if (!fromEl || !toEl) return;
+  if (!card && !imageUrl) return;
 
   const from = fromEl.getBoundingClientRect();
   const to = toEl.getBoundingClientRect();
 
-  const img = getCardImage(card);
+  const img = imageUrl || getCardImage(card);
 
   const clone = document.createElement("div");
-  clone.className = "flying-card";
+  clone.className = `flying-card ${className}`.trim();
   clone.style.backgroundImage = `url('${img}')`;
 
   // posição inicial
@@ -262,7 +271,8 @@ export function flyCard({ fromEl, toEl, card, sfx = null, duration = 280 }) {
   // dispara animação no próximo frame
   requestAnimationFrame(() => {
     clone.classList.add("done");
-    clone.style.transform = `translate3d(${dx}px, ${dy}px, 0) scale(.95)`;
+    clone.style.transform =
+    `translate3d(${dx}px, ${dy}px, 0) scale(.95)`;
   });
 
   // remove no fim
@@ -365,6 +375,64 @@ export function createCardElement(card, { selectable = false } = {}) {
 }
 
 
+let lastDealAnimationKey = "";
+let lastDealAnimatedCount = 0;
+let lastDealHudAnimationKey = "";
+let lastDealHudAnimatedCount = 0;
+
+function animateDealRoundToOtherPlayers(roundNumber) {
+  const monteEl = document.getElementById("monte");
+
+  if (!monteEl) return;
+
+  const s = getPublicStateSafe();
+
+  const players = getPlayersForMobileTable()
+    .filter(Boolean)
+    .filter(p => {
+      const seat = Number(p?.seat);
+
+      if (!seat) return false;
+
+      // minha própria mão já tem animação separada
+      if (seat === Number(s.mySeat ?? state.mySeat)) {
+        return false;
+      }
+
+      const handCount = Number(
+        p.handCount ??
+        p.cardsCount ??
+        p.handLength ??
+        p.cardCount ??
+        (Array.isArray(p.hand) ? p.hand.length : 0)
+      );
+
+      return handCount >= roundNumber;
+    })
+    .sort((a, b) => Number(a.seat) - Number(b.seat));
+
+  players.forEach((p, index) => {
+    const seat = Number(p.seat);
+
+    setTimeout(() => {
+      // confirma de novo porque o HUD pode ter sido renderizado
+      // entre o agendamento e a animação
+      const toEl = getHudCardsTargetBySeat(seat);
+
+      if (!toEl) return;
+
+      flyCard({
+        fromEl: monteEl,
+        toEl,
+        imageUrl: "assets/cards/back-01.png",
+        sfx: null,
+        duration: 280,
+        className: "deal-flying-card"
+      });
+    }, index * 100);
+  });
+}
+
 export function renderHand() {
   const handEl = document.getElementById("hand");
   handEl.innerHTML = "";
@@ -380,19 +448,88 @@ export function renderHand() {
     const total = player.hand.length;
     const dealMs = Number(state.dealMs) || 2200;
     const endAt = Number(state.dealEndsAt) || 0;
-    const elapsed = Math.max(0, dealMs - Math.max(0, endAt - Date.now()));
-    const stepMs = total > 0 ? Math.max(70, Math.floor(dealMs / total)) : 120;
-    const visibleCount = Math.min(total, Math.floor(elapsed / stepMs));
+
+    const elapsed = Math.max(
+      0,
+      dealMs - Math.max(0, endAt - Date.now())
+    );
+
+    const stepMs =
+      total > 0
+        ? Math.max(70, Math.floor(dealMs / total))
+        : 120;
+
+    const visibleCount = Math.min(
+      total,
+      Math.floor(elapsed / stepMs)
+    );
+
+    // dealEndsAt identifica esta distribuição.
+    // Mudou = começou uma nova distribuição.
+    const dealAnimationKey = String(endAt);
+
+    if (lastDealAnimationKey !== dealAnimationKey) {
+      lastDealAnimationKey = dealAnimationKey;
+      lastDealAnimatedCount = 0;
+    }
+
+    // nova distribuição = reinicia também
+    // o controle visual dos HUDs adversários
+    if (lastDealHudAnimationKey !== dealAnimationKey) {
+      lastDealHudAnimationKey = dealAnimationKey;
+      lastDealHudAnimatedCount = 0;
+    }
+
+    const monteEl = document.getElementById("monte");
 
     for (let i = 0; i < visibleCount; i++) {
       const div = document.createElement("div");
+
       div.className = "card";
-      div.style.backgroundImage = "url('assets/cards/back.png')";
+      div.style.backgroundImage = "url('assets/cards/back-01.png')";
       div.style.opacity = "0.98";
       div.style.transform = "translateY(-6px)";
       div.style.transition = "transform 120ms ease";
+
       handEl.appendChild(div);
+
+      // Esta posição acabou de receber uma carta.
+      // Faz o verso voar do monte até ela.
+      if (
+        i >= lastDealAnimatedCount &&
+        monteEl
+      ) {
+        requestAnimationFrame(() => {
+          flyCard({
+            fromEl: monteEl,
+            toEl: div,
+            imageUrl: "assets/cards/back-01.png",
+            sfx: null,
+            duration: 280,
+            className: "deal-flying-card"
+          });
+        });
+      }
     }
+
+      // Cada novo "nível" da mão representa mais uma
+      // rodada de distribuição para a mesa inteira.
+      if (visibleCount > lastDealHudAnimatedCount) {
+        for (
+          let round = lastDealHudAnimatedCount + 1;
+          round <= visibleCount;
+          round++
+        ) {
+          animateDealRoundToOtherPlayers(round);
+        }
+
+        lastDealHudAnimatedCount = visibleCount;
+      }
+
+    lastDealAnimatedCount = Math.max(
+      lastDealAnimatedCount,
+      visibleCount
+    );
 
     return;
   }
@@ -931,7 +1068,7 @@ export function playPendingHandToTableAnimation() {
       ghost.style.zIndex = "99999";
       ghost.style.borderRadius = "10px";
       ghost.style.boxShadow = "0 10px 24px rgba(0,0,0,0.28)";
-      ghost.style.backgroundImage = "url('./assets/cards/back.png')";
+      ghost.style.backgroundImage = "url('./assets/cards/back-01.png')";
       ghost.style.backgroundSize = "cover";
       ghost.style.backgroundPosition = "center";
       ghost.style.backgroundRepeat = "no-repeat";
@@ -974,7 +1111,7 @@ export function playPendingHandToTableAnimation() {
 
 export function renderMonte() {
   const el = document.getElementById("monte");
-  el.style.backgroundImage = "url('./assets/cards/back.png')";
+  el.style.backgroundImage = "url('./assets/cards/back-01.png')";
   el.onclick = () => {
     comprarDoMonte(); // só 1 vez
     // no online, NÃO precisa renderAll()
@@ -1662,6 +1799,12 @@ if (correrBtn) {
 
 function isMobilePortraitTable() {
   return window.matchMedia("(max-width: 768px) and (orientation: portrait)").matches;
+}
+
+function isMobileLandscapeTable() {
+  return window.matchMedia(
+    "(max-width: 900px) and (orientation: landscape)"
+  ).matches;
 }
 
 const mobilePortraitMediaQuery = window.matchMedia(
@@ -3084,3 +3227,174 @@ export function renderRebuyButton() {
   }
 }
 
+
+function getHudCardsTargetBySeat(seat) {
+  const seatNum = Number(seat);
+
+  if (!seatNum) return null;
+
+  // Landscape
+  if (isMobileLandscapeTable()) {
+    return document.querySelector(
+      `#mobileLandscapeTableLayout
+       [data-landscape-seat="${seatNum}"]
+       .landscape-seat-cards`
+    );
+  }
+
+  // Portrait
+  if (isMobilePortraitTable()) {
+    return document.querySelector(
+      `#mobileTableLayout
+       [data-seat-pos="${seatNum}"]
+       .mobile-seat-cards`
+    );
+  }
+
+  // Desktop
+  return document.querySelector(
+    `#desktopTableLayout
+     [data-seat-pos="${seatNum}"]
+     .desktop-seat-cards`
+  );
+}
+
+function animateHudCardMovement({
+  fromEl,
+  toEl,
+  card,
+  duration = 650,
+  faceDown = false,
+  onComplete = null
+}) {
+  if (!fromEl || !toEl) return;
+
+  const from = fromEl.getBoundingClientRect();
+  const to = toEl.getBoundingClientRect();
+
+  if (
+    from.width <= 0 ||
+    from.height <= 0 ||
+    to.width <= 0 ||
+    to.height <= 0
+  ) {
+    return;
+  }
+
+  const ghost = document.createElement("div");
+  ghost.className = "hud-card-flight";
+
+  ghost.style.backgroundImage = faceDown
+    ? "url('./assets/cards/back-01.png')"
+    : `url('${getCardImage(card)}')`;
+
+  const sourceCard =
+    fromEl.querySelector?.(
+      ".mini-card, .mobile-mini-card, .landscape-mini-card"
+    );
+
+  const sourceRect =
+    sourceCard?.getBoundingClientRect?.();
+
+  const startWidth =
+    sourceRect?.width || 22;
+
+  const startHeight =
+    sourceRect?.height || 34;
+
+  const targetCard =
+    toEl.querySelector?.(
+      ".mini-card, .mobile-mini-card, .landscape-mini-card"
+    );
+
+  const targetRect =
+    targetCard?.getBoundingClientRect?.();
+
+  const endWidth =
+    (targetRect?.width || startWidth) * 2;
+
+  const endHeight =
+    (targetRect?.height || startHeight) * 2;
+
+  const startX =
+    from.left +
+    from.width / 2 -
+    startWidth / 2;
+
+  const startY =
+    from.top +
+    from.height / 2 -
+    startHeight / 2;
+
+  const endX =
+    to.left +
+    to.width / 2 -
+    endWidth / 2;
+
+  const endY =
+    to.top +
+    to.height / 2 -
+    endHeight / 2;
+
+  ghost.style.left = `${startX}px`;
+  ghost.style.top = `${startY}px`;
+
+  ghost.style.width = `${startWidth}px`;
+  ghost.style.height = `${startHeight}px`;
+
+  document.body.appendChild(ghost);
+
+  ghost.getBoundingClientRect();
+
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      ghost.style.left = `${endX}px`;
+      ghost.style.top = `${endY}px`;
+
+      ghost.style.width = `${endWidth}px`;
+      ghost.style.height = `${endHeight}px`;
+    });
+  });
+
+  setTimeout(() => {
+    ghost.remove();
+
+    if (typeof onComplete === "function") {
+      onComplete();
+    }
+  }, duration + 50);
+}
+
+export function playPendingHudDrawAnimation() {
+  const fx = state.pendingHudDrawAnim;
+
+
+  if (!fx?.seat || !fx?.source) return;
+
+  const source = String(fx.source).toUpperCase();
+
+  // por enquanto, esta animação é para compra do monte
+  if (source !== "DECK") {
+    state.pendingHudDrawAnim = null;
+    return;
+  }
+
+  const fromEl = document.getElementById("monte");
+
+
+  if (!fromEl) return;
+
+  const toEl = getHudCardsTargetBySeat(fx.seat);
+
+  if (!toEl) return;
+
+  state.pendingHudDrawAnim = null;
+
+  flyCard({
+    fromEl,
+    toEl,
+    imageUrl: "./assets/cards/back-01.png",
+    sfx: "draw",
+    duration: 400
+  });
+}

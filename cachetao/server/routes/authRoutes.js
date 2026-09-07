@@ -375,63 +375,6 @@ router.post("/me/avatar", requireAuth, async (req, res) => {
   }
 });
 
-/*
-router.post("/change-password-required", requireAuth, async (req, res) => {
-  try {
-    const currentUser = await findUserById(req.auth.userId);
-
-    if (!currentUser) {
-      return res.status(404).json({
-        ok: false,
-        message: "Usuário não encontrado.",
-      });
-    }
-
-    const newPassword = String(req.body?.newPassword || "").trim();
-    const confirmPassword = String(req.body?.confirmPassword || "").trim();
-
-    if (!newPassword || newPassword.length < 4) {
-      return res.status(400).json({
-        ok: false,
-        message: "A nova senha deve ter pelo menos 4 caracteres.",
-      });
-    }
-
-    if (newPassword !== confirmPassword) {
-      return res.status(400).json({
-        ok: false,
-        message: "A confirmação de senha não confere.",
-      });
-    }
-
-    const passwordHash = await bcrypt.hash(newPassword, 10);
-
-    await pool.query(
-      `
-      UPDATE users
-      SET
-        password_hash = $2,
-        must_reset_password = false,
-        session_version = COALESCE(session_version, 1) + 1,
-        updated_at = NOW()
-      WHERE id = $1
-      `,
-      [currentUser.id, passwordHash]
-    );
-
-    return res.json({
-      ok: true,
-      message: "Senha alterada com sucesso. Faça login novamente.",
-    });
-  } catch (err) {
-    console.error("POST /change-password-required error:", err);
-    return res.status(500).json({
-      ok: false,
-      message: "Erro ao alterar senha.",
-    });
-  }
-});
-*/
 
 router.post("/me/change-password", requireAuth, async (req, res) => {
   try {
@@ -514,6 +457,178 @@ router.post("/me/change-password", requireAuth, async (req, res) => {
     });
   }
 });
+
+router.post("/me/delete-account", requireAuth, async (req, res) => {
+  const client = await pool.connect();
+
+  try {
+    const currentPassword = String(req.body?.currentPassword || "");
+
+    if (!currentPassword) {
+      return res.status(400).json({
+        ok: false,
+        message: "Digite sua senha atual para confirmar a exclusão da conta.",
+      });
+    }
+
+    await client.query("BEGIN");
+
+    const resultUser = await client.query(
+      `
+      SELECT
+        id,
+        username,
+        email,
+        password_hash,
+        is_admin,
+        is_blocked,
+        blocked_reason
+      FROM users
+      WHERE id = $1
+      LIMIT 1
+      FOR UPDATE
+      `,
+      [req.auth.userId]
+    );
+
+    const user = resultUser.rows[0];
+
+    if (!user) {
+      await client.query("ROLLBACK");
+
+      return res.status(404).json({
+        ok: false,
+        message: "Usuário não encontrado.",
+      });
+    }
+
+    // Conta administrativa não pode ser excluída por este fluxo.
+    if (user.is_admin === true) {
+      await client.query("ROLLBACK");
+
+      return res.status(403).json({
+        ok: false,
+        message: "Contas administrativas não podem ser excluídas por este recurso.",
+      });
+    }
+
+    // Conta bloqueada por decisão administrativa não pode usar
+    // a exclusão para contornar uma punição.
+    if (user.is_blocked === true) {
+      await client.query("ROLLBACK");
+
+      return res.status(403).json({
+        ok: false,
+        message:
+          "Esta conta possui um bloqueio administrativo e não pode ser excluída automaticamente.",
+      });
+    }
+
+    const okPassword = await bcrypt.compare(
+      currentPassword,
+      user.password_hash
+    );
+
+    if (!okPassword) {
+      await client.query("ROLLBACK");
+
+      return res.status(401).json({
+        ok: false,
+        message: "Senha atual incorreta.",
+      });
+    }
+
+    const deletedUsername = `usuario_excluido_${user.id}`;
+    const deletedEmail = `deleted_${user.id}@deleted.invalid`;
+
+    // Gera uma senha aleatória que o antigo usuário nunca conhecerá.
+    const randomPassword =
+      `${Date.now()}_${Math.random()}_${user.id}_${user.email}`;
+
+    const deletedPasswordHash = await bcrypt.hash(randomPassword, 10);
+
+    // Remove dados de jogo/recompensas que não precisam permanecer.
+    // O histórico financeiro em wallet_transactions é preservado.
+    await client.query(
+      `
+      DELETE FROM lucky_card_sessions
+      WHERE user_id = $1
+      `,
+      [user.id]
+    );
+
+    await client.query(
+      `
+      DELETE FROM monthly_ranking
+      WHERE user_id = $1
+      `,
+      [user.id]
+    );
+
+    await client.query(
+      `
+      DELETE FROM reward_transactions
+      WHERE user_id = $1
+      `,
+      [user.id]
+    );
+
+    await client.query(
+      `
+      DELETE FROM user_reward_progress
+      WHERE user_id = $1
+      `,
+      [user.id]
+    );
+
+    await client.query(
+      `
+      UPDATE users
+      SET
+        username = $2,
+        email = $3,
+        password_hash = $4,
+        chips_balance = 0,
+        avatar_url = NULL,
+        is_blocked = true,
+        blocked_reason = 'Conta excluída pelo usuário',
+        must_reset_password = false,
+        session_version = COALESCE(session_version, 1) + 1,
+        updated_at = NOW()
+      WHERE id = $1
+      `,
+      [
+        user.id,
+        deletedUsername,
+        deletedEmail,
+        deletedPasswordHash,
+      ]
+    );
+
+    await client.query("COMMIT");
+
+    res.clearCookie("pontinho_token");
+
+    return res.json({
+      ok: true,
+      message: "Sua conta foi excluída com sucesso.",
+    });
+  } catch (err) {
+    try {
+      await client.query("ROLLBACK");
+    } catch (_) {}
+
+    console.error("POST /me/delete-account error:", err);
+
+    return res.status(500).json({
+      ok: false,
+      message: "Erro ao excluir conta.",
+    });
+  } finally {
+    client.release();
+  }
+});
+
 
 router.post("/change-password-required", requireAuth, async (req, res) => {
   try {
@@ -835,43 +950,7 @@ router.post("/admin/users/:id/unblock", requireAuth, requireAdmin, async (req, r
 });
 
 
-
-
 router.post("/admin/users/:id/reset-password", requireAuth, requireAdmin, async (req, res) => {
-  try {
-    const targetUserId = Number(req.params.id);
-    const newPassword = String(req.body?.newPassword || "").trim();
-
-    if (!targetUserId) {
-      return res.status(400).json({
-        ok: false,
-        message: "ID do usuário inválido.",
-      });
-    }
-
-    if (!newPassword || newPassword.length < 4) {
-      return res.status(400).json({
-        ok: false,
-        message: "Informe uma nova senha com pelo menos 4 caracteres.",
-      });
-    }
-
-    const passwordHash = await bcrypt.hash(newPassword, 10);
-
-    await pool.query(
-      `
-      UPDATE users
-      SET
-        password_hash = $2,
-        must_reset_password = true,
-        session_version = COALESCE(session_version, 1) + 1,
-        updated_at = NOW()
-      WHERE id = $1
-      `,
-      [targetUserId, passwordHash]
-    );
-
-    router.post("/admin/users/:id/reset-password", requireAuth, requireAdmin, async (req, res) => {
   try {
     const targetUserId = Number(req.params.id);
     const newPassword = String(req.body?.newPassword || "").trim();
@@ -933,18 +1012,7 @@ router.post("/admin/users/:id/reset-password", requireAuth, requireAdmin, async 
       message: "Erro ao redefinir senha.",
     });
   }
-  });
-
-  } catch (err) {
-    console.error("POST /admin/users/:id/reset-password error:", err);
-    return res.status(500).json({
-      ok: false,
-      message: "Erro ao redefinir senha.",
-    });
-  }
 });
-
-
 
 router.post("/admin/users/:id/end-sessions", requireAuth, requireAdmin, async (req, res) => {
   try {

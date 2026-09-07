@@ -51,6 +51,12 @@
   opacity: 1;
 }
 
+/* carta voadora menor somente durante a distribuição */
+.flying-card.deal-flying-card{
+  width: 40px;
+  height: 60px;
+}
+
 /* quando terminar */
 .flying-card.done{
   opacity: 0;
@@ -309,14 +315,14 @@
   }
 
   .desktop-seat-avatar {
-  position: relative;
-  width: 42px;
-  height: 42px;
-  flex: 0 0 42px;
-  border-radius: 50%;
-  border: 2px solid rgba(255, 215, 0, .72);
-  box-shadow: 0 0 8px rgba(255, 215, 0, .28);
-}
+    position: relative;
+    width: 42px;
+    height: 42px;
+    flex: 0 0 42px;
+    border-radius: 50%;
+    border: 2px solid rgba(255, 215, 0, .72);
+    box-shadow: 0 0 8px rgba(255, 215, 0, .28);
+  }
 
   .desktop-seat-name {
     font-size: 15px;
@@ -391,22 +397,47 @@
   }
 
   .dealer-chip-desktop {
-  position: absolute;
+    position: absolute;
 
-  width: 24px;
-  height: 24px;
+    width: 24px;
+    height: 24px;
 
-  right: -10px;
-  bottom: -6px;
+    right: -10px;
+    bottom: -6px;
 
-  font-size: 13px;
-  line-height: 1;
+    font-size: 13px;
+    line-height: 1;
 
-  z-index: 20;
+    z-index: 20;
+  }
 }
+
+.hud-card-flight {
+  position: fixed;
+  margin: 0;
+  padding: 0;
+  border-radius: 4px;
+  background-size: 100% 100%;
+  background-position: center;
+  background-repeat: no-repeat;
+  box-shadow:
+    0 5px 14px rgba(0,0,0,.35);
+  pointer-events: none;
+  z-index: 100000;
+  opacity: 1;
+  will-change:
+    left,
+    top,
+    width,
+    height;
+  transition-property:
+    left,
+    top,
+    width,
+    height;
+  transition-duration: 650ms;
+  transition-timing-function: ease;
 }
-
-
 
 
 
@@ -428,7 +459,7 @@
 
   border-radius: 4px;
 
-  background-image: url("/assets/image/card-back.png");
+  background-image: url("/assets/cards/back-01.png");
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;

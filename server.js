@@ -486,6 +486,7 @@ if (cartasDevolvidas > 0) {
   scheduleAutoTurn(room);
 }
 
+
 function advanceCachetaoDecisionTurn(room) {
   if (!room || room.phase !== "DECISAO_PARTICIPAR") return;
 
@@ -1817,6 +1818,21 @@ function mandarParaRebuyCachetao(room, player) {
   player.hand = [];
   player.jogosBaixados = [];
 
+    // BOT não participa de rebuy.
+  // Quando eliminado, permanece apenas como eliminado
+  // até ser removido da mesa no fim da partida.
+  if (player.isBot === true) {
+    player.pendingRebuy = false;
+    player.rebuyDeclined = true;
+
+    console.log("[BOT] eliminado sem rebuy", {
+      roomId: room.id,
+      name: player.name
+    });
+
+    return;
+  }
+
   const rebuyCount = Number(player.rebuyCount) || 0;
   const cost = Number(getRebuyCost(room, player)) || 0;
   const chips = Number(player.chips) || 0;
@@ -1828,34 +1844,9 @@ function mandarParaRebuyCachetao(room, player) {
     !todosVivosNaMarra(room)
   ) {
     player.pendingRebuy = false;
-
-console.log("[CACHEIPRO REBUY ABRIU]", {
-  player: player.name,
-  vidas: player.vidas,
-  rebuyCount: player.rebuyCount,
-  cost,
-  chips,
-  rebuyDecisionUntil: room.rebuyDecisionUntil
-});
-
     player.rebuyDeclined = false;
     return;
   }
-
-    console.log("[CACHEIPRO REBUY NÃO ABRIU]", {
-      player: player.name,
-      rebuyCount,
-      motivo:
-        rebuyCount >= 3
-          ? "Limite de 3 rebuys atingido"
-          : todosVivosNaMarra(room)
-          ? "Todos os jogadores vivos estão na Marra"
-          : chips < cost
-          ? "Saldo insuficiente"
-          : "Outro motivo",
-      chips
-    });
-
 
   player.pendingRebuy = false;
   player.rebuyDeclined = true;
@@ -3193,6 +3184,23 @@ function finalizeMatchEconomy(room) {
       } : null
     )
   });
+
+    // =====================================================
+  // REMOVE BOTS AO FINAL DA PARTIDA
+  // =====================================================
+  for (let i = 0; i < room.playersBySeat.length; i++) {
+    const p = room.playersBySeat[i];
+
+    if (p?.isBot === true) {
+      console.log("[BOT] removido ao final da partida", {
+        roomId: room.id,
+        seat: i + 1,
+        name: p.name
+      });
+
+      room.playersBySeat[i] = null;
+    }
+  }
 }
 
 function sendState(roomId) {
@@ -3223,6 +3231,15 @@ function sendState(roomId) {
     /*rematchRequestedBySeat: room.rematchRequestedBySeat || null,*/
     deckCount: room.deck.length,
     discardTop: room.discard?.[room.discard.length - 1] || null,
+    lastDiscardSeat: Number(room.lastDiscardSeat) || null,
+    lastDrawSeat: Number(room.lastDrawSeat) || null,
+    lastDrawSource: room.lastDrawSource || null,
+    lastDrawSeq: Number(room.lastDrawSeq) || 0,
+    lastDrawCard:
+      room.lastDrawSource === "DISCARD"
+        ? (room.lastDrawCard || null)
+        : null,
+
     cartaVira: room.cartaVira || null,
     viraDisponivelParaJogar: !!room.viraDisponivelParaJogar,
     primeiroCompradorSeat: Number(room.primeiroCompradorSeat) || 0,
@@ -3806,6 +3823,12 @@ function handleDrawDeckAction(room, player, playerSeat) {
 
   player.hand = player.hand || [];
   player.hand.push(card);
+  room.lastDrawSeat = Number(playerSeat) || null;
+  room.lastDrawSource = "DECK";
+  room.lastDrawCard = null;
+  room.lastDrawSeq =
+    (Number(room.lastDrawSeq) || 0) + 1;
+
 
   // se este era o jogador bloqueado do lixo e escolheu comprar do monte,
   // a trava anti-"3 cantos" se encerra
@@ -3979,12 +4002,108 @@ function refreshStartCountdown(room) {
   const count = connectedSeatedCount(room);
 
   if (count < minPlayers) {
+
     resetStartCountdown(room);
+
     clearAutoTurnTimer(room);
+
     room.turnEndsAt = 0;
+
     room._autoTurnSeat = null;
+
     room.buyEndsAt = 0;
+
+    // =====================================================
+    // BOT PARA COMPLETAR O MÍNIMO DA MESA
+    // Cachetão Pro:
+    // - entram 4 humanos
+    // - aguarda 5 segundos pelo quinto humano
+    // - se ninguém entrar, completa com 1 bot
+    // =====================================================
+
+    const seatedPlayers =
+      (room.playersBySeat || []).filter(Boolean);
+
+    const humanPlayers =
+      seatedPlayers.filter(p => !p.isBot);
+
+    if (
+      humanPlayers.length === 4 &&
+      count === 4 &&
+      minPlayers === 5
+    ) {
+
+      if (!room._botJoinTimer) {
+
+        console.log("[BOT] aguardando quinto jogador humano", {
+          roomId: room.id
+        });
+
+        room._botJoinTimer = setTimeout(() => {
+          room._botJoinTimer = null;
+
+          // revalida a situação após os 10 segundos
+          if (!room) return;
+          if (room.started && !room.matchEnded) return;
+
+          const currentCount =
+            connectedSeatedCount(room);
+
+          const currentHumans =
+            (room.playersBySeat || [])
+              .filter(Boolean)
+              .filter(p => !p.isBot);
+
+          // entrou um humano enquanto o bot aguardava
+          if (
+            currentCount >= minPlayers ||
+            currentHumans.length !== 4
+          ) {
+            return;
+          }
+
+          const freeSeatIndex =
+            (room.playersBySeat || [])
+              .findIndex(p => !p);
+
+          if (freeSeatIndex === -1) {
+            return;
+          }
+
+          const botSeat = freeSeatIndex + 1;
+
+          const bot =
+            createBotForSeat(room, botSeat);
+
+          if (!bot) {
+            return;
+          }
+
+          broadcastRoomState(room);
+          broadcastLobbyTable(room);
+
+          // agora existem 5 jogadores;
+          // deixa o fluxo normal iniciar o countdown
+          refreshStartCountdown(room);
+
+        }, 10000);
+      }
+
+    } else {
+
+      // a condição mudou antes do bot entrar
+      if (room._botJoinTimer) {
+        clearTimeout(room._botJoinTimer);
+        room._botJoinTimer = null;
+      }
+    }
+
     return;
+  }
+
+  if (room._botJoinTimer) {
+    clearTimeout(room._botJoinTimer);
+    room._botJoinTimer = null;
   }
 
   if (!room.startAt) {
@@ -4000,7 +4119,78 @@ function seatedCount(room) {
   return room.playersBySeat.filter(Boolean).length;
 }
 
+function createBotForSeat(room, seat) {
+  if (!room) return null;
 
+  const s = Number(seat);
+
+  if (!(s >= 1 && s <= 10)) {
+    return null;
+  }
+
+  if (room.playersBySeat?.[s - 1]) {
+    return null;
+  }
+
+  const buyIn = Number(room.buyIn) || 0;
+  const mesaStack = buyIn * 10;
+  const mesaStackLiquido = mesaStack - buyIn;
+
+  const botNumber =
+    (room.playersBySeat || []).filter(p => p?.isBot).length + 1;
+
+  const bot = {
+    clientId: null,
+    userId: null,
+
+    isBot: true,
+
+    reconnectToken: null,
+
+    name: `Visitante ${botNumber}`,
+    avatarUrl: "/assets/avatars/avatar-01.png",
+
+    chips: 0,
+    tableChips: mesaStackLiquido,
+
+    hand: [],
+
+    // Cachetão Pro
+    vidas: 10,
+    participando: false,
+    passouRodada: false,
+    marrou: false,
+
+    // compatibilidade
+    totalPoints: 0,
+    lastRoundPoints: 0,
+
+    eliminated: false,
+
+    rebuyCount: 0,
+    pendingRebuy: false,
+    rebuyDeclined: false,
+    pendingBatidaAfterDiscard: false,
+
+    disconnected: false,
+    nextMatchReady: true,
+    disconnectDeadline: 0,
+    disconnectTimer: null,
+
+    jogosBaixados: [],
+    obrigacaoBaixar: false
+  };
+
+  room.playersBySeat[s - 1] = bot;
+
+  console.log("[BOT] entrou na mesa", {
+    roomId: room.id,
+    seat: s,
+    name: bot.name
+  });
+
+  return bot;
+}
 
 
 
@@ -4373,15 +4563,45 @@ function getBuyDurationMs(room) {
 }
 
 function startTurnClock(room) {
-  const now = Date.now();
-  const turnMs = Number(room.turnMs) > 0 ? Number(room.turnMs) : 30000;
-  const buyMs = Number(room.buyMs) > 0 ? Number(room.buyMs) : 15000;
 
-  room.turnMs = turnMs;
-  room.buyMs = buyMs;
+  const now = Date.now();
+
+  const currentSeat = room.currentSeat;
+
+  const currentPlayer = currentSeat
+    ? room.playersBySeat?.[currentSeat - 1]
+    : null;
+
+  const isFastAutoPlayer =
+    !!currentPlayer &&
+    (
+      currentPlayer.isBot === true ||
+      currentPlayer.disconnected === true
+    );
+
+  const normalTurnMs =
+    Number(room.turnMs) > 0
+      ? Number(room.turnMs)
+      : 30000;
+
+  const normalBuyMs =
+    Number(room.buyMs) > 0
+      ? Number(room.buyMs)
+      : 15000;
+
+  const turnMs =
+    isFastAutoPlayer
+      ? 15000
+      : normalTurnMs;
+
+  const buyMs =
+    isFastAutoPlayer
+      ? 10000
+      : normalBuyMs;
+
   room.turnEndsAt = now + turnMs;
   room.buyEndsAt = now + buyMs;
-  room._autoTurnSeat = room.currentSeat || null;
+  room._autoTurnSeat = currentSeat || null;
 }
 
 
@@ -4429,12 +4649,50 @@ function scheduleAutoTurn(room) {
   const current = room.playersBySeat?.[seat - 1];
   if (!current || current.eliminated) return;
 
+    // =====================================================
+    // BOT — decisão automática no Cachetão Pro
+    // Fora da Marra: corre.
+    // Na Marra: joga.
+    // A decisão em si continua centralizada em
+    // autoDecideCachetaoParticipation().
+    // =====================================================
+    if (
+      room.phase === "DECISAO_PARTICIPAR" &&
+      current.isBot === true
+    ) {
+      room._autoTurnTimer = setTimeout(() => {
+        room._autoTurnTimer = null;
+
+        if (!room || !room.started || room.roundEnded) return;
+        if (room.phase !== "DECISAO_PARTICIPAR") return;
+        if (room.currentSeat !== seat) return;
+
+        const botNow = room.playersBySeat?.[seat - 1];
+
+        if (!botNow || botNow.eliminated || botNow.isBot !== true) {
+          return;
+        }
+
+        autoDecideCachetaoParticipation(room);
+
+      }, 1500);
+
+      return;
+    }
+
   const now = Date.now();
 
-  // só cria novo relógio quando muda o jogador do turno
-  if (room._autoTurnSeat !== seat || !room.turnEndsAt || room.turnEndsAt <= now) {
-    startTurnClock(room);
-  }
+    // só cria novo relógio quando muda o jogador do turno
+    if (room._autoTurnSeat !== seat || !room.turnEndsAt || room.turnEndsAt <= now) {
+
+      if (
+        room._autoTurnSeat !== seat ||
+        !room.turnEndsAt ||
+        room.turnEndsAt <= now
+      ) {
+        startTurnClock(room);
+      }
+    }
 
   let deadline = room.turnEndsAt;
 
@@ -4465,17 +4723,22 @@ function scheduleAutoTurn(room) {
     }
     // 1) Se ainda está em COMPRAR e bateu 15s, compra automático
     if (room.phase === "COMPRAR" && room.buyEndsAt && now2 >= room.buyEndsAt) {
-      const bought = room.deck.pop();
-      if (bought) {
-        currentNow.hand.push(bought);
+      const err = handleDrawDeckAction(
+        room,
+        currentNow,
+        seatNow
+      );
+
+      if (err) {
+        console.log("[BOT] erro na compra automática", err);
       }
 
-      room.phase = "BAIXAR";
+      if (room?.id) {
+        sendState(room.id);
+      }
 
-      // mantém o mesmo turnEndsAt; só encerra a janela de compra
-      room.buyEndsAt = 0;
-
-      if (room?.id) sendState(room.id);
+      scheduleAutoTurn(room);
+      return;
       scheduleAutoTurn(room);
       return;
     }
@@ -4485,13 +4748,24 @@ function scheduleAutoTurn(room) {
         room.turnEndsAt && now2 >= room.turnEndsAt) {
 
       // se ainda estava em COMPRAR e venceu o total, compra antes de descartar
-      if (room.phase === "COMPRAR") {
-        const bought = room.deck.pop();
-        if (bought) {
-          currentNow.hand.push(bought);
-        }
-        room.phase = "BAIXAR";
+    if (room.phase === "COMPRAR") {
+
+      const bought = room.deck.pop();
+
+      if (bought) {
+
+        currentNow.hand.push(bought);
+
+        // informa aos clientes que este jogador comprou do monte
+        room.lastDrawSeat = Number(seatNow) || null;
+        room.lastDrawSource = "DECK";
+        room.lastDrawCard = null;
+        room.lastDrawSeq =
+          (Number(room.lastDrawSeq) || 0) + 1;
       }
+
+      room.phase = "BAIXAR";
+    }
 
       revertPendingJokerReturn?.(room, seatNow, currentNow);
 
@@ -4501,6 +4775,7 @@ function scheduleAutoTurn(room) {
         const card = currentNow.hand.splice(idx, 1)[0];
         if (card) {
           room.discard.push(card);
+          room.lastDiscardSeat = Number(seatNow) || null;
 
           const requiredDiscard = room.mustUseDiscardCardBySeat?.[seatNow];
           if (requiredDiscard != null && String(card.id) === String(requiredDiscard)) {
@@ -6091,6 +6366,64 @@ if (msg.type === "leaveTable") {
   return;
 }
 
+// -------------------------
+// JOIN SPECTATOR TABLE GROUP
+// Resolve a mesa real correspondente ao card clicado.
+// -------------------------
+if (msg.type === "joinSpectatorTableGroup") {
+
+  const payload = msg.payload || {};
+  const tableGroupId = String(payload.tableId || "");
+
+  if (!getBaseTableConfig(tableGroupId)) {
+    return send(ws, "error", {
+      message: "Mesa inválida."
+    });
+  }
+
+  let realRoom = null;
+
+  // 1) prioridade: partida ativa deste grupo
+  for (const room of rooms.values()) {
+    const groupId = String(
+      room.tableGroupId ||
+      room.baseTableId ||
+      room.id
+    );
+
+    if (groupId !== tableGroupId) continue;
+
+    if (room.started === true && room.matchEnded !== true) {
+      realRoom = room;
+      break;
+    }
+  }
+
+  // 2) se não houver partida ativa,
+  // usa a própria mesa mostrada no lobby
+  if (!realRoom) {
+    realRoom = getLobbyRoomForGroup(tableGroupId);
+  }
+
+  if (!realRoom) {
+    return send(ws, "error", {
+      message: "Não foi possível localizar esta mesa."
+    });
+  }
+
+  leaveCurrentTable(clientId);
+
+  joinAsSpectator(
+    realRoom,
+    c,
+    clientId,
+    realRoom.id,
+    ws
+  );
+
+  return;
+}
+
 
 // -------------------------
 // JOIN TABLE GROUP
@@ -6162,11 +6495,37 @@ if (msg.type === "joinTableGroup") {
 
   const s = Number(seat);
 
-  if (!(s >= 1 && s <= 10)) {
-    return send(ws, "error", { message: "Assento inválido." });
-  }
+      if (!(s >= 1 && s <= 10)) {
+        return send(ws, "error", { message: "Assento inválido." });
+      }
 
-  const existing = room.playersBySeat[s - 1];
+      // =====================================================
+      // HUMANO ENTRANDO DURANTE O COUNTDOWN:
+      // remove o bot para devolver a vaga a um jogador real
+      // =====================================================
+      if (!room.started && !room.matchEnded) {
+
+        const botIndex =
+          (room.playersBySeat || [])
+            .findIndex(p => p?.isBot === true);
+
+        if (botIndex !== -1) {
+
+          const bot = room.playersBySeat[botIndex];
+
+          console.log("[BOT] saiu para dar lugar a jogador humano", {
+            roomId: room.id,
+            seat: botIndex + 1,
+            name: bot?.name
+          });
+
+          room.playersBySeat[botIndex] = null;
+
+          resetStartCountdown(room);
+        }
+      }
+
+      const existing = room.playersBySeat[s - 1];
 
   // ===== RECONEXÃO / ASSENTO JÁ OCUPADO =====
   if (existing) {

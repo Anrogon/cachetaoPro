@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <title>Excluir Conta - Cachetão Pro</title>
+
+  <link rel="stylesheet" href="./css/reset.css">
+  <link rel="stylesheet" href="./css/layout.css">
+  <link rel="stylesheet" href="./css/pages.css">
+
+  <style>
+    .delete-page {
+      width: min(92vw, 760px);
+      margin: 0 auto;
+      padding: 50px 20px;
+      color: #fff;
+      text-align: left;
+    }
+
+    .delete-title {
+      text-align: center;
+      margin-bottom: 10px;
+    }
+
+    .delete-subtitle {
+      text-align: center;
+      color: #dbeafe;
+      margin-bottom: 30px;
+    }
+
+    .delete-card {
+      margin: 20px 0;
+      padding: 20px;
+      border-radius: 14px;
+      background: rgba(255,255,255,0.08);
+      border: 1px solid rgba(255,255,255,0.12);
+    }
+
+    .delete-card h2 {
+      color: #ffd54a;
+      margin-top: 0;
+    }
+
+    .delete-card p {
+      line-height: 1.6;
+    }
+
+    .delete-card ul {
+      padding-left: 22px;
+      line-height: 1.7;
+    }
+
+    .delete-warning {
+      border-color: rgba(220, 53, 69, 0.55);
+    }
+
+    .delete-actions {
+      display: flex;
+      justify-content: center;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-top: 28px;
+    }
+
+    .delete-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 13px 20px;
+      border-radius: 10px;
+      text-decoration: none;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .delete-btn-danger {
+      background: #b42318;
+      color: #fff;
+    }
+
+    .delete-btn-secondary {
+      background: rgba(255,255,255,0.12);
+      color: #fff;
+      border: 1px solid rgba(255,255,255,0.16);
+    }
+
+    .delete-email {
+      font-weight: 700;
+      color: #ffd54a;
+      word-break: break-word;
+    }
+
+    .delete-note {
+      font-size: 14px;
+      color: #dbeafe;
+    }
+
+    @media (max-width: 600px) {
+      .delete-page {
+        padding: 30px 16px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+  <main class="delete-page">
+
+    <h1 class="delete-title">Excluir conta do Cachetão Pro</h1>
+
+    <p class="delete-subtitle">
+      Solicite a exclusão permanente da sua conta e dos dados associados.
+    </p>
+
+    <section class="delete-card">
+      <h2>Exclusão pelo próprio perfil</h2>
+
+      <p>
+        Se você ainda consegue acessar sua conta, pode solicitar a exclusão
+        diretamente pelo Cachetão Pro.
+      </p>
+
+      <p>
+        Acesse <strong>Perfil → Excluir conta</strong>, informe sua senha atual
+        e confirme a solicitação.
+      </p>
+
+      <p>
+        Após a confirmação, a conta não poderá ser recuperada.
+      </p>
+    </section>
+
+    <section class="delete-card">
+      <h2>Solicitação pela Web</h2>
+
+      <p>
+        Se você não consegue mais acessar o Cachetão Pro, desinstalou o
+        aplicativo ou prefere fazer a solicitação fora do app, envie um
+        pedido para:
+      </p>
+
+      <p class="delete-email">
+        contato@cachetaopro.com.br
+      </p>
+
+      <p>
+        No pedido, informe:
+      </p>
+
+      <ul>
+        <li>o endereço de e-mail utilizado na conta;</li>
+        <li>o nome de usuário, se lembrar;</li>
+        <li>que deseja excluir permanentemente sua conta do Cachetão Pro.</li>
+      </ul>
+
+      <p class="delete-note">
+        Nunca envie sua senha por e-mail.
+      </p>
+
+      <div class="delete-actions">
+        <a
+          class="delete-btn delete-btn-danger"
+          href="mailto:contato@cachetaopro.com.br?subject=Solicitação%20de%20exclusão%20de%20conta%20-%20Cachetão%20Pro"
+        >
+          Solicitar exclusão por e-mail
+        </a>
+      </div>
+    </section>
+
+    <section class="delete-card delete-warning">
+      <h2>O que acontece após a exclusão?</h2>
+
+      <p>
+        A exclusão da conta é permanente. Os dados pessoais associados à conta,
+        como nome de usuário, e-mail e avatar, são removidos ou anonimizados,
+        e o acesso à conta é encerrado definitivamente.
+      </p>
+
+      <p>
+        Dados relacionados ao funcionamento do jogo que não precisem ser
+        preservados são excluídos ou anonimizados.
+      </p>
+
+      <p>
+        Determinados registros financeiros ou de segurança poderão ser
+        mantidos quando necessários para cumprimento de obrigações legais,
+        prevenção de fraude, contestação de pagamentos ou proteção da
+        plataforma.
+      </p>
+
+      <p>
+        Quando esses registros precisarem ser preservados, a retenção será
+        limitada ao que for necessário para essas finalidades.
+      </p>
+    </section>
+
+    <section class="delete-card">
+      <h2>Posso criar outra conta depois?</h2>
+
+      <p>
+        Sim. Depois que a exclusão for concluída, você poderá criar uma nova
+        conta no Cachetão Pro.
+      </p>
+
+      <p>
+        A nova conta será independente da conta excluída. Saldo, estatísticas,
+        avatar, ranking e demais informações da conta anterior não serão
+        recuperados.
+      </p>
+    </section>
+
+    <section class="delete-card">
+      <h2>Contas com bloqueio administrativo</h2>
+
+      <p>
+        Solicitações relacionadas a contas que possuam bloqueio administrativo
+        serão analisadas pelo suporte.
+      </p>
+
+      <p>
+        Informações que precisem ser preservadas para segurança, prevenção de
+        abuso, fraude ou cumprimento de obrigações legais poderão ser mantidas
+        pelo período necessário.
+      </p>
+    </section>
+
+    <div class="delete-actions">
+      <a class="delete-btn delete-btn-secondary" href="./index.html">
+        ← Voltar para o início
+      </a>
+    </div>
+
+  </main>
+
+</body>
+</html>

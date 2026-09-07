@@ -1,4 +1,7 @@
-const API_BASE = "/api";
+const API_BASE =
+  window.location.hostname === "localhost"
+    ? "http://localhost:3003/api"
+    : "/api";
 
 let changeBusy = false;
 

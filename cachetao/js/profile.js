@@ -1,6 +1,6 @@
 const API_BASE =
   window.location.hostname === "localhost"
-    ? "http://localhost:3001/api"
+    ? "http://localhost:3003/api"
     : "/api";
 
 const AVATAR_LIST = Array.from({ length: 35 }, (_, i) => {
@@ -370,6 +370,64 @@ async function changePassword() {
   }
 }
 
+async function deleteAccount() {
+  const currentPassword =
+    document.getElementById("deleteAccountPassword")?.value || "";
+
+  if (!currentPassword) {
+    setMsg("Digite sua senha para confirmar a exclusão da conta.", true);
+    return;
+  }
+
+  const confirmed = window.confirm(
+    "Tem certeza de que deseja excluir sua conta?\n\n" +
+    "Esta ação é permanente e não poderá ser desfeita."
+  );
+
+  if (!confirmed) {
+    return;
+  }
+
+  setMsg("Excluindo conta...");
+
+  try {
+    const res = await fetch(`${API_BASE}/auth/me/delete-account`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      credentials: "include",
+      body: JSON.stringify({
+        currentPassword,
+      }),
+    });
+
+    const data = await res.json().catch(() => null);
+
+    if (!res.ok || !data?.ok) {
+      setMsg(
+        data?.message ||
+          `Não foi possível excluir a conta. (HTTP ${res.status})`,
+        true
+      );
+      return;
+    }
+
+    clearLocalAuth();
+
+    setMsg("Sua conta foi excluída com sucesso.");
+
+    setTimeout(() => {
+      window.location.href = "./login.html";
+    }, 1200);
+
+  } catch (err) {
+    console.error("Erro ao excluir conta:", err);
+    setMsg(`Erro ao excluir conta. (${err.message})`, true);
+  }
+}
+
+
 function bindEvents() {
   document.getElementById("btnPrevAvatar")?.addEventListener("click", () => {
     currentAvatarIndex = (currentAvatarIndex - 1 + AVATAR_LIST.length) % AVATAR_LIST.length;
@@ -383,6 +441,7 @@ function bindEvents() {
 
   document.getElementById("btnSaveAvatar")?.addEventListener("click", saveAvatar);
   document.getElementById("btnChangePassword")?.addEventListener("click", changePassword);
+  document.getElementById("btnDeleteAccount")?.addEventListener("click", deleteAccount);
 
   /*document.getElementById("btnGoSettings")?.addEventListener("click", () => {
     alert("Configurações do perfil podem entrar aqui depois.");
