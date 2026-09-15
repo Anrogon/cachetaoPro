@@ -51,7 +51,7 @@
     min-width: 0 !important;
 
     display: grid !important;
-    grid-template-columns: minmax(0, 1fr) 100px !important;
+    grid-template-columns: 115px minmax(0, 1fr) !important;
     grid-template-areas:
       "title   visual"
       "value   visual"
@@ -76,11 +76,12 @@
 
     margin: 0 !important;
 
-    font-size: 14px !important;
+    font-size: 13px !important;
     font-weight: 900 !important;
     line-height: 1.1 !important;
 
-    text-align: left !important;
+    text-align: center !important;
+    white-space: nowrap !important;
   }
 
   #tablesGrid > .table-card .table-value,
@@ -88,11 +89,11 @@
     grid-area: value !important;
 
     margin: 0 !important;
-
-    font-size: 13px !important;
+    justify-self: center !important;
+    font-size: 12px !important;
     line-height: 1.2 !important;
 
-    text-align: left !important;
+    text-align: center !important;
     opacity: 0.96 !important;
   }
 
@@ -105,7 +106,7 @@
 
     display: flex !important;
     align-items: center !important;
-    justify-content: flex-start !important;
+    justify-content: center !important;
     flex-wrap: wrap !important;
     gap: 6px !important;
 
@@ -132,11 +133,11 @@
 
     position: relative !important;
 
-    width: 100px !important;
-    min-width: 100px !important;
-    height: 64px !important;
+    width: 180px !important;
+    min-width: 180px !important;
+    height: auto !important;
 
-    justify-self: end !important;
+    justify-self: center !important;
     align-self: center !important;
 
     margin: 0 !important;
@@ -214,9 +215,5 @@
     height: 20px !important;
   }
   
-  #tablesGrid > .table-card .table-visual{
-    width: 200px !important;
-    height: auto !important;
-  }
 }
 

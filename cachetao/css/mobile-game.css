@@ -63,8 +63,10 @@
   left: 22px !important;
   right: 22px !important;
 
-  top: 275px !important;
-  height: 110px !important;
+  top: 355px !important;
+  height: 120px !important;
+  min-height: 0 !important;
+
 
   bottom: auto !important;
   width: auto !important;
@@ -82,49 +84,65 @@
   overflow-x: auto !important;
   overflow-y: hidden !important;
 
-  padding: 8px 10px !important;
+  padding: 4px 8px !important;
   margin: 0 !important;
 
   background: rgba(0, 0, 0, 0.18) !important;
-  /*border: 2px dashed rgba(255, 255, 255, 0.25) !important;*/
   border-radius: 22px !important;
 
   z-index: 16000 !important;
   pointer-events: auto !important;
 }
 
+  .table-melds-layer {
+    width: 100% !important;
+    height: 100% !important;
+
+    display: flex !important;
+    flex-direction: row !important;
+    flex-wrap: nowrap !important;
+
+    align-items: center !important;
+    justify-content: center !important;
+
+    gap: 14px !important;
+
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
+  }
+
   .grupo-table {
-  position: relative !important;
+    position: relative !important;
 
-  width: auto !important;
-  min-width: auto !important;
-  height: 70px !important;
+    width: auto !important;
+    min-width: auto !important;
+    height: 70px !important;
 
-  display: flex !important;
-  flex-direction: row !important;
-  align-items: center !important;
-  justify-content: center !important;
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    justify-content: center !important;
 
-  overflow: visible !important;
-  background: transparent !important;
+    overflow: visible !important;
+    background: transparent !important;
 
-  pointer-events: auto !important;
-}
+    pointer-events: auto !important;
+  }
 
   .grupo-table .card {
-  position: relative !important;
-  left: auto !important;
-  top: auto !important;
+    position: relative !important;
+    left: auto !important;
+    top: auto !important;
 
-  width: 48px !important;
-  height: 68px !important;
+    width: 48px !important;
+    height: 68px !important;
 
-  margin-left: -40px !important;
-  border-radius: 5px !important;
+    margin-left: -40px !important;
+    border-radius: 5px !important;
 
-  box-shadow: 0 2px 4px rgba(0,0,0,0.4) !important;
-  transition: transform 0.10s !important;
-}
+    box-shadow: 0 2px 4px rgba(0,0,0,0.4) !important;
+    transition: transform 0.10s !important;
+  }
 
 .grupo-table .card:first-child {
   margin-left: 0 !important;
@@ -311,7 +329,9 @@
 #mobileViraBox {
   position: fixed !important;
 
-  top: calc(10px + env(safe-area-inset-top) + 100px) !important;
+  /* região superior: fica só o texto/cartinhas dos coringas */
+  top: calc(10px + env(safe-area-inset-top) + 150px) !important;
+
   left: 50% !important;
   transform: translateX(-50%) !important;
 
@@ -321,7 +341,8 @@
   justify-content: center !important;
 
   gap: 3px !important;
-  pointer-events: auto !important;
+
+  pointer-events: none !important;
   z-index: 26000 !important;
 }
 
@@ -329,20 +350,25 @@
   width: 60px !important;
   height: 93.6px !important;
 
-  border-radius: 4px !important;
+  flex: 0 0 auto !important;
 
+  border-radius: 4px !important;
   background-size: cover !important;
   background-position: center !important;
   background-repeat: no-repeat !important;
+
   position: relative !important;
-  z-index: 26001 !important;
+  z-index: 36001 !important;
+
   pointer-events: auto !important;
   cursor: pointer !important;
+
   touch-action: manipulation !important;
   -webkit-tap-highlight-color: transparent !important;
-  box-shadow: 0 2px 6px rgba(0,0,0,.45) !important;
-  outline: 2px solid rgba(255, 215, 0, 0.70) !important;
+
+  /*outline: 2px solid rgba(255, 215, 0, 0.70) !important;*/
   outline-offset: 4px !important;
+
   box-shadow:
     0 2px 6px rgba(0,0,0,.45),
     0 0 8px rgba(255,215,0,.25) !important;
@@ -361,48 +387,82 @@
     0 0 14px rgba(255,213,74,.9) !important;
 }
 
-#mobileViraJoker {
+ #mobileViraJoker {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+
+  gap: 4px !important;
+
   font-size: 10px !important;
   font-weight: 800 !important;
-
   color: #fff !important;
 
   text-align: center !important;
   white-space: nowrap !important;
 
   text-shadow: 0 2px 4px rgba(0,0,0,.8) !important;
+
+  pointer-events: none !important;
 }
 
-#mobileDeckBox {
-  position: fixed !important;
-
-  left: 40px !important;
-  bottom: calc(-7px + env(safe-area-inset-bottom) + 140px) !important;
-
-  display: flex !important;
-  flex-direction: row !important;
-  align-items: center !important;
-  justify-content: flex-start !important;
-  gap: 8px !important;
-
-  z-index: 36000 !important;
-  pointer-events: auto !important;
+.mobile-joker-mini-label {
+  font-weight: 800;
+  line-height: 1;
 }
 
-#mobileDeckBox #monte.monte-horizontal {
-  width: 78px !important;
-  height: 57px !important;
+.mobile-joker-mini-cards {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  gap: 5px;
 }
 
-#mobileDeckBox #lixo {
-  width: 65px !important;
-  height: 97px !important;
+.mobile-joker-mini-card {
+  width: 40px;
+  height: auto;
+
+  border-radius: 3px;
+  display: block;
 }
 
-#mobileDeckBox #pot-area {
-  transform: scale(0.75);
-  transform-origin: center;
-}
+
+  #mobileDeckBox {
+    position: fixed !important;
+
+    left: 38% !important;
+    width: 230px !important;
+    transform: translateX(-50%) !important;
+
+    bottom: calc(-7px + env(safe-area-inset-bottom) + 140px) !important;
+
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    justify-content: center !important;
+
+    gap: 17px !important;
+
+    z-index: 36000 !important;
+    pointer-events: auto !important;
+  }
+
+  #mobileDeckBox #monte.monte-horizontal {
+    width: 78px !important;
+    height: 57px !important;
+  }
+
+  #mobileDeckBox #lixo {
+    width: 70px !important;
+    height: 97px !important;
+  }
+
+  #mobileDeckBox #pot-area {
+    transform: scale(0.75);
+    transform-origin: center;
+  }
 
 #mobileActionButtons {
   position: fixed !important;
@@ -854,4 +914,40 @@ body.mobile-table-mode #sortPanel .sort-btn{
 #mobileJogarViraBtn:disabled {
   opacity: 0.45;
   cursor: default;
+}
+
+/* =========================================================
+   COMPETIÇÃO — MINI CARTAS DOS CORINGAS
+========================================================= */
+
+#mobileViraJoker{
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+}
+
+.mobile-joker-mini-label{
+  font-weight: 700;
+  margin-right: 2px;
+}
+
+.mobile-joker-mini-card{
+  width: 34px;
+  height: auto;
+  border-radius: 3px;
+  display: block;
+}
+
+.mobile-competition-prize {
+  position: fixed !important;
+
+  top: calc(10px + env(safe-area-inset-top) + 85px) !important;
+  left: 50% !important;
+
+  transform: translateX(-50%) scale(0.85) !important;
+  transform-origin: top center !important;
+
+  z-index: 26010 !important;
+  pointer-events: none !important;
 }

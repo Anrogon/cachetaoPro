@@ -24,6 +24,7 @@ import {
   playPendingDrawAnimation,
   playPendingDiscardDrawAnimation,
   playPendingHudDrawAnimation,
+  renderReentryOverlay,
   playPendingHandToTableAnimation
 } from "./render.js";
 import { startTurnTimer } from "./turnTimer.js";
@@ -579,12 +580,16 @@ state.deckCount = pub.deckCount ?? 0;
       rebuyCount: typeof p.rebuyCount === "number" ? p.rebuyCount : 0,
       pendingRebuy: !!p.pendingRebuy,
       rebuyDeclined: !!p.rebuyDeclined,
+      reentryCount: typeof p.reentryCount === "number" ? p.reentryCount : 0,
+      pendingReentry: !!p.pendingReentry,
+      reentryDeclined: !!p.reentryDeclined,
     });
   });
 
   state.players = players;
   state.rebuyDecisionUntil = pub.rebuyDecisionUntil || 0;
-
+  state.reentryDecisionUntil = pub.reentryDecisionUntil || 0;
+  
   // fim de partida vindo do servidor autoritativo
   state.matchEnded = !!pub.matchEnded;
   state.matchWinnerSeat = pub.matchWinnerSeat ?? null;
@@ -619,27 +624,64 @@ if (state.room?.id) {
     : prevSeats;
 
   window.state.tables[state.room.id] = {
-  ...prev,
-  id: prev.id || state.room.id,
-  name: prev.name,
-  buyIn: prev.buyIn,
-  started: pub.started ?? prev.started ?? false,
-  matchEnded: !!pub.matchEnded,
-  currentSeat: pub.currentSeat ?? prev.currentSeat ?? 1,
-  phase: pub.phase ?? prev.phase ?? "WAITING",
-  seats: mergedSeats,
-  seatedCount: Array.isArray(pub.seats)
-    ? pub.seats.filter(Boolean).length
-    : (prev.seatedCount || 0),
-  maxSeats: pub.maxSeats ?? prev.maxSeats ?? 10,
-  minPlayersToStart: pub.minPlayersToStart ?? prev.minPlayersToStart ?? 5,
-  startAt: Number(pub.startAt) || 0,
-  tableMelds: Array.isArray(pub.tableMelds) ? pub.tableMelds : (prev.tableMelds || []),
-  discardTop: pub.discardTop ?? prev.discardTop ?? null,
-  deckCount: pub.deckCount ?? prev.deckCount ?? 0,
-  matchPot: Number(pub.matchPot) || 0,
-  roundNumber: Number(pub.roundNumber) || 0
-};
+    ...prev,
+    id: prev.id || state.room.id,
+    name: prev.name,
+    buyIn: prev.buyIn,
+    started: pub.started ?? prev.started ?? false,
+    matchEnded: !!pub.matchEnded,
+    currentSeat: pub.currentSeat ?? prev.currentSeat ?? 1,
+    phase: pub.phase ?? prev.phase ?? "WAITING",
+    seats: mergedSeats,
+
+    seatedCount: Array.isArray(pub.seats)
+      ? pub.seats.filter(Boolean).length
+      : (prev.seatedCount || 0),
+
+    maxSeats: pub.maxSeats ?? prev.maxSeats ?? 10,
+    minPlayersToStart: pub.minPlayersToStart ?? prev.minPlayersToStart ?? 5,
+    startAt: Number(pub.startAt) || 0,
+
+    tableMelds: Array.isArray(pub.tableMelds)
+      ? pub.tableMelds
+      : (prev.tableMelds || []),
+
+    discardTop: pub.discardTop ?? prev.discardTop ?? null,
+    deckCount: pub.deckCount ?? prev.deckCount ?? 0,
+
+    matchPot: Number(pub.matchPot) || 0,
+    roundNumber: Number(pub.roundNumber) || 0,
+
+    // =====================================================
+    // COMPETIÇÃO — ECONOMIA
+    // =====================================================
+    competitionGross:
+      Number(pub.competitionGross ?? prev.competitionGross) || 0,
+
+    competitionOrganizationFee:
+      Number(
+        pub.competitionOrganizationFee ??
+        prev.competitionOrganizationFee
+      ) || 0,
+
+    competitionPrizePool:
+      Number(
+        pub.competitionPrizePool ??
+        prev.competitionPrizePool
+      ) || 0,
+
+    competitionEntriesCount:
+      Number(
+        pub.competitionEntriesCount ??
+        prev.competitionEntriesCount
+      ) || 0,
+
+    competitionReentriesCount:
+      Number(
+        pub.competitionReentriesCount ??
+        prev.competitionReentriesCount
+      ) || 0
+  };
   // redesenha as mesas imediatamente
   if (typeof renderTablesScreen === "function") {
     renderTablesScreen();
@@ -911,13 +953,16 @@ export function renderAll() {
 
   if (state.matchEnded) {
     document.getElementById("rebuyOverlay")?.remove();
+    document.getElementById("reentryOverlay")?.remove();
     document.getElementById("rebuy-box")?.remove();
+
     return;
   }
 
   renderRoundInfo();
   renderDealOverlay?.();
   renderRebuyOverlay();
+  renderReentryOverlay();
 }
 
 window.renderAll = renderAll;
@@ -2029,6 +2074,10 @@ export function renderTablesScreen() {
   if (controls) {
     state.selectedVariant = "CACHETAO";
 
+    if (!state.selectedTableType) {
+      state.selectedTableType = "RECREATIONAL";
+    }
+
     controls.innerHTML = `
       <div class="tables-header">
         <button
@@ -2043,10 +2092,23 @@ export function renderTablesScreen() {
       <div class="tables-tabs-wrapper">
         <div class="tables-tabs">
           <button
-            class="tables-tab active"
+            id="btnRecreationalTables"
+            class="tables-tab ${
+              state.selectedTableType === "RECREATIONAL" ? "active" : ""
+            }"
             type="button"
           >
-            Cachetão Pro
+            Mesas Recreativas
+          </button>
+
+          <button
+            id="btnCompetitionTables"
+            class="tables-tab ${
+              state.selectedTableType === "COMPETITION" ? "active" : ""
+            }"
+            type="button"
+          >
+            Mesas Competição
           </button>
         </div>
       </div>
@@ -2055,6 +2117,26 @@ export function renderTablesScreen() {
     if (btnBackHomeFromTables) {
       btnBackHomeFromTables.onclick = () => {
         showScreen("home");
+      };
+    }
+
+    const btnRecreationalTables =
+      document.getElementById("btnRecreationalTables");
+
+    if (btnRecreationalTables) {
+      btnRecreationalTables.onclick = () => {
+        state.selectedTableType = "RECREATIONAL";
+        renderTablesScreen();
+      };
+    }
+
+    const btnCompetitionTables =
+      document.getElementById("btnCompetitionTables");
+
+    if (btnCompetitionTables) {
+      btnCompetitionTables.onclick = () => {
+        state.selectedTableType = "COMPETITION";
+        renderTablesScreen();
       };
     }
 
@@ -2070,17 +2152,41 @@ export function renderTablesScreen() {
   const selectedVariant = "CACHETAO";
   state.selectedVariant = "CACHETAO";
 
-  const visibleTables = (tables || []).filter(t => {
-  const liveTable = window.state?.tables?.[t.id];
-  const variant =
-  String(
-    t.variant ||
-    liveTable?.variant ||
-    "CACHETAO"
-  ).toUpperCase();
+  let visibleTables = (tables || []).filter(t => {
+    const liveTable = window.state?.tables?.[t.id];
 
-  return variant === selectedVariant;
+    const variant = String(
+      t.variant ||
+      liveTable?.variant ||
+      "CACHETAO"
+    ).toUpperCase();
+
+    const tableType = String(
+      t.tableType ||
+      liveTable?.tableType ||
+      "RECREATIONAL"
+    ).toUpperCase();
+
+    return (
+      variant === selectedVariant &&
+      tableType === state.selectedTableType
+    );
   });
+
+
+  if (
+    state.selectedTableType === "COMPETITION" &&
+    visibleTables.length === 0
+  ) {
+    grid.innerHTML = `
+      <div class="tables-empty-state">
+        Nenhuma competição disponível.
+      </div>
+    `;
+
+    updateLobbyCountdowns();
+    return;
+  }
 
   visibleTables.forEach((t) => {
     const card = document.createElement("div");
@@ -2140,9 +2246,23 @@ export function renderTablesScreen() {
       </div>
 
       <div class="table-value">
-        <span class="chip"></span>
-        <strong>${formatBR((Number(t.buyIn) || 0) * 10)}</strong>
-    </div>
+        ${
+          state.selectedTableType === "COMPETITION"
+            ? `
+              <div class="competition-value-info">
+                <strong>
+                  Inscrição: R$ ${Number(
+                    liveTable.entryFee ?? t.entryFee ?? 0
+                  ).toFixed(2).replace(".", ",")}
+                </strong>
+              </div>
+            `
+            : `
+              <span class="chip"></span>
+              <strong>${formatBR((Number(t.buyIn) || 0) * 10)}</strong>
+            `
+        }
+      </div>
       <div class="table-hint">Clique em um assento vazio para entrar</div>
 
       <div class="table-actions">
@@ -2226,7 +2346,12 @@ const joinPayload = {
 if (player) {
   if (!reconnectToken) return;
 
-  state.room = { id: t.id, buyIn: t.buyIn };
+  state.room = {
+    id: t.id,
+    buyIn: t.buyIn,
+    tableType: liveTable.tableType || t.tableType || "RECREATIONAL",
+    entryFee: Number(liveTable.entryFee ?? t.entryFee ?? 0)
+  };
 
   socket.send(JSON.stringify({
   type: reconnectToken ? "joinTable" : "joinTableGroup",
@@ -2237,13 +2362,17 @@ if (player) {
 }
 
 // ✅ assento vazio: entra normalmente
-state.room = { id: t.id, buyIn: t.buyIn };
-
-socket.send(JSON.stringify({
-  type: "joinTableGroup",
-  payload: joinPayload
-}));
-};
+  state.room = {
+    id: t.id,
+    buyIn: t.buyIn,
+    tableType: liveTable.tableType || t.tableType || "RECREATIONAL",
+    entryFee: Number(liveTable.entryFee ?? t.entryFee ?? 0)
+  };
+  socket.send(JSON.stringify({
+    type: "joinTableGroup",
+    payload: joinPayload
+  }));
+  };
 
       seatsEl.appendChild(seatEl);
     }

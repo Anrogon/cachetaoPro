@@ -1728,6 +1728,39 @@ export function declineRebuy() {
   return false;
 }
 
+
+// ============================
+// 🏆 REENTRADA — COMPETIÇÃO
+// ============================
+
+export function requestReentry() {
+  if (state?.room?.id && typeof window.wsSendAction === "function") {
+    window.wsSendAction({
+      type: "reentry"
+    });
+
+    return true;
+  }
+
+  showGameNotice("Reentrada só está disponível no modo online.");
+  return false;
+}
+
+
+export function declineReentry() {
+  if (state?.room?.id && typeof window.wsSendAction === "function") {
+    window.wsSendAction({
+      type: "declineReentry"
+    });
+
+    return true;
+  }
+
+  showGameNotice("Não foi possível cancelar a Reentrada.");
+  return false;
+}
+
+
 // aplica rebuys pendentes no início da rodada (antes de ante/deal)
 export function applyPendingRebuys() {
   // garante que existe pot numérico
@@ -1785,7 +1818,19 @@ export function applyPendingRebuys() {
 }
 
 export function hasRebuyChoices() {
-  if (state.partidaEncerrada) return false; // ✅ fim
+
+  const tableType = String(
+    state.room?.tableType ||
+    window.state?.tables?.[state.room?.id]?.tableType ||
+    "RECREATIONAL"
+  ).toUpperCase();
+
+  if (tableType === "COMPETITION") {
+    return false;
+  }
+
+  if (state.partidaEncerrada) return false;
+
   return (state.players || []).some(pl =>
     pl &&
     pl.eliminated === true &&

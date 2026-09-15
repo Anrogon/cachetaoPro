@@ -81,6 +81,7 @@ export const state = {
   ======================================================= */
 
   rebuyDecisionUntil: 0,
+  reentryDecisionUntil: 0,
 
   /* =======================================================
      CONTROLE DA PRÓXIMA RODADA

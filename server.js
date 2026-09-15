@@ -1594,8 +1594,15 @@ function endRoundByEmptyDeck(room) {
     []
   );
 
-  // 5) abre janela de rebuy / próxima rodada
-  scheduleNextRoundWithRebuy(room, 10000);
+  
+  // 5) abre janela de rebuy/reentrada / próxima rodada
+  if (
+    String(room?.tableType || "RECREATIONAL").toUpperCase() === "COMPETITION"
+  ) {
+    scheduleNextRoundWithReentry(room, 10000);
+  } else {
+    scheduleNextRoundWithRebuy(room, 10000);
+  }
 
   // 6) avisa o cliente agora
   if (room?.id) sendState(room.id);
@@ -1683,12 +1690,18 @@ function endRound(room, winnerSeat) {
 
   finalizeMatchEconomy(room);
 
-  if (room?.id) sendState(room.id);
-  return;
-}
+    if (room?.id) sendState(room.id);
+    return;
+  }
 
-      // Cachetão Pro: agenda próxima rodada usando janela de rebuy
-    scheduleNextRoundWithRebuy(room, 15000);
+    // Cachetão Pro: agenda próxima rodada usando rebuy ou reentrada
+    if (
+      String(room?.tableType || "RECREATIONAL").toUpperCase() === "COMPETITION"
+    ) {
+      scheduleNextRoundWithReentry(room, 15000);
+    } else {
+      scheduleNextRoundWithRebuy(room, 15000);
+    }
 
     if (room?.id) sendState(room.id);
 }
@@ -1768,6 +1781,12 @@ function isCrazyBatidaOpenEndedSequence(meld, room, player, idSet) {
 
 
 function hasRebuyChoices(room) {
+
+  const isCompetition =
+    String(room?.tableType || "RECREATIONAL").toUpperCase() === "COMPETITION";
+
+  if (isCompetition) return false;
+
   if (!room.started && room.phase === "WAITING") return false;
 
   return (room.playersBySeat || []).some(pl =>
@@ -1778,6 +1797,7 @@ function hasRebuyChoices(room) {
     pl.rebuyDeclined !== true &&
     (pl.rebuyCount || 0) < 3
   );
+
 }
 
 function getRebuyCost(room, p) {
@@ -1942,6 +1962,99 @@ function applyPendingRebuys(room) {
 
   return appliedRebuys;
 }
+
+
+
+/* Eentrada Competição*/
+
+function applyPendingReentries(room) {
+  // Somente mesas de competição
+  const isCompetition =
+    String(room?.tableType || "RECREATIONAL").toUpperCase() === "COMPETITION";
+
+  if (!isCompetition) return [];
+
+  // Cachetão Pro:
+  // reentrada volta com a menor quantidade de vidas entre os jogadores ativos
+  const active = (room.playersBySeat || [])
+    .filter(pl => pl && !pl.eliminated && !pl.pendingReentry);
+
+  const minVidas = active.length
+    ? Math.min(
+        ...active
+          .map(pl => Number(pl.vidas ?? pl.totalPoints ?? 0))
+          .filter(v => v > 0)
+      )
+    : 1;
+
+  const returnVidas =
+    Number.isFinite(minVidas) && minVidas > 0
+      ? minVidas
+      : 1;
+
+  const appliedReentries = [];
+
+  for (let i = 0; i < (room.playersBySeat || []).length; i++) {
+    const pl = room.playersBySeat[i];
+
+    if (!pl || !pl.pendingReentry) continue;
+
+    if ((pl.reentryCount || 0) >= 3) {
+      pl.pendingReentry = false;
+      pl.eliminated = true;
+      continue;
+    }
+
+    const reentryCountBefore = pl.reentryCount || 0;
+
+    const reentryFee =
+      Number(room.competitionReentryFee ?? room.entryFee) || 0;
+
+    const moneyResult = registerCompetitionMoney(
+      room,
+      reentryFee,
+      "reentry"
+    );
+
+    if (!moneyResult?.ok) {
+      pl.pendingReentry = false;
+      pl.eliminated = true;
+      continue;
+    }
+
+    pl.eliminated = false;
+    pl.pendingReentry = false;
+    pl.reentryDeclined = false;
+    pl.reentryCount = reentryCountBefore + 1;
+
+    pl.hand = [];
+    pl.jogosBaixados = [];
+    pl.obrigacaoBaixar = false;
+
+    // Retorna com a menor quantidade de vidas entre os sobreviventes
+    pl.vidas = returnVidas;
+    pl.totalPoints = returnVidas;
+
+    // Se retornar com 1 vida, já retorna na Marra
+    pl.marra = returnVidas === 1;
+    pl.naMarra = returnVidas === 1;
+
+    appliedReentries.push({
+      seat: i + 1,
+      name: pl.name,
+      reentryCountBefore,
+      reentryCountAfter: pl.reentryCount,
+      returnVidas,
+      fee: reentryFee,
+      organizationFee: moneyResult.organizationFee,
+      prizeAmount: moneyResult.prizeAmount,
+    });
+  }
+
+  return appliedReentries;
+}
+
+
 
 /* Revanche*/
 
@@ -2125,6 +2238,187 @@ function scheduleNextRoundWithRebuy(room, ms = 20000) {
     if (room?.id) sendState(room.id);
   }, ms);
 }
+
+function scheduleNextRoundWithReentry(room, ms = 20000) {
+  room.reentryDecisionUntil = 0;
+  room.lastAppliedReentries = [];
+
+  const alivePlayers = (room.playersBySeat || [])
+    .filter(pl => pl && !pl.eliminated);
+
+  // =====================================================
+  // 1) SE SOBROU APENAS 1 JOGADOR VIVO, ACABOU.
+  // NÃO EXISTE REENTRADA NESTE CASO.
+  // =====================================================
+  if (alivePlayers.length <= 1) {
+    room.reentryDecisionUntil = 0;
+
+    if (room.nextRoundTimeoutId) {
+      clearTimeout(room.nextRoundTimeoutId);
+      room.nextRoundTimeoutId = null;
+    }
+
+    room.matchEnded = true;
+    room.matchWinnerSeat =
+      room.playersBySeat.indexOf(alivePlayers[0]) + 1;
+
+    finalizeCompetitionMatch(room);
+
+    if (room?.id) sendState(room.id);
+    return;
+  }
+
+  // =====================================================
+  // 2) SE TODOS OS JOGADORES VIVOS ESTÃO COM 1 VIDA,
+  // TODOS ESTÃO NA MARRA.
+  // NÃO EXISTE MAIS DIREITO À REENTRADA.
+  // =====================================================
+  const allAliveInMarra = alivePlayers.every(pl =>
+    Number(pl.vidas ?? pl.totalPoints ?? 0) === 1
+  );
+
+  if (room.nextRoundTimeoutId) {
+    clearTimeout(room.nextRoundTimeoutId);
+    room.nextRoundTimeoutId = null;
+  }
+
+  if (allAliveInMarra) {
+    room.reentryDecisionUntil = 0;
+
+    const nextRoundDelayMs = 1000;
+
+    room.nextRoundTimeoutId = setTimeout(() => {
+      room.nextRoundTimeoutId = null;
+      room.reentryDecisionUntil = 0;
+
+      startNewRound(room);
+
+      if (room?.id) sendState(room.id);
+    }, nextRoundDelayMs);
+
+    if (room?.id) sendState(room.id);
+    return;
+  }
+
+  // =====================================================
+  // 3) PROCURA ELIMINADOS QUE AINDA PODEM DECIDIR
+  // SOBRE REENTRADA.
+  // =====================================================
+  const hasConnectedChoices = (room.playersBySeat || []).some(pl =>
+    pl &&
+    pl.eliminated === true &&
+    pl.disconnected !== true &&
+    pl.pendingReentry !== true &&
+    pl.reentryDeclined !== true &&
+    (pl.reentryCount || 0) < 3
+  );
+
+  // =====================================================
+  // 4) NÃO HÁ NINGUÉM CONECTADO PRECISANDO DECIDIR.
+  // APLICA EVENTUAIS REENTRADAS JÁ PENDENTES E SEGUE.
+  // =====================================================
+  if (!hasConnectedChoices) {
+    room.reentryDecisionUntil = 0;
+
+    const reentries = applyPendingReentries(room);
+    room.lastAppliedReentries = reentries;
+
+    const aliveAfterReentry = (room.playersBySeat || [])
+      .filter(pl => pl && !pl.eliminated);
+
+    // Segurança:
+    // se por algum motivo sobrou apenas um após aplicar,
+    // encerra a competição.
+    if (aliveAfterReentry.length <= 1) {
+      room.matchEnded = true;
+      room.matchWinnerSeat =
+        room.playersBySeat.indexOf(aliveAfterReentry[0]) + 1;
+
+      finalizeCompetitionMatch(room);
+
+      if (room?.id) sendState(room.id);
+      return;
+    }
+
+    const nextRoundDelayMs = 1000;
+
+    room.nextRoundTimeoutId = setTimeout(() => {
+      room.nextRoundTimeoutId = null;
+      room.reentryDecisionUntil = 0;
+
+      startNewRound(room);
+
+      if (room?.id) sendState(room.id);
+    }, nextRoundDelayMs);
+
+    if (room?.id) sendState(room.id);
+    return;
+  }
+
+  // =====================================================
+  // 5) EXISTE JOGADOR COM DIREITO À REENTRADA.
+  // ABRE A JANELA DE DECISÃO.
+  // =====================================================
+  room.reentryDecisionUntil = Date.now() + ms;
+
+
+
+  console.log("[REENTRY OPENED]", {
+  roomId: room.id,
+  until: room.reentryDecisionUntil,
+  ms
+});
+
+
+
+
+
+
+  if (room?.id) sendState(room.id);
+
+  room.nextRoundTimeoutId = setTimeout(() => {
+    room.nextRoundTimeoutId = null;
+    room.reentryDecisionUntil = 0;
+
+    // Quem estava conectado e não confirmou até o fim
+    // da janela passa a contar como recusou.
+    for (const pl of room.playersBySeat || []) {
+      if (!pl) continue;
+
+      if (
+        pl.eliminated === true &&
+        pl.disconnected !== true &&
+        pl.pendingReentry !== true &&
+        pl.reentryDeclined !== true &&
+        (pl.reentryCount || 0) < 3
+      ) {
+        pl.reentryDeclined = true;
+      }
+    }
+
+    const reentries = applyPendingReentries(room);
+    room.lastAppliedReentries = reentries;
+
+    const aliveAfterWindow = (room.playersBySeat || [])
+      .filter(pl => pl && !pl.eliminated);
+
+    if (aliveAfterWindow.length <= 1) {
+      room.matchEnded = true;
+      room.matchWinnerSeat =
+        room.playersBySeat.indexOf(aliveAfterWindow[0]) + 1;
+
+      finalizeCompetitionMatch(room);
+
+      if (room?.id) sendState(room.id);
+      return;
+    }
+
+    startNewRound(room);
+
+    if (room?.id) sendState(room.id);
+  }, ms);
+}
+
 
 function canAddCardToMeld(room, meld, card) {
   if (!meld || !Array.isArray(meld.cards) || !card) return false;
@@ -2581,12 +2875,13 @@ async function getAuthUserFromWsRequest(req) {
 // Config de mesas
 // --------------------
 const TABLES = [
-  { id: "K1", name: "Mesa 1", buyIn: 1000, variant: "CACHETAO" },
-  { id: "K2", name: "Mesa 2", buyIn: 5000, variant: "CACHETAO" },
-  { id: "K3", name: "Mesa 3", buyIn: 10000, variant: "CACHETAO" },
-  { id: "K4", name: "Mesa 4", buyIn: 20000, variant: "CACHETAO" },
-  { id: "K5", name: "Mesa 5", buyIn: 50000, variant: "CACHETAO" },
-  { id: "K6", name: "Mesa 6", buyIn: 100000, variant: "CACHETAO" }
+  { id: "K1", name: "Mesa 1", buyIn: 1000, variant: "CACHETAO", tableType: "RECREATIONAL" },
+  { id: "K2", name: "Mesa 2", buyIn: 5000, variant: "CACHETAO", tableType: "RECREATIONAL" },
+  { id: "K3", name: "Mesa 3", buyIn: 10000, variant: "CACHETAO", tableType: "RECREATIONAL" },
+  { id: "K4", name: "Mesa 4", buyIn: 20000, variant: "CACHETAO", tableType: "RECREATIONAL" },
+  { id: "K5", name: "Mesa 5", buyIn: 50000, variant: "CACHETAO", tableType: "RECREATIONAL" },
+  { id: "K6", name: "Mesa 6", buyIn: 100000, variant: "CACHETAO", tableType: "RECREATIONAL" },
+  { id: "C1", name: "Competição 1", buyIn: 1000, entryFee: 10, variant: "CACHETAO", tableType: "COMPETITION" },
 ];
 
 const rooms = new Map();
@@ -2661,8 +2956,40 @@ function makeRoom(t) {
 
     name: t.name,
     buyIn: Math.floor((Number(t.buyIn) || 1000) * 0.10), // 10% da mesa
+    
 
     variant: String(t?.variant || "CLASSIC").toUpperCase(),
+    tableType: String(t?.tableType || "RECREATIONAL").toUpperCase(),
+    entryFee: Number(t.entryFee) || 10,
+    // =====================================================
+// COMPETIÇÃO — ECONOMIA PRÓPRIA
+// =====================================================
+
+    // valor da inscrição da competição
+    competitionEntryFee: Number(t?.entryFee) || 0,
+
+    // valor da Reentrada
+    competitionReentryFee: Number(t?.reentryFee ?? t?.entryFee) || 0,
+
+    // total bruto arrecadado:
+    // inscrições + reentradas
+    competitionGross: 0,
+
+    // taxa da plataforma
+    competitionOrganizationPct: 0.05,
+
+    // valor acumulado da taxa de organização
+    competitionOrganizationFee: 0,
+
+    // premiação líquida da competição
+    competitionPrizePool: 0,
+
+    // quantidade de inscrições efetivamente cobradas
+    competitionEntriesCount: 0,
+
+    // quantidade de reentradas efetivamente cobradas
+    competitionReentriesCount: 0,
+
 
     playersBySeat: Array(10).fill(null),
     spectators: new Set(),
@@ -2690,6 +3017,9 @@ function makeRoom(t) {
 
     // rebuy / economia
     rebuyDecisionUntil: 0,
+    // Competição - janela de reentrada
+    reentryDecisionUntil: 0,
+    lastAppliedReentries: [],
     nextRoundTimeoutId: null,
     _autoTurnScheduled: false,
     stake: Number(t.buyIn) || 1000,        // valor base da mesa
@@ -2707,6 +3037,103 @@ function makeRoom(t) {
     _dealStartTimer: null,
   };
 }
+
+
+function registerCompetitionMoney(room, amount, type = "entry") {
+  const isCompetition =
+    String(room?.tableType || "RECREATIONAL").toUpperCase() === "COMPETITION";
+
+  if (!isCompetition) {
+    return {
+      ok: false,
+      msg: "Esta mesa não é uma competição."
+    };
+  }
+
+  const value = Number(amount) || 0;
+
+  if (value <= 0) {
+    return {
+      ok: false,
+      msg: "Valor inválido para a competição."
+    };
+  }
+
+  const organizationPct =
+    Number(room.competitionOrganizationPct) || 0.05;
+
+  const organizationFee =
+    value * organizationPct;
+
+  const prizeAmount =
+    value - organizationFee;
+
+  room.competitionGross =
+    Number(room.competitionGross) || 0;
+
+  room.competitionOrganizationFee =
+    Number(room.competitionOrganizationFee) || 0;
+
+  room.competitionPrizePool =
+    Number(room.competitionPrizePool) || 0;
+
+  room.competitionEntriesCount =
+    Number(room.competitionEntriesCount) || 0;
+
+  room.competitionReentriesCount =
+    Number(room.competitionReentriesCount) || 0;
+
+  room.competitionGross += value;
+  room.competitionOrganizationFee += organizationFee;
+  room.competitionPrizePool += prizeAmount;
+
+  if (type === "reentry") {
+    room.competitionReentriesCount += 1;
+  } else {
+    room.competitionEntriesCount += 1;
+  }
+
+  room.economicLogs = room.economicLogs || [];
+
+  room.economicLogs.push({
+    type: type === "reentry"
+      ? "competition_reentry"
+      : "competition_entry",
+
+    tableId: room.id,
+    matchId: room.matchId || null,
+    timestamp: Date.now(),
+
+    amount: value,
+    organizationPct,
+    organizationFee,
+    prizeAmount,
+
+    competitionGross:
+      Number(room.competitionGross) || 0,
+
+    competitionOrganizationFee:
+      Number(room.competitionOrganizationFee) || 0,
+
+    competitionPrizePool:
+      Number(room.competitionPrizePool) || 0,
+
+    competitionEntriesCount:
+      Number(room.competitionEntriesCount) || 0,
+
+    competitionReentriesCount:
+      Number(room.competitionReentriesCount) || 0
+  });
+
+  return {
+    ok: true,
+    amount: value,
+    organizationFee,
+    prizeAmount
+  };
+}
+
+
 
 // --------------------
 // Baralho (exemplo)
@@ -2976,7 +3403,14 @@ function roomSnapshotPublic(room) {
     id: room.id,
     name: room.name,
     buyIn: room.buyIn,
-    ante: Math.ceil((room.buyIn || 0) / 2),
+    tableType: room.tableType || "RECREATIONAL",
+    entryFee: Number(room.entryFee) || 0,
+    reentryDecisionUntil: Number(room.reentryDecisionUntil) || 0,
+    competitionGross: Number(room.competitionGross) || 0,
+    competitionOrganizationFee: Number(room.competitionOrganizationFee) || 0,
+    competitionPrizePool: Number(room.competitionPrizePool) || 0,
+    competitionEntriesCount: Number(room.competitionEntriesCount) || 0,
+    competitionReentriesCount: Number(room.competitionReentriesCount) || 0,
     started: room.started,
     startAt: room.startAt || 0,
     minPlayersToStart: room.minPlayersToStart || 2,
@@ -3203,6 +3637,44 @@ function finalizeMatchEconomy(room) {
   }
 }
 
+function finalizeCompetitionMatch(room) {
+  const winnerSeat = room.matchWinnerSeat;
+  const winner = room.playersBySeat?.[winnerSeat - 1];
+
+  if (!winner) return;
+
+  persistMatchStats(room);
+
+  room.economicLogs = room.economicLogs || [];
+
+  room.economicLogs.push({
+    type: "competition_end",
+    tableId: room.id,
+    matchId: room.matchId,
+    timestamp: Date.now(),
+
+    variant: room.variant,
+    tableType: room.tableType,
+
+    winnerSeat,
+    winnerName: winner.name,
+
+    roundsPlayed: Number(room.roundNumber) || 0,
+
+    finalSeats: (room.playersBySeat || []).map((p, idx) =>
+      p ? {
+        seat: idx + 1,
+        name: p.name,
+        vidas: Number(p.vidas ?? p.totalPoints ?? 0),
+        totalPoints: Number(p.totalPoints) || 0,
+        eliminated: !!p.eliminated,
+        reentryCount: Number(p.reentryCount) || 0
+      } : null
+    )
+  });
+}
+
+
 function sendState(roomId) {
   const room = rooms.get(roomId);
   if (!room) return;
@@ -3218,8 +3690,8 @@ function sendState(roomId) {
     dealerSeat: Number(room.dealerSeat) || 0,
     buyIn: room.buyIn,
     maxSeats: room.playersBySeat.length,
-    ante: Math.ceil((room.buyIn || 0) / 2),
     variant: getRoomVariant(room),
+    tableType: room.tableType || "RECREATIONAL",
     turnEndsAt: Number(room.turnEndsAt) || 0,
     turnMs: Number(room.turnMs) || 30000,
     buyEndsAt: Number(room.buyEndsAt) || 0,
@@ -3267,6 +3739,12 @@ function sendState(roomId) {
     roundEnded: !!room.roundEnded,
     winnerSeat: room.winnerSeat ?? null,
     rebuyDecisionUntil: room.rebuyDecisionUntil || 0,
+    reentryDecisionUntil: room.reentryDecisionUntil || 0,
+    competitionGross: Number(room.competitionGross) || 0,
+    competitionOrganizationFee: Number(room.competitionOrganizationFee) || 0,
+    competitionPrizePool: Number(room.competitionPrizePool) || 0,
+    competitionEntriesCount: Number(room.competitionEntriesCount) || 0,
+    competitionReentriesCount: Number(room.competitionReentriesCount) || 0,
     startAt: room.startAt || 0,
     minPlayersToStart: room.minPlayersToStart || 5,
 
@@ -3289,6 +3767,9 @@ function sendState(roomId) {
         rebuyCount: p.rebuyCount || 0,
         pendingRebuy: !!p.pendingRebuy,
         rebuyDeclined: !!p.rebuyDeclined,
+        reentryCount: p.reentryCount || 0,
+        pendingReentry: !!p.pendingReentry,
+        reentryDeclined: !!p.reentryDeclined,
         disconnected: !!p.disconnected,
       } : null
     ),
@@ -3366,13 +3847,17 @@ function getClientPlayer(room, client) {
 }
 
 function isOutOfTurnAllowed(actionType) {
+
   return (
     actionType === "rebuy" ||
     actionType === "declineRebuy" ||
+    actionType === "reentry" ||
+    actionType === "declineReentry" ||
     actionType === "startCrazyBatidaAttempt" ||
     actionType === "startBatidaComViraAttempt" ||
     actionType === "cancelCrazyBatidaAttempt"
   );
+
 }
 
 function clearClientTableState(client) {
@@ -3444,19 +3929,29 @@ function attachClientToExistingPlayer(existing, client, clientId, tableId, seat)
 
 
 function createPlayerForSeat(room, seat, clientId, client, avatarUrl) {
+  const isCompetition =
+    String(room?.tableType || "RECREATIONAL").toUpperCase() === "COMPETITION";
+
   const buyIn = Number(room?.buyIn) || 0;
-  const mesaStack = buyIn * 10;
-  const mesaStackLiquido = mesaStack - buyIn;
+
+  const mesaStack = isCompetition
+    ? 0
+    : buyIn * 10;
+
+  const mesaStackLiquido = isCompetition
+    ? 0
+    : mesaStack - buyIn;
 
   const saldoAtual = Number(client.chips ?? client.chipsBalance ?? 0);
 
-  // cobra buy-in do saldo geral
-  /*client.chips = saldoAtual - mesaStack;*/ // caso queira cobrar o stack completo já no buy-in, use mesaStack ao invés de mesaStackLiquido
-  client.chips = saldoAtual - mesaStackLiquido;
-  client.chipsBalance = client.chips;
+  if (!isCompetition) {
+    // Mesa recreativa: mantém exatamente a economia atual
+    client.chips = saldoAtual - mesaStackLiquido;
+    client.chipsBalance = client.chips;
 
-  room.matchPot = Number(room.matchPot) || 0;
-  room.matchPot += buyIn;
+    room.matchPot = Number(room.matchPot) || 0;
+    room.matchPot += buyIn;
+  }
 
   room.playersBySeat[seat - 1] = {
     clientId,
@@ -3489,8 +3984,13 @@ function createPlayerForSeat(room, seat, clientId, client, avatarUrl) {
     rebuyCount: 0,
     pendingRebuy: false,
     rebuyDeclined: false,
-    pendingBatidaAfterDiscard: false,
 
+    // Competição - reentrada
+    reentryCount: 0,
+    pendingReentry: false,
+    reentryDeclined: false,
+
+    pendingBatidaAfterDiscard: false,
     disconnected: false,
     nextMatchReady: true,
     disconnectDeadline: 0,
@@ -4122,6 +4622,12 @@ function seatedCount(room) {
 function createBotForSeat(room, seat) {
   if (!room) return null;
 
+  if (
+    String(room?.tableType || "RECREATIONAL").toUpperCase() === "COMPETITION"
+  ) {
+    return null;
+  }
+
   const s = Number(seat);
 
   if (!(s >= 1 && s <= 10)) {
@@ -4244,8 +4750,14 @@ room.tableMelds = [];
 room.mustUseJokerBySeat = {};
 room.mustUseDiscardCardBySeat = {};
 
+const isCompetition =
+  String(room?.tableType || "RECREATIONAL").toUpperCase() === "COMPETITION";
+
 const stake = Number(room.stake) || 1000;
-const initialTableChips = Math.max(0, stake - getBuyIn(room));
+
+const initialTableChips = isCompetition
+  ? 0
+  : Math.max(0, stake - getBuyIn(room));
 
   for (const p of room.playersBySeat || []) {
     if (!p) continue;
@@ -4257,7 +4769,9 @@ const initialTableChips = Math.max(0, stake - getBuyIn(room));
     p.rebuyDeclined = false;
     p.pendingBatidaAfterDiscard = false;
     p.rebuyCount = 0;
-
+    p.pendingReentry = false;
+    p.reentryDeclined = false;
+    p.reentryCount = 0;
     p.totalPoints = 0;
     p.lastRoundPoints = 0;
     p.vidas = 10;
@@ -4268,9 +4782,6 @@ const initialTableChips = Math.max(0, stake - getBuyIn(room));
     p.jogosBaixados = [];
     p.obrigacaoBaixar = false;
   }
-
-
-
 
   room.started = true;
   room.phase = "DEALING";
@@ -4308,6 +4819,34 @@ const initialTableChips = Math.max(0, stake - getBuyIn(room));
   room.matchPot = 0;
   room.economicLogs = [];
 
+  // =====================================================
+  // COMPETIÇÃO — INICIA ECONOMIA DA NOVA COMPETIÇÃO
+  // =====================================================
+
+  if (isCompetition) {
+    // zera os valores da competição anterior
+    room.competitionGross = 0;
+    room.competitionOrganizationFee = 0;
+    room.competitionPrizePool = 0;
+    room.competitionEntriesCount = 0;
+    room.competitionReentriesCount = 0;
+
+    const entryFee =
+      Number(room.competitionEntryFee ?? room.entryFee) || 0;
+
+    // Cada jogador sentado no início representa
+    // uma inscrição efetiva nesta competição.
+    for (const pl of room.playersBySeat || []) {
+      if (!pl) continue;
+
+      registerCompetitionMoney(
+        room,
+        entryFee,
+        "entry"
+      );
+    }
+  }
+
   const buyIn = getBuyIn(room);
 
   for (const p of room.playersBySeat || []) {
@@ -4327,8 +4866,10 @@ const initialTableChips = Math.max(0, stake - getBuyIn(room));
     p.chips = Number(p.chips) || 0;
     p.matchStartChips = Number(p.chips) || 0;
 
-    p.chips -= buyIn;
-    room.matchPot += buyIn;
+    if (!isCompetition) {
+      p.chips -= buyIn;
+      room.matchPot += buyIn;
+    }
   }
 
   room.deck = shuffle(makeDeck());
@@ -4383,8 +4924,8 @@ const initialTableChips = Math.max(0, stake - getBuyIn(room));
   startTurnClock(room);
 
   if (room?.id) sendState(room.id);
-  scheduleAutoTurn(room);
-}, room.dealMs);
+    scheduleAutoTurn(room);
+  }, room.dealMs);
 }
 
 
@@ -5969,11 +6510,224 @@ case "cancelCrazyBatidaAttempt": {
 }
 
 
+case "reentry": {
+  if (!player) {
+    return { ok: false, msg: "Você não está sentado nesta mesa." };
+  }
+
+  // Reentrada existe somente em mesas de competição.
+  if (
+    String(room?.tableType || "RECREATIONAL").toUpperCase() !== "COMPETITION"
+  ) {
+    return {
+      ok: false,
+      msg: "Reentrada está disponível somente em mesas de competição."
+    };
+  }
+
+  if (!player.eliminated) {
+    return {
+      ok: false,
+      msg: "Você não está eliminado."
+    };
+  }
+
+  if (player.disconnected) {
+    return {
+      ok: false,
+      msg: "Jogador desconectado não pode solicitar Reentrada."
+    };
+  }
+
+  if ((player.reentryCount || 0) >= 3) {
+    return {
+      ok: false,
+      msg: "Você atingiu o limite de Reentradas."
+    };
+  }
+
+  if (player.pendingReentry === true) {
+    return {
+      ok: false,
+      msg: "Reentrada já solicitada."
+    };
+  }
+
+  if (
+    !room.reentryDecisionUntil ||
+    Date.now() > room.reentryDecisionUntil
+  ) {
+    return {
+      ok: false,
+      msg: "Janela de Reentrada encerrada."
+    };
+  }
+
+  // Segurança adicional:
+  // a Reentrada não pode ser aceita se todos os jogadores
+  // ainda vivos estiverem com 1 vida (Marra).
+  const alivePlayers = (room.playersBySeat || [])
+    .filter(pl => pl && !pl.eliminated);
+
+  const allAliveInMarra =
+    alivePlayers.length > 0 &&
+    alivePlayers.every(pl =>
+      Number(pl.vidas ?? pl.totalPoints ?? 0) === 1
+    );
+
+  if (alivePlayers.length <= 1 || allAliveInMarra) {
+    return {
+      ok: false,
+      msg: "Reentrada não está mais disponível nesta competição."
+    };
+  }
+
+  player.pendingReentry = true;
+player.reentryDeclined = false;
+
+// Verifica se ainda existe algum eliminado conectado
+// que ainda precisa decidir sobre a Reentrada.
+const hasRemainingReentryChoices = (room.playersBySeat || []).some(pl =>
+  pl &&
+  pl.eliminated === true &&
+  pl.disconnected !== true &&
+  pl.pendingReentry !== true &&
+  pl.reentryDeclined !== true &&
+  (pl.reentryCount || 0) < 3
+);
+
+if (!hasRemainingReentryChoices) {
+  if (room.nextRoundTimeoutId) {
+    clearTimeout(room.nextRoundTimeoutId);
+    room.nextRoundTimeoutId = null;
+  }
+
+  room.reentryDecisionUntil = 0;
+
+  const reentries = applyPendingReentries(room);
+  room.lastAppliedReentries = reentries;
+
+  const aliveAfterReentry = (room.playersBySeat || [])
+    .filter(pl => pl && !pl.eliminated);
+
+  if (aliveAfterReentry.length <= 1) {
+    room.matchEnded = true;
+    room.matchWinnerSeat =
+      room.playersBySeat.indexOf(aliveAfterReentry[0]) + 1;
+
+    finalizeCompetitionMatch(room);
+
+    if (room?.id) sendState(room.id);
+    return { ok: true };
+  }
+
+  startNewRound(room);
+
+  if (room?.id) sendState(room.id);
+
+  return { ok: true };
+}
+
+if (room?.id) sendState(room.id);
+
+return { ok: true };
+}
+
+case "declineReentry": {
+  if (!player) {
+    return { ok: false, msg: "Você não está sentado nesta mesa." };
+  }
+
+  if (
+    String(room?.tableType || "RECREATIONAL").toUpperCase() !== "COMPETITION"
+  ) {
+    return {
+      ok: false,
+      msg: "Reentrada está disponível somente em mesas de competição."
+    };
+  }
+
+  if (!player.eliminated) {
+    return {
+      ok: false,
+      msg: "Você não está eliminado."
+    };
+  }
+
+  if (
+    !room.reentryDecisionUntil ||
+    Date.now() > room.reentryDecisionUntil
+  ) {
+    return {
+      ok: false,
+      msg: "Janela de Reentrada encerrada."
+    };
+  }
+
+  player.pendingReentry = false;
+  player.reentryDeclined = true;
+
+  const hasRemainingReentryChoices = (room.playersBySeat || []).some(pl =>
+    pl &&
+    pl.eliminated === true &&
+    pl.disconnected !== true &&
+    pl.pendingReentry !== true &&
+    pl.reentryDeclined !== true &&
+    (pl.reentryCount || 0) < 3
+  );
+
+  if (!hasRemainingReentryChoices) {
+    if (room.nextRoundTimeoutId) {
+      clearTimeout(room.nextRoundTimeoutId);
+      room.nextRoundTimeoutId = null;
+    }
+
+    room.reentryDecisionUntil = 0;
+
+    const reentries = applyPendingReentries(room);
+    room.lastAppliedReentries = reentries;
+
+    const aliveAfterReentry = (room.playersBySeat || [])
+      .filter(pl => pl && !pl.eliminated);
+
+    if (aliveAfterReentry.length <= 1) {
+      room.matchEnded = true;
+      room.matchWinnerSeat =
+        room.playersBySeat.indexOf(aliveAfterReentry[0]) + 1;
+
+      finalizeCompetitionMatch(room);
+
+      if (room?.id) sendState(room.id);
+      return { ok: true };
+    }
+
+    startNewRound(room);
+
+    if (room?.id) sendState(room.id);
+
+    return { ok: true };
+  }
+
+  if (room?.id) sendState(room.id);
+
+  return { ok: true };
+}
+
 
 case "rebuy": {
   if (!player) {
     return { ok: false, msg: "Você não está sentado nesta mesa." };
   }
+
+  if (
+    String(room?.tableType || "RECREATIONAL").toUpperCase() === "COMPETITION"
+  ) {
+    return {
+      ok: false,
+      msg: "Rebuy não está disponível em mesas de competição."
+    };
+  }
+
 
   if (!player.eliminated) {
     return { ok: false, msg: "Você não está eliminado." };
@@ -6045,6 +6799,15 @@ case "declineRebuy": {
 
   if (!player) {
     return { ok: false, msg: "Você não está sentado nesta mesa." };
+  }
+
+  if (
+    String(room?.tableType || "RECREATIONAL").toUpperCase() === "COMPETITION"
+  ) {
+    return {
+      ok: false,
+      msg: "Rebuy não está disponível em mesas de competição."
+    };
   }
 
   if (!player.eliminated) {
@@ -6188,42 +6951,6 @@ function leaveCurrentTable(clientId) {
 }
 
 
-/*
-function tryResolveRematchAfterSeatChange(room) {
-  if (!room) return;
-  if (!room.matchEnded) return;
-
-  const seatedPlayers = (room.playersBySeat || [])
-    .map((p, idx) => ({ p, seat: idx + 1 }))
-    .filter(x => !!x.p);
-
-  // só considera para revanche quem participou da partida anterior E ainda está sentado
-  const eligibleStillSeated = seatedPlayers.filter(({ p }) =>
-    Array.isArray(room.rematchEligiblePlayers) &&
-    room.rematchEligiblePlayers.includes(p.clientId)
-  );
-
-  // se ninguém elegível da partida anterior ficou sentado,
-  // a mesa precisa voltar ao estado normal de espera
-  if (eligibleStillSeated.length === 0) {
-    resetRoomForRematch(room);
-    resetStartCountdown(room);
-    broadcastRoomState(room);
-    return;
-  }
-
-  // se todos os elegíveis que ainda estão sentados aceitaram, a mesa volta para WAITING
-  const allAccepted = eligibleStillSeated.every(({ seat }) => room.rematchResponses?.[seat] === true);
-
-  if (!allAccepted) return;
-
-  resetRoomForRematch(room);
-
-  // volta para o fluxo normal de espera / countdown
-  refreshStartCountdown(room);
-  broadcastRoomState(room);
-}
-*/
 
 function sanitizeRoom(room) {
   // Precedência (quem “ganha” se tiver duplicado):
@@ -6484,14 +7211,23 @@ if (msg.type === "joinTableGroup") {
 
 
   // sai da mesa atual antes de entrar em outra
-  leaveCurrentTable(clientId);
+    leaveCurrentTable(clientId);
 
-  const room = rooms.get(tableId);
+    // IMPORTANTE:
+    // leaveCurrentTable pode remover uma instância dinâmica vazia.
+    // Por isso precisamos validar novamente depois da saída.
+    const room = rooms.get(tableId);
 
-  if (mode === "spectator") {
-    joinAsSpectator(room, c, clientId, tableId, ws);
-    return;
-  }
+    if (!room) {
+      return send(ws, "error", {
+        message: "Esta mesa não está mais disponível. Selecione a mesa novamente."
+      });
+    }
+
+    if (mode === "spectator") {
+      joinAsSpectator(room, c, clientId, tableId, ws);
+      return;
+    }
 
   const s = Number(seat);
 

@@ -191,12 +191,34 @@
 
   .mobile-seat-layer {
     position: absolute !important;
-    inset: 38px 0 0 0 !important;
+
+    top: 38px !important;
+    left: 14px !important;
+    right: 14px !important;
+    height: 250px !important;
 
     pointer-events: none !important;
-  }
 
-    .mobile-seat {
+    /* mini-mesa dos jogadores */
+    border: 2px solid rgba(255, 215, 0, 0.55) !important;
+    border-radius: 30px !important;
+
+    background:
+      radial-gradient(
+        ellipse at center,
+        rgba(25, 170, 90, 0.38) 0%,
+        rgba(8, 105, 62, 0.30) 58%,
+        rgba(0, 45, 28, 0.38) 100%
+      ) !important;
+
+    box-shadow:
+      inset 0 0 22px rgba(0, 0, 0, 0.22),
+      0 2px 6px rgba(0, 0, 0, 0.18) !important;
+
+    z-index: 1 !important;
+}
+
+  .mobile-seat {
     position: absolute !important;
 
     width: 92px !important;
@@ -302,19 +324,19 @@
      POSIÇÕES
   ========================= */
 
-  .mobile-seat.pos1 {  left: 50%;  top: 100%;  transform: translate(-50%, -50%);}
+  .mobile-seat.pos1 {  left: 50%;  top: 92%;  transform: translate(-50%, -50%);}
 
-  .mobile-seat.pos2 {  left: 15%;  top: 100%;  transform: translate(-50%, -50%);}
+  .mobile-seat.pos2 {  left: 15%;  top: 92%;  transform: translate(-50%, -50%);}
   .mobile-seat.pos3 {  left: 15%;  top: 70%;  transform: translate(-50%, -50%);}
   .mobile-seat.pos4 {  left: 15%;  top: 40%;  transform: translate(-50%, -50%);}
-  .mobile-seat.pos5 {  left: 15%;  top: 10%;  transform: translate(-50%, -50%);}
+  .mobile-seat.pos5 {  left: 15%;  top: 12%;  transform: translate(-50%, -50%);}
 
-  .mobile-seat.pos6 {  left: 50%;  top: 10%;  transform: translate(-50%, -50%);}
+  .mobile-seat.pos6 {  left: 50%;  top: 12%;  transform: translate(-50%, -50%);}
 
-  .mobile-seat.pos7 {  left: 85%;  top: 10%;  transform: translate(-50%, -50%);}
+  .mobile-seat.pos7 {  left: 85%;  top: 12%;  transform: translate(-50%, -50%);}
   .mobile-seat.pos8 {  left: 85%;  top: 70%;  transform: translate(-50%, -50%);}
   .mobile-seat.pos9 {  left: 85%;  top: 40%;  transform: translate(-50%, -50%);}
-  .mobile-seat.pos10 {  left: 85%;  top: 100%;  transform: translate(-50%, -50%);}
+  .mobile-seat.pos10 {  left: 85%;  top: 92%;  transform: translate(-50%, -50%);}
 
 
 

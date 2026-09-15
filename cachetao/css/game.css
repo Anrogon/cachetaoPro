@@ -733,6 +733,258 @@
 }
 
 
+/* =========================================================
+   COMPETIÇÃO — REENTRADA
+========================================================= */
+
+.reentry-overlay{
+  position: fixed;
+  inset: 0;
+  z-index: 9998;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  background: rgba(0, 10, 18, .62);
+  backdrop-filter: blur(6px);
+}
+
+.reentry-modal{
+  width: min(400px, calc(100vw - 28px));
+
+  padding: 24px 22px 18px;
+
+  border-radius: 18px;
+
+  background:
+    linear-gradient(
+      180deg,
+      rgba(20, 31, 43, .98),
+      rgba(8, 16, 25, .98)
+    );
+
+  border: 1px solid rgba(224, 174, 62, .55);
+
+  box-shadow:
+    0 24px 60px rgba(0,0,0,.48),
+    inset 0 1px 0 rgba(255,255,255,.04);
+
+  color: #fff;
+  text-align: center;
+}
+
+.reentry-title{
+  margin-bottom: 14px;
+
+  font-size: 26px;
+  font-weight: 800;
+
+  color: #f5f7fb;
+}
+
+.reentry-player-box{
+  padding: 18px;
+
+  border-radius: 14px;
+
+  background: rgba(255,255,255,.055);
+
+  border: 1px solid rgba(255,255,255,.08);
+}
+
+.reentry-player-name{
+  font-size: 18px;
+  font-weight: 800;
+
+  color: #fff;
+}
+
+.reentry-player-meta{
+  margin-top: 5px;
+
+  font-size: 14px;
+
+  color: rgba(255,255,255,.78);
+}
+
+.reentry-dot{
+  margin: 0 5px;
+
+  color: #e2b44f;
+}
+
+.reentry-actions{
+  margin-top: 16px;
+
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+}
+
+.reentry-btn-primary,
+.reentry-btn-secondary{
+  min-width: 122px;
+
+  padding: 11px 18px;
+
+  border: 0;
+  border-radius: 999px;
+
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.reentry-btn-primary{
+  background:
+    linear-gradient(
+      180deg,
+      #e5b94f,
+      #b88624
+    );
+
+  color: #111820;
+
+  box-shadow:
+    0 6px 18px rgba(198, 146, 35, .28);
+}
+
+.reentry-btn-primary:hover{
+  filter: brightness(1.08);
+}
+
+.reentry-btn-secondary{
+  background:
+    linear-gradient(
+      180deg,
+      #45515e,
+      #29333d
+    );
+
+  color: #fff;
+
+  border: 1px solid rgba(255,255,255,.10);
+}
+
+.reentry-btn-secondary:hover{
+  filter: brightness(1.10);
+}
+
+.reentry-btn-primary:disabled,
+.reentry-btn-secondary:disabled{
+  opacity: .60;
+  cursor: default;
+}
+
+.reentry-timer{
+  margin-top: 16px;
+}
+
+.reentry-timer-track{
+  width: 100%;
+  height: 5px;
+
+  background: rgba(255,255,255,.10);
+
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.reentry-timer-fill{
+  height: 100%;
+
+  background:
+    linear-gradient(
+      90deg,
+      #c58e26,
+      #f2d16c
+    );
+
+  border-radius: inherit;
+
+  transition: width 1s linear;
+}
+
+.reentry-timer-text{
+  margin-top: 9px;
+
+  font-size: 13px;
+
+  color: rgba(255,255,255,.70);
+}
+
+.reentry-timer-text b{
+  color: #f2d16c;
+}
+
+
+/* =========================================================
+   COMPETIÇÃO — PAINEL DE PREMIAÇÃO
+========================================================= */
+
+.competition-prize-mini{
+  width: 125px;
+  min-height: 62px;
+
+  padding: 8px 12px;
+
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+
+  text-align: center;
+
+  background: linear-gradient(
+    180deg,
+    rgba(28, 28, 28, .98),
+    rgba(8, 8, 8, .98)
+  );
+
+  border: 1px solid #d6a72f;
+  border-radius: 18px;
+
+  box-shadow:
+    0 6px 16px rgba(0,0,0,.28),
+    inset 0 1px 0 rgba(255,255,255,.05);
+}
+
+.competition-prize-mini-title{
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1;
+
+  color: #fff;
+}
+
+.competition-prize-mini-value{
+  margin-top: 5px;
+
+  font-size: 16px;
+  font-weight: 900;
+  line-height: 1;
+
+  color: #f1c84b;
+
+  text-shadow:
+    0 1px 0 #000,
+    0 2px 6px rgba(0,0,0,.35);
+}
+
+
+.joker-mini-label{
+  margin-right: 5px;
+  font-weight: 700;
+}
+
+.joker-mini-card{
+  width: 40px;
+  height: auto;
+  margin-left: 3px;
+  vertical-align: middle;
+  border-radius: 3px;
+}
+
 /* 
 ======================
    OVERLAY REVANCHE

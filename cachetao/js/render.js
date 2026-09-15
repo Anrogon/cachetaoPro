@@ -15,6 +15,8 @@ import {
   requestCancelCrazyBatidaAttempt,
   requestStartCrazyBatidaAttempt,
   requestStartBatidaComViraAttempt,
+  requestReentry,
+  declineReentry,
   declineRebuy
 } from "./actions.js";
 
@@ -699,22 +701,14 @@ export function renderTable() {
   const isMobilePortrait =
     window.matchMedia?.("(max-width: 520px) and (orientation: portrait)")?.matches;
 
-  let topLayer = null;
-  let bottomLayer = null;
+  let mobileMeldsLayer = null;
 
-  if (isMobilePortrait) {
-    topLayer = document.createElement("div");
-    topLayer.className = "table-melds-layer table-melds-top";
+    if (isMobilePortrait) {
+      mobileMeldsLayer = document.createElement("div");
+      mobileMeldsLayer.className = "table-melds-layer";
 
-    bottomLayer = document.createElement("div");
-    bottomLayer.className = "table-melds-layer table-melds-bottom";
-
-    el.appendChild(topLayer);
-    el.appendChild(bottomLayer);
-  }
-
-  const totalMelds = state.table.length;
-  const splitIndex = totalMelds;
+      el.appendChild(mobileMeldsLayer);
+    }
 
   state.table.forEach((jogo, index) => {
     const group = document.createElement("div");
@@ -744,7 +738,7 @@ export function renderTable() {
     };
 
     if (isMobilePortrait) {
-      bottomLayer.appendChild(group);
+      mobileMeldsLayer.appendChild(group);
     } else {
       el.appendChild(group);
     }
@@ -924,6 +918,12 @@ if (viraCardEl) {
 }
 
 if (viraJokerEl) {
+  const tableType = String(
+    state.room?.tableType ||
+    window.state?.tables?.[state.room?.id]?.tableType ||
+    "RECREATIONAL"
+  ).toUpperCase();
+
   const naipeSimbolo = {
     espadas: "♠",
     paus: "♣",
@@ -931,6 +931,46 @@ if (viraJokerEl) {
     ouros: "♦"
   };
 
+  // =====================================================
+  // COMPETIÇÃO — MINI CARTAS REAIS
+  // =====================================================
+  if (
+    tableType === "COMPETITION" &&
+    coringaValor &&
+    coringaNaipes.length >= 2
+  ) {
+    const card1 = {
+      valor: coringaValor,
+      naipe: coringaNaipes[0]
+    };
+
+    const card2 = {
+      valor: coringaValor,
+      naipe: coringaNaipes[1]
+    };
+
+    viraJokerEl.innerHTML = `
+      <span class="joker-mini-label">Coringas:</span>
+
+      <img
+        class="joker-mini-card"
+        src="${getCardImage(card1)}"
+        alt="${coringaValor} ${coringaNaipes[0]}"
+      >
+
+      <img
+        class="joker-mini-card"
+        src="${getCardImage(card2)}"
+        alt="${coringaValor} ${coringaNaipes[1]}"
+      >
+    `;
+
+    return;
+  }
+
+  // =====================================================
+  // RECREATIVO — MANTÉM COMO JÁ É
+  // =====================================================
   const coringaTexto =
     coringaValor && coringaNaipes.length >= 2
       ? `${coringaValor}${naipeSimbolo[coringaNaipes[0]] || coringaNaipes[0]} e ${coringaValor}${naipeSimbolo[coringaNaipes[1]] || coringaNaipes[1]}`
@@ -2210,20 +2250,72 @@ const miniAnte = Number(
       s.faseTurno === "COMPRAR" &&
       !s.spectator;
 
-          if (mobileViraJoker) {
-            const naipeSimbolo = {
-              espadas: "♠",
-              paus: "♣",
-              copas: "♥",
-              ouros: "♦"
+        if (mobileViraJoker) {
+          const tableType = String(
+            s.room?.tableType ||
+            tableData?.tableType ||
+            window.state?.tables?.[tableId]?.tableType ||
+            "RECREATIONAL"
+          ).toUpperCase();
+
+          const naipeSimbolo = {
+            espadas: "♠",
+            paus: "♣",
+            copas: "♥",
+            ouros: "♦"
+          };
+
+          // =====================================================
+          // COMPETIÇÃO — MINI CARTAS REAIS
+          // =====================================================
+          if (
+            tableType === "COMPETITION" &&
+            coringaValor &&
+            coringaNaipes.length >= 2
+          ) {
+            const card1 = {
+              valor: coringaValor,
+              naipe: coringaNaipes[0]
             };
 
-            const texto = coringaValor && coringaNaipes.length >= 2
-              ? `Coringas: ${coringaValor}${naipeSimbolo[coringaNaipes[0]] || coringaNaipes[0]} e ${coringaValor}${naipeSimbolo[coringaNaipes[1]] || coringaNaipes[1]}`
-              : "Coringas: —";
+            const card2 = {
+              valor: coringaValor,
+              naipe: coringaNaipes[1]
+            };
+
+            mobileViraJoker.innerHTML = `
+              <div class="mobile-joker-mini-label">
+                Coringas
+              </div>
+
+              <div class="mobile-joker-mini-cards">
+                <img
+                  class="mobile-joker-mini-card"
+                  src="${getCardImage(card1)}"
+                  alt="${coringaValor} ${coringaNaipes[0]}"
+                >
+
+                <img
+                  class="mobile-joker-mini-card"
+                  src="${getCardImage(card2)}"
+                  alt="${coringaValor} ${coringaNaipes[1]}"
+                >
+              </div>
+            `;
+          }
+
+          // =====================================================
+          // RECREATIVO — MANTÉM COMO ESTÁ
+          // =====================================================
+          else {
+            const texto =
+              coringaValor && coringaNaipes.length >= 2
+                ? `Coringas: ${coringaValor}${naipeSimbolo[coringaNaipes[0]] || coringaNaipes[0]} e ${coringaValor}${naipeSimbolo[coringaNaipes[1]] || coringaNaipes[1]}`
+                : "Coringas: —";
 
             mobileViraJoker.textContent = texto;
           }
+        }
 
       const mobileDeckBox = document.getElementById("mobileDeckBox");
 
@@ -2234,7 +2326,7 @@ const miniAnte = Number(
       const viraArea = document.getElementById("vira-area");
       const viraJoker = document.getElementById("vira-joker");
 
-      if (mobileDeckBox && monte && lixo && potArea) {
+      if (mobileDeckBox && monte && lixo) {
 
         if (!mobileDeckBox.contains(monte)) {
           mobileDeckBox.appendChild(monte);
@@ -2244,8 +2336,36 @@ const miniAnte = Number(
           mobileDeckBox.appendChild(lixo);
         }
 
-        if (!mobileDeckBox.contains(potArea)) {
-          mobileDeckBox.appendChild(potArea);
+        const tableTypeMobile = String(
+          s.room?.tableType ||
+          tableData?.tableType ||
+          "RECREATIONAL"
+        ).toUpperCase();
+
+        if (tableTypeMobile !== "COMPETITION") {
+          if (!mobileDeckBox.contains(potArea)) {
+            mobileDeckBox.appendChild(potArea);
+          }
+        }
+
+        if (
+          tableTypeMobile === "COMPETITION" &&
+          potArea &&
+          root
+        ) {
+          if (potArea.parentElement !== root) {
+            root.appendChild(potArea);
+          }
+
+          potArea.classList.add("mobile-competition-prize");
+        } else if (potArea) {
+          potArea.classList.remove("mobile-competition-prize");
+        }
+
+        if (mobileDeckBox && mobileViraCard) {
+          if (!mobileDeckBox.contains(mobileViraCard)) {
+            mobileDeckBox.appendChild(mobileViraCard);
+          }
         }
       }
 
@@ -2684,21 +2804,64 @@ export function renderPot() {
     lixoEl.insertAdjacentElement("afterend", potEl);
   }
 
-  const pot = typeof state.matchPot === "number" ? state.matchPot : 0;
+  const tableId = state.room?.id;
+
+  const liveTable =
+    tableId && window.state?.tables
+      ? window.state.tables[tableId]
+      : null;
+
+  const tableType = String(
+    state.room?.tableType ||
+    liveTable?.tableType ||
+    "RECREATIONAL"
+  ).toUpperCase();
+
+
+  // =====================================================
+  // COMPETIÇÃO — mostra premiação em dinheiro
+  // =====================================================
+  if (tableType === "COMPETITION") {
+  const prizePool = Number(
+    liveTable?.competitionPrizePool ?? 0
+  );
+
+  potEl.innerHTML = `
+    <div class="competition-prize-mini">
+      <div class="competition-prize-mini-title">
+        PREMIAÇÃO:
+      </div>
+
+      <div class="competition-prize-mini-value">
+        R$ ${prizePool
+          .toFixed(2)
+          .replace(".", ",")}
+      </div>
+    </div>
+  `;
+
+  return;
+}
+
+
+  // =====================================================
+  // RECREATIVO — mantém o pote atual
+  // =====================================================
+  const pot =
+    typeof state.matchPot === "number"
+      ? state.matchPot
+      : 0;
 
   potEl.innerHTML = `
     <div class="chip-stack" aria-label="Pote ${pot}">
       ${buildChipStackHTML(pot)}
     </div>
-    <div class="pot-label">Pote: ${Number(pot).toLocaleString("pt-BR")}</div>
+
+    <div class="pot-label">
+      Pote: ${Number(pot).toLocaleString("pt-BR")}
+    </div>
   `;
 
-/* animação do pote
-  potEl.classList.add("pot-update");
-
-  setTimeout(() => {
-    potEl.classList.remove("pot-update");
-  }, 300);*/
 }
 
 
@@ -2746,6 +2909,27 @@ function buildChipStackHTML(potValue) {
 
 export function renderRebuyOverlay() {
   const gameEl = document.getElementById("game");
+
+  const tableId = state.room?.id;
+
+  const tableType = String(
+    state.room?.tableType ||
+    window.state?.tables?.[tableId]?.tableType ||
+    "RECREATIONAL"
+  ).toUpperCase();
+
+  if (tableType === "COMPETITION") {
+    state.rebuyDecisionUntil = 0;
+
+    if (window.rebuyOverlayTimer) {
+      clearInterval(window.rebuyOverlayTimer);
+      window.rebuyOverlayTimer = null;
+    }
+
+    document.getElementById("rebuyOverlay")?.remove();
+    return;
+  }
+
   if (state.rebuyDecisionUntil && !window.rebuyOverlayTimer) {
   window.rebuyOverlayTimer = setInterval(() => {
     if (!state.rebuyDecisionUntil || Date.now() > state.rebuyDecisionUntil) {
@@ -2932,6 +3116,264 @@ export function renderRebuyOverlay() {
 });
 }
 
+
+// =========================================================
+// 🏆 REENTRADA — COMPETIÇÃO
+// =========================================================
+
+export function renderReentryOverlay() {
+  const gameEl = document.getElementById("game");
+  if (!gameEl) return;
+
+  const tableId = state.room?.id;
+
+  const tableType = String(
+    state.room?.tableType ||
+    window.state?.tables?.[tableId]?.tableType ||
+    "RECREATIONAL"
+  ).toUpperCase();
+
+  // Reentrada existe somente em competição
+  if (tableType !== "COMPETITION") {
+    if (window.reentryOverlayTimer) {
+      clearInterval(window.reentryOverlayTimer);
+      window.reentryOverlayTimer = null;
+    }
+
+    document.getElementById("reentryOverlay")?.remove();
+    return;
+  }
+
+  // Atualiza contador durante a janela
+  if (
+    state.reentryDecisionUntil &&
+    !window.reentryOverlayTimer
+  ) {
+    window.reentryOverlayTimer = setInterval(() => {
+      if (
+        !state.reentryDecisionUntil ||
+        Date.now() > state.reentryDecisionUntil
+      ) {
+        clearInterval(window.reentryOverlayTimer);
+        window.reentryOverlayTimer = null;
+
+        document.getElementById("reentryOverlay")?.remove();
+        return;
+      }
+
+      renderReentryOverlay();
+    }, 1000);
+  }
+
+  if (state.matchEnded) {
+    document.getElementById("reentryOverlay")?.remove();
+    return;
+  }
+
+  // Só mostra durante a janela
+  if (
+    !state.reentryDecisionUntil ||
+    Date.now() > state.reentryDecisionUntil
+  ) {
+    document.getElementById("reentryOverlay")?.remove();
+    return;
+  }
+
+  const mySeat = Number(state.mySeat || 0);
+
+  // Jogador deste navegador
+  const me = (state.players || []).find(pl =>
+    pl &&
+    Number(pl.seat) === mySeat
+  );
+
+  let overlay = document.getElementById("reentryOverlay");
+
+  // =====================================================
+  // JOGADOR NÃO É O ELIMINADO QUE PRECISA DECIDIR
+  // =====================================================
+  const canDecide =
+    me &&
+    me.eliminated === true &&
+    me.pendingReentry !== true &&
+    me.reentryDeclined !== true &&
+    (me.reentryCount || 0) < 3;
+
+  if (!canDecide) {
+    if (overlay) {
+      overlay.remove();
+    }
+
+    return;
+  }
+
+  // =====================================================
+  // CALCULA PONTOS DE RETORNO
+  // =====================================================
+  const ativos = (state.players || []).filter(pl =>
+    pl &&
+    !pl.eliminated &&
+    !pl.pendingReentry
+  );
+
+  const vidasValidas = ativos
+    .map(pl => Number(pl.vidas ?? pl.totalPoints ?? 0))
+    .filter(v => v > 0);
+
+  const pontosRetorno = vidasValidas.length
+    ? Math.min(...vidasValidas)
+    : 1;
+
+  const pontosLabel =
+    pontosRetorno === 1
+      ? "pt"
+      : "pts";
+
+  const nextIdx = Math.min(
+    (me.reentryCount || 0) + 1,
+    3
+  );
+
+  const nome = me.name || "Jogador";
+
+  const secondsLeft = Math.max(
+    0,
+    Math.ceil(
+      (state.reentryDecisionUntil - Date.now()) / 1000
+    )
+  );
+
+  const progressPct = Math.max(
+    0,
+    Math.min(
+      100,
+      ((state.reentryDecisionUntil - Date.now()) / 15000) * 100
+    )
+  );
+
+  // =====================================================
+  // CRIA OVERLAY
+  // =====================================================
+  if (!overlay) {
+    overlay = document.createElement("div");
+    overlay.id = "reentryOverlay";
+    overlay.className = "reentry-overlay";
+    gameEl.appendChild(overlay);
+  }
+
+  overlay.innerHTML = `
+    <div class="reentry-modal">
+
+      <div class="reentry-title">
+        Fazer Reentrada?
+      </div>
+
+      <div class="reentry-player-box">
+
+        <div class="reentry-player-name">
+          ${nome}
+        </div>
+
+        <div class="reentry-player-meta">
+          Reentrada ${nextIdx}/3
+          <span class="reentry-dot">•</span>
+          Volta com ${pontosRetorno} ${pontosLabel}
+        </div>
+
+        <div class="reentry-actions">
+
+          <button
+            class="reentry-btn-primary"
+            type="button"
+          >
+            Reentrada
+          </button>
+
+          <button
+            class="reentry-btn-secondary"
+            type="button"
+          >
+            Cancelar
+          </button>
+
+        </div>
+
+      </div>
+
+      <div class="reentry-timer">
+
+        <div class="reentry-timer-track">
+          <div
+            class="reentry-timer-fill"
+            style="width: ${progressPct}%"
+          ></div>
+        </div>
+
+        <div class="reentry-timer-text">
+          Rodada inicia em
+          <b>${secondsLeft}s</b>
+        </div>
+
+      </div>
+
+    </div>
+  `;
+
+  // =====================================================
+  // ACEITAR
+  // =====================================================
+  const btnReentry =
+    overlay.querySelector(".reentry-btn-primary");
+
+  if (btnReentry) {
+    btnReentry.onclick = () => {
+      btnReentry.disabled = true;
+
+      const ok = requestReentry();
+
+      if (!ok) {
+        btnReentry.disabled = false;
+
+        window.showGameNotice?.(
+          "Não foi possível solicitar a Reentrada.",
+          "warn"
+        );
+
+        return;
+      }
+
+      btnReentry.textContent = "Aguardando...";
+    };
+  }
+
+  // =====================================================
+  // CANCELAR
+  // =====================================================
+  const btnDecline =
+    overlay.querySelector(".reentry-btn-secondary");
+
+  if (btnDecline) {
+    btnDecline.onclick = () => {
+      btnDecline.disabled = true;
+
+      const ok = declineReentry();
+
+      if (!ok) {
+        btnDecline.disabled = false;
+
+        window.showGameNotice?.(
+          "Não foi possível cancelar a Reentrada.",
+          "warn"
+        );
+
+        return;
+      }
+
+      btnDecline.textContent = "Cancelado";
+    };
+  }
+}
+
 export function renderEndMatchOverlay() {
   const rootEl = document.body;
   if (!rootEl) return;
@@ -2950,7 +3392,9 @@ export function renderEndMatchOverlay() {
     rootEl.appendChild(ov);
   }
 
-  const winner = state.players?.find(p => p.seat === state.matchWinnerSeat);
+  const winner = state.players?.find(
+    p => Number(p.seat) === Number(state.matchWinnerSeat)
+  );
   const winnerName = winner?.name || "—";
 
   const matchPot = Number(state.matchPot) || 0;
