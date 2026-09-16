@@ -3,7 +3,7 @@ const API_BASE =
     ? "http://localhost:3003/api"
     : "/api";
 
-const AVATAR_LIST = Array.from({ length: 35 }, (_, i) => {
+const AVATAR_LIST = Array.from({ length: 40 }, (_, i) => {
   const n = String(i + 1).padStart(2, "0");
   return `/assets/avatars/avatar-${n}.png`;
 });
