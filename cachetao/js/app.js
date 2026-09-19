@@ -221,6 +221,7 @@ if (msg.type === "table_public") {
 
 // 2) joined
 if (msg.type === "joined") {
+
   const { tableId, mode, seat, reconnectToken } = msg.payload || {};
   // ✅ Se estava tentando assistir outra mesa e chegou joined antigo, ignora
   if (
@@ -290,6 +291,12 @@ return;
   // ✅ entrou de fato como espectador
   if (mode === "spectator") {
     pendingSpectatorJoinTableId = null;
+    ignoredRoomAfterSpectatorExit = null;
+  }
+
+  // Jogador reconectou/entrou novamente na mesa.
+  // A partir daqui o state_public desta mesa deve voltar a ser aceito.
+  if (mode === "player") {
     ignoredRoomAfterSpectatorExit = null;
   }
 
@@ -593,7 +600,17 @@ state.deckCount = pub.deckCount ?? 0;
   // fim de partida vindo do servidor autoritativo
   state.matchEnded = !!pub.matchEnded;
   state.matchWinnerSeat = pub.matchWinnerSeat ?? null;
-
+// Competição — sincroniza economia e tipo da mesa
+  state.tableType = pub.tableType || "RECREATIONAL";
+  state.competitionGross = Number(pub.competitionGross) || 0;
+  state.competitionOrganizationFee =
+    Number(pub.competitionOrganizationFee) || 0;
+  state.competitionPrizePool =
+    Number(pub.competitionPrizePool) || 0;
+  state.competitionEntriesCount =
+    Number(pub.competitionEntriesCount) || 0;
+  state.competitionReentriesCount =
+    Number(pub.competitionReentriesCount) || 0;
   state.matchPot = Number(pub.matchPot) || 0;
   state.pot = state.matchPot;
   state.houseRakePct = Number(pub.houseRakePct) || 0;
@@ -784,6 +801,9 @@ if (msg.type === "state_private") {
   }
 
   const { seat, hand } = payload;
+
+  // Saldo em R$ — modo Competição
+  state.cashBalance = Number(payload.cashBalance) || 0;
 
   state.canRematch = !!payload.canRematch;
 
@@ -1246,6 +1266,7 @@ window.backToTables = function backToTables() {
   stopTurnTimer();
 
   const tableId = state.room?.id;
+
   ignoredRoomAfterSpectatorExit = tableId;
 
   // remove overlays visuais
@@ -1827,6 +1848,7 @@ function bindHomeButtons() {
 async function refreshHomeUser() {
   const homeUserName = document.getElementById("homeUserName");
   const homeUserBalance = document.getElementById("homeUserBalance");
+  const homeUserCashBalance = document.getElementById("homeUserCashBalance");
   const homeUserAvatar = document.getElementById("homeUserAvatar");
 
   const topNav = document.getElementById("topNav");
@@ -1845,7 +1867,8 @@ async function refreshHomeUser() {
 
   function setLoggedOutHome() {
     if (homeUserName) homeUserName.textContent = "Visitante";
-    if (homeUserBalance) homeUserBalance.textContent = "Saldo: —";
+    if (homeUserBalance) homeUserBalance.textContent = "Fichas: —";
+    if (homeUserCashBalance) homeUserCashBalance.textContent = "Saldo: R$ —";
     if (homeUserAvatar) homeUserAvatar.src = "/assets/avatars/avatar-01.png";
 
     if (topNav) topNav.style.display = "none";
@@ -1875,7 +1898,16 @@ async function refreshHomeUser() {
     if (homeUserName) homeUserName.textContent = user.username || "Usuário";
 
     if (homeUserBalance) {
-      homeUserBalance.textContent = `Saldo: ${(Number(user.chipsBalance) || 0).toLocaleString("pt-BR")}`;
+      homeUserBalance.textContent =
+        `Fichas: ${(Number(user.chipsBalance) || 0).toLocaleString("pt-BR")}`;
+    }
+
+    if (homeUserCashBalance) {
+      homeUserCashBalance.textContent =
+        `Saldo: ${(Number(user.cashBalance) || 0).toLocaleString("pt-BR", {
+          style: "currency",
+          currency: "BRL"
+        })}`;
     }
 
     if (homeUserAvatar) {

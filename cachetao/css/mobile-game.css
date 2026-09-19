@@ -939,6 +939,20 @@ body.mobile-table-mode #sortPanel .sort-btn{
   display: block;
 }
 
+.mobile-recreational-pot {
+  position: fixed !important;
+
+  top: calc(10px + env(safe-area-inset-top) + 45px) !important;
+  left: 50% !important;
+
+  transform: translateX(-50%) scale(0.85) !important;
+  transform-origin: top center !important;
+
+  z-index: 26010 !important;
+  pointer-events: none !important;
+}
+
+
 .mobile-competition-prize {
   position: fixed !important;
 

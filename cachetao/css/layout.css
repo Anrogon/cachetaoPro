@@ -73,7 +73,7 @@ body{
   width: min(900px, 92vw);
   margin: 0 auto;
 
-  min-height: 190px;
+  min-height: 170px;
 
   display: flex;
   flex-direction: row;
@@ -112,7 +112,7 @@ body{
   align-items: center;
   justify-content: center;
 top: 120px;
-  gap: 18px;
+  gap: 40px;
 }
 
 .pile-slot {
@@ -1664,7 +1664,8 @@ html, body {
   font-weight: 800;
 }
 
-#homeUserBalance {
+#homeUserBalance,
+#homeUserCashBalance {
   font-size: 13px;
   opacity: 0.9;
 }
@@ -1727,7 +1728,8 @@ html, body {
   font-weight: 800;
 }
 
-#homeUserBalance{
+#homeUserBalance,
+#homeUserCashBalance{
   font-size: 13px;
   opacity: 0.92;
 }

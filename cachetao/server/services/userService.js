@@ -8,6 +8,7 @@ async function findUserByEmail(email) {
       email,
       password_hash,
       chips_balance,
+      cash_balance,
       avatar_url,
       is_admin,
       is_blocked,
@@ -31,6 +32,7 @@ async function findUserById(id) {
       username,
       email,
       chips_balance,
+      cash_balance,
       avatar_url,
       is_admin,
       is_blocked,
@@ -78,7 +80,7 @@ async function createUser({ username, email, passwordHash, avatarUrl = null }) {
   const sql = `
     INSERT INTO users (username, email, password_hash, avatar_url)
     VALUES ($1, $2, $3, $4)
-    RETURNING id, username, email, chips_balance, avatar_url, created_at, updated_at
+    RETURNING id, username, email, chips_balance, cash_balance, avatar_url, created_at, updated_at
   `;
   const result = await pool.query(sql, [username, email, passwordHash, avatarUrl]);
   return result.rows[0];

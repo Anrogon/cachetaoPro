@@ -12,8 +12,15 @@ function sanitizeUser(user) {
     id: user.id,
     username: user.username,
     email: user.email,
+
+    // Fichas — modo Recreativo
     chipsBalance: Number(user.chips_balance) || 0,
+
+    // Saldo em R$ — modo Competição
+    cashBalance: Number(user.cash_balance) || 0,
+
     avatarUrl: user.avatar_url || null,
+
     is_admin: !!user.is_admin,
     is_blocked: !!user.is_blocked,
     blocked_reason: user.blocked_reason || null,
@@ -194,7 +201,7 @@ router.patch("/settings", requireAuth, async (req, res) => {
             password_hash = $3,
             updated_at = NOW()
         WHERE id = $4
-        RETURNING id, username, email, chips_balance, avatar_url, created_at, updated_at
+        RETURNING id, username, email, chips_balance, cash_balance, avatar_url, created_at, updated_at
       `
       : `
         UPDATE users
@@ -202,7 +209,7 @@ router.patch("/settings", requireAuth, async (req, res) => {
             avatar_url = $2,
             updated_at = NOW()
         WHERE id = $3
-        RETURNING id, username, email, chips_balance, avatar_url, created_at, updated_at
+        RETURNING id, username, email, chips_balance, cash_balance, avatar_url, created_at, updated_at
       `;
 
     const result = await require("../config/db").query(sql, params);
@@ -241,8 +248,19 @@ router.get("/me", requireAuth, async (req, res) => {
         id: user.id,
         username: user.username,
         email: user.email,
-        chipsBalance: user.chips_balance ?? user.chipsBalance ?? 0,
-        avatarUrl: user.avatar_url ?? user.avatarUrl ?? null,
+      // Fichas — modo Recreativo
+      chipsBalance:
+        user.chips_balance ??
+        user.chipsBalance ??
+        0,
+
+      // Saldo em R$ — modo Competição
+      cashBalance:
+        user.cash_balance ??
+        user.cashBalance ??
+        0,
+
+      avatarUrl: user.avatar_url ?? user.avatarUrl ?? null,
         is_admin: user.is_admin === true || user.is_admin === 1,
         createdAt: user.created_at ?? user.createdAt ?? null,
         updatedAt: user.updated_at ?? user.updatedAt ?? null,
@@ -340,6 +358,7 @@ router.post("/me/avatar", requireAuth, async (req, res) => {
         username,
         email,
         chips_balance,
+        cash_balance,
         avatar_url,
         is_admin,
         is_blocked,
@@ -589,6 +608,7 @@ router.post("/me/delete-account", requireAuth, async (req, res) => {
         email = $3,
         password_hash = $4,
         chips_balance = 0,
+        cash_balance = 0,
         avatar_url = NULL,
         is_blocked = true,
         blocked_reason = 'Conta excluída pelo usuário',
@@ -718,6 +738,7 @@ router.get("/admin/users", requireAuth, requireAdmin, async (req, res) => {
         username,
         email,
         chips_balance,
+        cash_balance,
         avatar_url,
         is_admin,
         is_blocked,
@@ -734,7 +755,13 @@ router.get("/admin/users", requireAuth, requireAdmin, async (req, res) => {
       id: u.id,
       username: u.username,
       email: u.email,
-      chipsBalance: u.chips_balance,
+
+      // Fichas — modo Recreativo
+      chipsBalance: Number(u.chips_balance) || 0,
+
+      // Saldo em R$ — modo Competição
+      cashBalance: Number(u.cash_balance) || 0,
+
       avatarUrl: u.avatar_url,
       is_admin: u.is_admin === true || u.is_admin === 1,
       is_blocked: u.is_blocked === true || u.is_blocked === 1,

@@ -46,6 +46,13 @@ function formatBalance(value) {
   return (Number(value) || 0).toLocaleString("pt-BR");
 }
 
+function formatCashBalance(value) {
+  return (Number(value) || 0).toLocaleString("pt-BR", {
+    style: "currency",
+    currency: "BRL"
+  });
+}
+
 function formatDate(value) {
   if (!value) return "—";
   const dt = new Date(value);
@@ -118,8 +125,15 @@ async function loadProfile() {
 
     document.getElementById("profileUsername").textContent = user.username || "—";
     document.getElementById("profileEmail").textContent = user.email || "—";
-    document.getElementById("profileBalance").textContent = formatBalance(user.chipsBalance);
-    document.getElementById("profileCreatedAt").textContent = formatDate(user.createdAt);
+
+    document.getElementById("profileBalance").textContent =
+      formatBalance(user.chipsBalance);
+
+    document.getElementById("profileCashBalance").textContent =
+      formatCashBalance(user.cashBalance);
+
+    document.getElementById("profileCreatedAt").textContent =
+      formatDate(user.createdAt);
 
     document.getElementById("profileAccountType").textContent =
       user.is_admin === true || user.is_admin === 1 ? "Administrador" : "Jogador";

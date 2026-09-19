@@ -159,7 +159,8 @@
     margin-bottom: 4px;
   }
 
-  #homeUserBalance {
+  #homeUserBalance,
+  #homeUserCashBalance {
     font-size: 14px;
     line-height: 1.15;
   }

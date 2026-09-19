@@ -1222,7 +1222,7 @@ function revealBatidaThenEndRound(room, winnerSeat, ms = 1800) {
 
   if (room?.id) sendState(room.id);
 
-  room._pendingBatidaRevealTimeoutId = setTimeout(() => {
+  room._pendingBatidaRevealTimeoutId = setTimeout(async () => {
     room._pendingBatidaRevealTimeoutId = null;
 
     room.pendingBatidaReveal = false;
@@ -1232,7 +1232,7 @@ function revealBatidaThenEndRound(room, winnerSeat, ms = 1800) {
     room.batidaAnnouncement = "";
     room.batidaAnnouncementEndsAt = 0;
 
-    endRound(room, winnerSeat);
+    await endRound(room, winnerSeat);
 
     if (room?.id) sendState(room.id);
   }, ms);
@@ -1609,7 +1609,7 @@ function endRoundByEmptyDeck(room) {
 }
 
 
-function endRound(room, winnerSeat) {
+async function endRound(room, winnerSeat) {
   if (room.roundEnded) return;
 
   room.roundEnded = true;
@@ -1688,10 +1688,17 @@ function endRound(room, winnerSeat) {
     p.obrigadoJogar = false;
   }
 
-  finalizeMatchEconomy(room);
+  const isCompetition =
+    String(room?.tableType || "RECREATIONAL").toUpperCase() === "COMPETITION";
 
-    if (room?.id) sendState(room.id);
-    return;
+  if (isCompetition) {
+    await finalizeCompetitionMatch(room);
+  } else {
+    finalizeMatchEconomy(room);
+  }
+
+  if (room?.id) sendState(room.id);
+  return;
   }
 
     // Cachetão Pro: agenda próxima rodada usando rebuy ou reentrada
@@ -1967,7 +1974,7 @@ function applyPendingRebuys(room) {
 
 /* Eentrada Competição*/
 
-function applyPendingReentries(room) {
+async function applyPendingReentries(room) {
   // Somente mesas de competição
   const isCompetition =
     String(room?.tableType || "RECREATIONAL").toUpperCase() === "COMPETITION";
@@ -2010,6 +2017,71 @@ function applyPendingReentries(room) {
     const reentryFee =
       Number(room.competitionReentryFee ?? room.entryFee) || 0;
 
+    // =====================================================
+    // COMPETIÇÃO — COBRA REENTRADA NO SALDO EM R$
+    // =====================================================
+    if (!pl.userId || reentryFee <= 0) {
+      pl.pendingReentry = false;
+      pl.eliminated = true;
+      continue;
+    }
+
+    let debitResult;
+
+    try {
+      debitResult = await pool.query(
+        `
+        UPDATE users
+        SET
+          cash_balance = cash_balance - $1,
+          updated_at = NOW()
+        WHERE id = $2
+          AND cash_balance >= $1
+        RETURNING cash_balance
+        `,
+        [reentryFee, pl.userId]
+      );
+    } catch (err) {
+      console.error("[COMPETITION] erro ao cobrar Reentrada:", {
+        roomId: room.id,
+        userId: pl.userId,
+        reentryFee,
+        error: err.message
+      });
+
+      pl.pendingReentry = false;
+      pl.eliminated = true;
+      continue;
+    }
+
+    // Nenhuma linha retornada = usuário inexistente
+    // ou saldo insuficiente.
+    if (!debitResult.rows.length) {
+      console.log("[COMPETITION] Reentrada recusada por saldo insuficiente:", {
+        roomId: room.id,
+        userId: pl.userId,
+        reentryFee
+      });
+
+      pl.pendingReentry = false;
+      pl.eliminated = true;
+      continue;
+    }
+
+    const newCashBalance =
+      Number(debitResult.rows[0].cash_balance) || 0;
+
+    // Atualiza também o client conectado em memória.
+    const playerClient = pl.clientId
+      ? clients.get(pl.clientId)
+      : null;
+
+    if (playerClient) {
+      playerClient.cashBalance = newCashBalance;
+    }
+
+    // Registra os R$ 10,00 somente DEPOIS
+    // que o débito foi confirmado no banco.
     const moneyResult = registerCompetitionMoney(
       room,
       reentryFee,
@@ -2017,6 +2089,44 @@ function applyPendingReentries(room) {
     );
 
     if (!moneyResult?.ok) {
+      console.error(
+        "[COMPETITION] Reentrada debitada, mas falhou ao registrar economia:",
+        {
+          roomId: room.id,
+          userId: pl.userId,
+          reentryFee
+        }
+      );
+
+      // Segurança financeira:
+      // se o registro econômico falhar depois do débito,
+      // devolve o valor ao jogador.
+      try {
+        const refundResult = await pool.query(
+          `
+          UPDATE users
+          SET
+            cash_balance = cash_balance + $1,
+            updated_at = NOW()
+          WHERE id = $2
+          RETURNING cash_balance
+          `,
+          [reentryFee, pl.userId]
+        );
+
+        if (refundResult.rows.length && playerClient) {
+          playerClient.cashBalance =
+            Number(refundResult.rows[0].cash_balance) || 0;
+        }
+      } catch (refundErr) {
+        console.error("[COMPETITION] ERRO CRÍTICO ao estornar Reentrada:", {
+          roomId: room.id,
+          userId: pl.userId,
+          reentryFee,
+          error: refundErr.message
+        });
+      }
+
       pl.pendingReentry = false;
       pl.eliminated = true;
       continue;
@@ -2239,7 +2349,7 @@ function scheduleNextRoundWithRebuy(room, ms = 20000) {
   }, ms);
 }
 
-function scheduleNextRoundWithReentry(room, ms = 20000) {
+async function scheduleNextRoundWithReentry(room, ms = 20000) {
   room.reentryDecisionUntil = 0;
   room.lastAppliedReentries = [];
 
@@ -2262,7 +2372,7 @@ function scheduleNextRoundWithReentry(room, ms = 20000) {
     room.matchWinnerSeat =
       room.playersBySeat.indexOf(alivePlayers[0]) + 1;
 
-    finalizeCompetitionMatch(room);
+    await finalizeCompetitionMatch(room);
 
     if (room?.id) sendState(room.id);
     return;
@@ -2320,7 +2430,7 @@ function scheduleNextRoundWithReentry(room, ms = 20000) {
   if (!hasConnectedChoices) {
     room.reentryDecisionUntil = 0;
 
-    const reentries = applyPendingReentries(room);
+    const reentries = await applyPendingReentries(room);
     room.lastAppliedReentries = reentries;
 
     const aliveAfterReentry = (room.playersBySeat || [])
@@ -2334,7 +2444,7 @@ function scheduleNextRoundWithReentry(room, ms = 20000) {
       room.matchWinnerSeat =
         room.playersBySeat.indexOf(aliveAfterReentry[0]) + 1;
 
-      finalizeCompetitionMatch(room);
+      await finalizeCompetitionMatch(room);
 
       if (room?.id) sendState(room.id);
       return;
@@ -2361,22 +2471,9 @@ function scheduleNextRoundWithReentry(room, ms = 20000) {
   // =====================================================
   room.reentryDecisionUntil = Date.now() + ms;
 
-
-
-  console.log("[REENTRY OPENED]", {
-  roomId: room.id,
-  until: room.reentryDecisionUntil,
-  ms
-});
-
-
-
-
-
-
   if (room?.id) sendState(room.id);
 
-  room.nextRoundTimeoutId = setTimeout(() => {
+  room.nextRoundTimeoutId = setTimeout(async () => {
     room.nextRoundTimeoutId = null;
     room.reentryDecisionUntil = 0;
 
@@ -2396,7 +2493,7 @@ function scheduleNextRoundWithReentry(room, ms = 20000) {
       }
     }
 
-    const reentries = applyPendingReentries(room);
+    const reentries = await applyPendingReentries(room);
     room.lastAppliedReentries = reentries;
 
     const aliveAfterWindow = (room.playersBySeat || [])
@@ -2407,7 +2504,7 @@ function scheduleNextRoundWithReentry(room, ms = 20000) {
       room.matchWinnerSeat =
         room.playersBySeat.indexOf(aliveAfterWindow[0]) + 1;
 
-      finalizeCompetitionMatch(room);
+      await finalizeCompetitionMatch(room);
 
       if (room?.id) sendState(room.id);
       return;
@@ -2841,8 +2938,8 @@ async function getAuthUserFromWsRequest(req) {
 
     const result = await pool.query(
       `
-      SELECT id, username, email, chips_balance, is_admin, is_blocked, session_version
-      FROM users
+      SELECT id, username, email, chips_balance, cash_balance, is_admin, is_blocked, session_version
+FROM users
       WHERE id = $1
       LIMIT 1
       `,
@@ -2863,6 +2960,7 @@ async function getAuthUserFromWsRequest(req) {
       username: user.username,
       email: user.email,
       chipsBalance: Number(user.chips_balance) || 0,
+      cashBalance: Number(user.cash_balance) || 0,
       isAdmin: user.is_admin === true || user.is_admin === 1,
     };
   } catch (err) {
@@ -3426,24 +3524,44 @@ function roomSnapshotPublic(room) {
 
 
 function broadcastLobbyTable(room) {
-  const groupId = String(room.tableGroupId || room.baseTableId || room.id);
-  const lobbyRoom = getLobbyRoomForGroup(groupId) || room;
-
-  const snapshot = roomSnapshotPublic(lobbyRoom);
-
-  // importante: no lobby, o card continua sendo o id base: C1, C2...
-  snapshot.id = groupId;
-  snapshot.realRoomId = lobbyRoom.id;
+  const groupId = String(
+    room.tableGroupId ||
+    room.baseTableId ||
+    room.id
+  );
 
   for (const [, client] of clients) {
     if (!client?.ws || client.ws.readyState !== 1) continue;
 
-    // Não manda snapshot de lobby para quem está dentro de uma room real diferente.
-    // Isso evita misturar C1 com C1#2 durante o jogo.
+    // Se este usuário já está participando de alguma instância
+    // deste grupo, o lobby dele deve mostrar essa instância.
+    const playerRoom = findPlayerRoomInGroupByUserId(
+      groupId,
+      client.userId
+    );
+
+    // Caso contrário, mostra a instância normal disponível
+    // para novos jogadores.
+    const lobbyRoom =
+      playerRoom ||
+      getLobbyRoomForGroup(groupId) ||
+      room;
+
+    if (!lobbyRoom) continue;
+
+    const snapshot = roomSnapshotPublic(lobbyRoom);
+
+    // No cliente o card continua sendo K1, C1 etc.
+    // realRoomId informa qual instância está sendo representada.
+    snapshot.id = groupId;
+    snapshot.realRoomId = lobbyRoom.id;
+
+    // Quem está efetivamente dentro de outra room não deve receber
+    // estado de uma instância diferente.
     if (
-        client.tableId &&
-        client.tableId !== snapshot.realRoomId
-      ) {
+      client.tableId &&
+      client.tableId !== snapshot.realRoomId
+    ) {
       continue;
     }
 
@@ -3453,6 +3571,39 @@ function broadcastLobbyTable(room) {
     }));
   }
 }
+
+
+function findPlayerRoomInGroupByUserId(tableGroupId, userId) {
+  if (!userId) return null;
+
+  const groupId = String(tableGroupId || "");
+  const uid = String(userId);
+
+  for (const room of rooms.values()) {
+    const roomGroupId = String(
+      room.tableGroupId ||
+      room.baseTableId ||
+      room.id
+    );
+
+    if (roomGroupId !== groupId) continue;
+
+    const player = (room.playersBySeat || []).find(
+      p =>
+        p &&
+        !p.eliminated &&
+        p.userId != null &&
+        String(p.userId) === uid
+    );
+
+    if (player) {
+      return room;
+    }
+  }
+
+  return null;
+}
+
 
 function getLobbyRoomForGroup(tableGroupId) {
   const groupId = String(tableGroupId);
@@ -3493,6 +3644,176 @@ function cleanupEmptyRoomInstances() {
 
     rooms.delete(roomId);
     console.log("[ROOM CLEANUP] removida instância vazia:", roomId);
+  }
+}
+
+
+async function debitCashBalance(userId, amount) {
+  const value = Number(amount) || 0;
+
+  if (!userId || value <= 0) {
+    return {
+      ok: false,
+      msg: "Dados inválidos para cobrança."
+    };
+  }
+
+  try {
+    const result = await pool.query(
+      `
+      UPDATE users
+      SET cash_balance = cash_balance - $1,
+          updated_at = NOW()
+      WHERE id = $2
+        AND cash_balance >= $1
+      RETURNING cash_balance
+      `,
+      [value, userId]
+    );
+
+    if (result.rowCount === 0) {
+      return {
+        ok: false,
+        msg: "Saldo em reais insuficiente."
+      };
+    }
+
+    return {
+      ok: true,
+      cashBalance: Number(result.rows[0].cash_balance) || 0,
+      amount: value
+    };
+
+  } catch (err) {
+    console.error("[CASH] erro ao debitar saldo:", err);
+
+    return {
+      ok: false,
+      msg: "Erro ao processar cobrança."
+    };
+  }
+}
+
+
+async function debitCompetitionEntries(room) {
+  const isCompetition =
+    String(room?.tableType || "RECREATIONAL").toUpperCase() === "COMPETITION";
+
+  if (!isCompetition) {
+    return {
+      ok: false,
+      msg: "Esta mesa não é uma competição."
+    };
+  }
+
+  const entryFee =
+    Number(room.competitionEntryFee ?? room.entryFee) || 0;
+
+  if (entryFee <= 0) {
+    return {
+      ok: false,
+      msg: "Valor de inscrição inválido."
+    };
+  }
+
+  const players = (room.playersBySeat || [])
+    .filter(pl => pl && pl.userId);
+
+  if (players.length === 0) {
+    return {
+      ok: false,
+      msg: "Nenhum jogador válido para cobrança."
+    };
+  }
+
+  const client = await pool.connect();
+
+  try {
+    await client.query("BEGIN");
+
+    const chargedPlayers = [];
+
+    for (const pl of players) {
+      const result = await client.query(
+        `
+        UPDATE users
+        SET cash_balance = cash_balance - $1,
+            updated_at = NOW()
+        WHERE id = $2
+          AND cash_balance >= $1
+        RETURNING cash_balance
+        `,
+        [entryFee, pl.userId]
+      );
+
+      if (result.rowCount === 0) {
+        throw new Error(
+          `INSUFFICIENT_CASH:${pl.userId}`
+        );
+      }
+
+      chargedPlayers.push({
+        player: pl,
+        cashBalance:
+          Number(result.rows[0].cash_balance) || 0
+      });
+    }
+
+    await client.query("COMMIT");
+
+    // Só atualiza a memória DEPOIS que o banco confirmou
+    // a cobrança de todos os jogadores.
+    for (const item of chargedPlayers) {
+      const pl = item.player;
+      const newBalance = item.cashBalance;
+
+      pl.cashBalance = newBalance;
+
+      const connectedClient = clients.get(pl.clientId);
+
+      if (connectedClient) {
+        connectedClient.cashBalance = newBalance;
+      }
+    }
+
+    return {
+      ok: true,
+      entryFee,
+      chargedPlayers
+    };
+
+  } catch (err) {
+    try {
+      await client.query("ROLLBACK");
+    } catch (_) {}
+
+    if (
+      String(err?.message || "").startsWith("INSUFFICIENT_CASH:")
+    ) {
+      const userId =
+        String(err.message).split(":")[1] || null;
+
+      return {
+        ok: false,
+        reason: "INSUFFICIENT_CASH",
+        userId,
+        msg: "Um dos jogadores não possui saldo suficiente para a inscrição."
+      };
+    }
+
+    console.error(
+      "[COMPETITION] erro ao cobrar inscrições:",
+      err
+    );
+
+    return {
+      ok: false,
+      reason: "ERROR",
+      msg: "Erro ao processar as inscrições da competição."
+    };
+
+  } finally {
+    client.release();
   }
 }
 
@@ -3637,13 +3958,119 @@ function finalizeMatchEconomy(room) {
   }
 }
 
-function finalizeCompetitionMatch(room) {
-  const winnerSeat = room.matchWinnerSeat;
+async function finalizeCompetitionMatch(room) {
+  const winnerSeat = Number(room.matchWinnerSeat) || 0;
   const winner = room.playersBySeat?.[winnerSeat - 1];
 
   if (!winner) return;
 
-  persistMatchStats(room);
+  // =====================================================
+  // COMPETIÇÃO — PAGAMENTO DA PREMIAÇÃO
+  // =====================================================
+  const prizeAmount =
+    Number(room.competitionPrizePool) || 0;
+
+  // Proteção contra pagamento duplicado.
+  // Se algum outro fluxo chamar novamente esta função,
+  // o prêmio não será creditado duas vezes.
+  if (!room.competitionPrizePaid) {
+    if (!winner.userId || prizeAmount <= 0) {
+      console.error("[COMPETITION] prêmio não pôde ser pago:", {
+        roomId: room.id,
+        matchId: room.matchId || null,
+        winnerSeat,
+        winnerName: winner.name,
+        userId: winner.userId || null,
+        prizeAmount
+      });
+
+      return;
+    }
+
+    try {
+      const payoutResult = await pool.query(
+        `
+        UPDATE users
+        SET
+          cash_balance = cash_balance + $1,
+          updated_at = NOW()
+        WHERE id = $2
+        RETURNING cash_balance
+        `,
+        [prizeAmount, winner.userId]
+      );
+
+      if (!payoutResult.rows.length) {
+        console.error("[COMPETITION] campeão não encontrado para pagamento:", {
+          roomId: room.id,
+          matchId: room.matchId || null,
+          winnerSeat,
+          winnerName: winner.name,
+          userId: winner.userId,
+          prizeAmount
+        });
+
+        return;
+      }
+
+      const newCashBalance =
+        Number(payoutResult.rows[0].cash_balance) || 0;
+
+      // Atualiza também o client conectado em memória.
+      const winnerClient = winner.clientId
+        ? clients.get(winner.clientId)
+        : null;
+
+      if (winnerClient) {
+        winnerClient.cashBalance = newCashBalance;
+      }
+
+      room.competitionPrizePaid = true;
+      room.competitionPrizePaidAmount = prizeAmount;
+      room.competitionPrizeWinnerSeat = winnerSeat;
+      room.competitionPrizeWinnerUserId = winner.userId;
+      room.competitionPrizePaidAt = Date.now();
+
+      room.economicLogs = room.economicLogs || [];
+
+      room.economicLogs.push({
+        type: "competition_prize_paid",
+        tableId: room.id,
+        matchId: room.matchId || null,
+        timestamp: room.competitionPrizePaidAt,
+
+        winnerSeat,
+        winnerName: winner.name,
+        winnerUserId: winner.userId,
+
+        prizeAmount,
+        newCashBalance
+      });
+
+      console.log("[COMPETITION] premiação paga:", {
+        roomId: room.id,
+        matchId: room.matchId || null,
+        winner: winner.name,
+        prizeAmount,
+        newCashBalance
+      });
+
+    } catch (err) {
+      console.error("[COMPETITION] erro ao pagar premiação:", {
+        roomId: room.id,
+        matchId: room.matchId || null,
+        winnerSeat,
+        winnerName: winner.name,
+        userId: winner.userId,
+        prizeAmount,
+        error: err.message
+      });
+
+      return;
+    }
+  }
+
+  await persistMatchStats(room);
 
   room.economicLogs = room.economicLogs || [];
 
@@ -3659,6 +4086,15 @@ function finalizeCompetitionMatch(room) {
     winnerSeat,
     winnerName: winner.name,
 
+    prizeAmount:
+      Number(room.competitionPrizePaidAmount) || prizeAmount,
+
+    competitionGross:
+      Number(room.competitionGross) || 0,
+
+    competitionOrganizationFee:
+      Number(room.competitionOrganizationFee) || 0,
+
     roundsPlayed: Number(room.roundNumber) || 0,
 
     finalSeats: (room.playersBySeat || []).map((p, idx) =>
@@ -3673,7 +4109,6 @@ function finalizeCompetitionMatch(room) {
     )
   });
 }
-
 
 function sendState(roomId) {
   const room = rooms.get(roomId);
@@ -3789,11 +4224,19 @@ function sendState(roomId) {
       payload
     }));
 
-      client.ws.send(JSON.stringify({
+    client.ws.send(JSON.stringify({
       type: "state_private",
       payload: {
         seat,
         hand: player.hand,
+
+        // Saldo em R$ — somente o próprio jogador recebe
+        cashBalance: Number(
+          client.cashBalance ??
+          player.cashBalance ??
+          0
+        ),
+
         canRematch: !!room.matchEnded
       }
     }));
@@ -3878,20 +4321,27 @@ function removePlayerFromSeat(room, seat, clientId) {
   const p = room.playersBySeat?.[seat - 1];
   if (!p || p.clientId !== clientId) return false;
 
-  // Se a partida ainda não começou, devolve somente as fichas reservadas da mesa
+  // Antes da partida:
+  // somente mesas Recreativas possuem fichas reservadas para devolver.
   if (!room.started && !room.matchEnded) {
-    const tableChips = Number(p.tableChips) || 0;
-    const refund = tableChips;
+    const isCompetition =
+      String(room?.tableType || "RECREATIONAL").toUpperCase() === "COMPETITION";
 
-    p.chips = Number(p.chips) || 0;
-    p.chips += refund;
-    p.tableChips = 0;
+    if (!isCompetition) {
+      const tableChips = Number(p.tableChips) || 0;
+      const refund = tableChips;
 
-    const client = clients.get(clientId);
-    if (client) {
-      client.chips = Number(client.chips) || 0;
-      client.chips += refund;
-      client.chipsBalance = client.chips;
+      p.chips = Number(p.chips) || 0;
+      p.chips += refund;
+      p.tableChips = 0;
+
+      const client = clients.get(clientId);
+
+      if (client) {
+        client.chips = Number(client.chips) || 0;
+        client.chips += refund;
+        client.chipsBalance = client.chips;
+      }
     }
   }
 
@@ -3961,8 +4411,11 @@ function createPlayerForSeat(room, seat, clientId, client, avatarUrl) {
     name: client.name,
     avatarUrl: avatarUrl || "/assets/avatars/avatar-01.png",
 
-    // saldo geral já com buy-in descontado
+    // saldo geral de fichas — modo Recreativo
     chips: client.chips,
+
+    // saldo em R$ — modo Competição
+    cashBalance: Number(client.cashBalance) || 0,
 
     // fichas da mesa
     tableChips: mesaStackLiquido,
@@ -4343,7 +4796,7 @@ function handleDrawDeckAction(room, player, playerSeat) {
 
 
 
-function handleDiscardAction(room, player, playerSeat, action) {
+async function handleDiscardAction(room, player, playerSeat, action) {
   const phaseCheck = ensurePhase(room, ["BAIXAR", "DESCARTAR"]);
   if (!phaseCheck.ok) return phaseCheck;
 
@@ -4482,7 +4935,7 @@ function handleDiscardAction(room, player, playerSeat, action) {
 
   if ((player.hand || []).length === 0 || player.pendingBatidaAfterDiscard) {
     player.pendingBatidaAfterDiscard = false;
-    endRound(room, playerSeat);
+    await endRound(room, playerSeat);
     return null;
   }
 
@@ -4700,7 +5153,7 @@ function createBotForSeat(room, seat) {
 
 
 
-function tryStartMatch(room) {
+async function tryStartMatch(room) {
 
   const minPlayers = Number(room.minPlayersToStart) || 2;
   const count = connectedSeatedCount(room);
@@ -4824,18 +5277,52 @@ const initialTableChips = isCompetition
   // =====================================================
 
   if (isCompetition) {
-    // zera os valores da competição anterior
+    const entryFee =
+      Number(room.competitionEntryFee ?? room.entryFee) || 0;
+
+    // =====================================================
+    // COMPETIÇÃO — COBRA TODAS AS INSCRIÇÕES
+    // A transação garante: ou todos pagam, ou ninguém paga.
+    // =====================================================
+    const debitResult = await debitCompetitionEntries(room);
+
+    if (!debitResult?.ok) {
+      console.log("[COMPETITION] competição não iniciada:", {
+        roomId: room.id,
+        reason: debitResult?.reason || "ERROR",
+        userId: debitResult?.userId || null,
+        message: debitResult?.msg || "Falha na cobrança."
+      });
+
+      // A partida ainda não pode permanecer marcada como iniciada.
+      room.started = false;
+      room.phase = "WAITING";
+
+      room.startAt = 0;
+
+      resetStartCountdown(room);
+
+      broadcastRoomState(room);
+      broadcastLobbyTable(room);
+
+      return;
+    }
+
+    // =====================================================
+    // COBRANÇA CONFIRMADA — INICIA ECONOMIA DA COMPETIÇÃO
+    // =====================================================
     room.competitionGross = 0;
     room.competitionOrganizationFee = 0;
     room.competitionPrizePool = 0;
     room.competitionEntriesCount = 0;
     room.competitionReentriesCount = 0;
+    // Reseta o controle de pagamento da nova competição
+    room.competitionPrizePaid = false;
+    room.competitionPrizePaidAmount = 0;
+    room.competitionPrizeWinnerSeat = null;
+    room.competitionPrizeWinnerUserId = null;
+    room.competitionPrizePaidAt = 0;
 
-    const entryFee =
-      Number(room.competitionEntryFee ?? room.entryFee) || 0;
-
-    // Cada jogador sentado no início representa
-    // uma inscrição efetiva nesta competição.
     for (const pl of room.playersBySeat || []) {
       if (!pl) continue;
 
@@ -4845,6 +5332,15 @@ const initialTableChips = isCompetition
         "entry"
       );
     }
+
+    console.log("[COMPETITION] inscrições cobradas:", {
+      roomId: room.id,
+      players: debitResult.chargedPlayers?.length || 0,
+      entryFee,
+      gross: room.competitionGross,
+      organizationFee: room.competitionOrganizationFee,
+      prizePool: room.competitionPrizePool
+    });
   }
 
   const buyIn = getBuyIn(room);
@@ -5863,7 +6359,7 @@ function canUseBatidaException(room, player, selectedCards, context = {}) {
   return { ok: false };
 }
 
-function handlePlayMeldAction(room, player, playerSeat, action) {
+async function handlePlayMeldAction(room, player, playerSeat, action) {
   const phaseCheck = ensurePhase(room, "BAIXAR");
   if (!phaseCheck.ok) return phaseCheck;
 
@@ -5947,18 +6443,18 @@ function handlePlayMeldAction(room, player, playerSeat, action) {
   const willBatidaNow = willBatidaWithoutDiscard || willBatidaWithDiscard;
 
   // Quem declarou BATI com a vira precisa
-// obrigatoriamente utilizá-la em um dos jogos.
-if (
-  willBatidaNow &&
-  player.batendoComVira &&
-  !player.viraBaixada &&
-  !querUsarVira
-) {
-  return {
-    ok: false,
-    msg: "Para bater com a vira, selecione-a em um dos jogos."
-  };
-}
+  // obrigatoriamente utilizá-la em um dos jogos.
+  if (
+    willBatidaNow &&
+    player.batendoComVira &&
+    !player.viraBaixada &&
+    !querUsarVira
+  ) {
+    return {
+      ok: false,
+      msg: "Para bater com a vira, selecione-a em um dos jogos."
+    };
+  }
 
   // 1) EXCEÇÃO DE BATIDA — prioridade máxima
   if (willBatidaNow) {
@@ -6023,7 +6519,7 @@ if (
 
       // se a carta restante força batida, encerra agora
       if (shouldForceBatida(room, player)) {
-        endRound(room, playerSeat);
+        await endRound(room, playerSeat);
         return null;
       }
 
@@ -6120,13 +6616,16 @@ if (
   }
 
   // 5) FIM DE RODADA
+
+  // Batida sem descarte
   if ((player.hand || []).length === 0) {
     revealBatidaThenEndRound(room, playerSeat);
     return null;
   }
 
-    if (shouldForceBatida(room, player)) {
-    endRound(room, playerSeat);
+  // Se a carta restante força batida, encerra agora
+  if (shouldForceBatida(room, player)) {
+    await endRound(room, playerSeat);
     return null;
   }
 
@@ -6141,7 +6640,8 @@ if (
 }
 
 
-function handleAddToMeldAction(room, player, playerSeat, action) {
+
+async function handleAddToMeldAction(room, player, playerSeat, action) {
   const phaseCheck = ensurePhase(room, "BAIXAR");
   if (!phaseCheck.ok) return phaseCheck;
 
@@ -6214,7 +6714,7 @@ function handleAddToMeldAction(room, player, playerSeat, action) {
 
       // se a carta restante não pode/ não deve ser descartada, encerra agora
       if (shouldForceBatida(room, player)) {
-        endRound(room, playerSeat);
+        await endRound(room, playerSeat);
         return null;
       }
 
@@ -6317,7 +6817,7 @@ function handleAddToMeldAction(room, player, playerSeat, action) {
   }
 
   if (shouldForceBatida(room, player)) {
-    endRound(room, playerSeat);
+    await endRound(room, playerSeat);
     return null;
   }
 
@@ -6327,7 +6827,7 @@ function handleAddToMeldAction(room, player, playerSeat, action) {
 // --------------------
 // Ações autoritativas
 // --------------------
-function handleAction(clientId, tableId, action) {
+async function handleAction(clientId, tableId, action) {
 
   const room = rooms.get(tableId);
   const client = clients.get(clientId);
@@ -6479,7 +6979,7 @@ case "swapJoker": {
 }
 
 case "addToMeld": {
-  const err = handleAddToMeldAction(room, player, playerSeat, action);
+  const err = await handleAddToMeldAction(room, player, playerSeat, action);
   if (err) return err;
   break;
 }
@@ -6604,7 +7104,7 @@ if (!hasRemainingReentryChoices) {
 
   room.reentryDecisionUntil = 0;
 
-  const reentries = applyPendingReentries(room);
+  const reentries = await applyPendingReentries(room);
   room.lastAppliedReentries = reentries;
 
   const aliveAfterReentry = (room.playersBySeat || [])
@@ -6615,7 +7115,7 @@ if (!hasRemainingReentryChoices) {
     room.matchWinnerSeat =
       room.playersBySeat.indexOf(aliveAfterReentry[0]) + 1;
 
-    finalizeCompetitionMatch(room);
+  await finalizeCompetitionMatch(room);
 
     if (room?.id) sendState(room.id);
     return { ok: true };
@@ -6684,7 +7184,7 @@ case "declineReentry": {
 
     room.reentryDecisionUntil = 0;
 
-    const reentries = applyPendingReentries(room);
+    const reentries = await applyPendingReentries(room);
     room.lastAppliedReentries = reentries;
 
     const aliveAfterReentry = (room.playersBySeat || [])
@@ -6695,7 +7195,7 @@ case "declineReentry": {
       room.matchWinnerSeat =
         room.playersBySeat.indexOf(aliveAfterReentry[0]) + 1;
 
-      finalizeCompetitionMatch(room);
+      await finalizeCompetitionMatch(room);
 
       if (room?.id) sendState(room.id);
       return { ok: true };
@@ -6863,7 +7363,7 @@ case "drawDiscard": {
 
 
 case "playMeld": {
-  const err = handlePlayMeldAction(room, player, playerSeat, action);
+  const err = await handlePlayMeldAction(room, player, playerSeat, action);
   if (err) return err;
   break;
 }
@@ -6879,9 +7379,13 @@ case "debugHand": {
 */
 
 case "discard": {
-  const err = handleDiscardAction(room, player, playerSeat, action);
+
+  const err = await handleDiscardAction(room, player, playerSeat, action);
+
   if (err) return err;
+
   break;
+
 }
 
 default:
@@ -7021,8 +7525,12 @@ wss.on("connection", async (ws, req) => {
   userId: authUser?.id || null,
   email: authUser?.email || null,
 
+  // Fichas — modo Recreativo
   chips: authUser?.chipsBalance || 0,
   chipsBalance: authUser?.chipsBalance || 0,
+
+  // Saldo em R$ — modo Competição
+  cashBalance: authUser?.cashBalance || 0,
 
   tableId: null,
   seat: null,
@@ -7229,6 +7737,28 @@ if (msg.type === "joinTableGroup") {
       return;
     }
 
+// =====================================================
+// COMPETIÇÃO — VALIDA SALDO PARA INSCRIÇÃO
+// Sentar não cobra nada; apenas exige saldo suficiente.
+// =====================================================
+const isCompetition =
+  String(room?.tableType || "RECREATIONAL").toUpperCase() === "COMPETITION";
+
+if (isCompetition) {
+  const entryFee =
+    Number(room.competitionEntryFee ?? room.entryFee) || 0;
+
+  const clientCashBalance = Number(c.cashBalance) || 0;
+
+  if (clientCashBalance < entryFee) {
+    return send(ws, "error", {
+      message: `Saldo insuficiente para esta competição. Inscrição: R$ ${entryFee
+        .toFixed(2)
+        .replace(".", ",")}.`
+    });
+  }
+}
+
   const s = Number(seat);
 
       if (!(s >= 1 && s <= 10)) {
@@ -7306,7 +7836,6 @@ if (msg.type === "joinTableGroup") {
 
     if (room) {
       room.abandonedAt = 0;
-      sendState(room.id);
     }
 
     if (existing.disconnectTimer) {
@@ -7329,6 +7858,8 @@ if (msg.type === "joinTableGroup") {
       seat: s,
       reconnectToken: existing.reconnectToken
     });
+
+    sendState(room.id);
 
     refreshStartCountdown(room);
     scheduleMatchStart(room);
@@ -7357,12 +7888,17 @@ if (msg.type === "joinTableGroup") {
   }
 */
 
-const mesaStack = (Number(room.buyIn) || 0) * 10;
+// =====================================================
+// RECREATIVO — VALIDA SALDO EM FICHAS
+// =====================================================
+if (!isCompetition) {
+  const mesaStack = (Number(room.buyIn) || 0) * 10;
 
-if (clientChips < mesaStack) {
-  return send(ws, "error", {
-    message: "Saldo insuficiente para entrar nesta mesa."
-  });
+  if (clientChips < mesaStack) {
+    return send(ws, "error", {
+      message: "Saldo insuficiente para entrar nesta mesa."
+    });
+  }
 }
 
 
@@ -7491,7 +8027,7 @@ if (msg.type === "keepSeatForNextMatch") {
       if (seq)
         c.lastSeq = seq;
 
-      const result = handleAction(clientId, tableId, action);
+      const result = await handleAction(clientId, tableId, action);
 
       if (!result.ok)
         send(ws, "error", { message: result.msg });

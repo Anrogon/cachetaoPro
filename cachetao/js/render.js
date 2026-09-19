@@ -2342,24 +2342,20 @@ const miniAnte = Number(
           "RECREATIONAL"
         ).toUpperCase();
 
-        if (tableTypeMobile !== "COMPETITION") {
-          if (!mobileDeckBox.contains(potArea)) {
-            mobileDeckBox.appendChild(potArea);
-          }
-        }
+        if (potArea && root) {
 
-        if (
-          tableTypeMobile === "COMPETITION" &&
-          potArea &&
-          root
-        ) {
+          // O pote/premiação fica fora do conjunto MONTE + VIRA + LIXO
           if (potArea.parentElement !== root) {
             root.appendChild(potArea);
           }
 
-          potArea.classList.add("mobile-competition-prize");
-        } else if (potArea) {
-          potArea.classList.remove("mobile-competition-prize");
+          if (tableTypeMobile === "COMPETITION") {
+            potArea.classList.add("mobile-competition-prize");
+            potArea.classList.remove("mobile-recreational-pot");
+          } else {
+            potArea.classList.remove("mobile-competition-prize");
+            potArea.classList.add("mobile-recreational-pot");
+          }
         }
 
         if (mobileDeckBox && mobileViraCard) {
@@ -2679,7 +2675,7 @@ function renderDesktopTableLayout() {
 
       ${p.disconnected ? `
         <div class="desktop-offline">
-          OFFLINE
+          OFF
         </div>
       ` : ""}
 
@@ -3402,29 +3398,83 @@ export function renderEndMatchOverlay() {
   const winnerPayout = Number(state.winnerPayout) || 0;
   const houseRakePct = Math.round((Number(state.houseRakePct) || 0) * 100);
 
+  const isCompetition =
+    String(state.tableType || "RECREATIONAL").toUpperCase() === "COMPETITION";
+
+  const competitionGross =
+    Number(state.competitionGross) || 0;
+
+  const competitionOrganizationFee =
+    Number(state.competitionOrganizationFee) || 0;
+
+  const competitionPrizePool =
+    Number(state.competitionPrizePool) || 0;
+
+  const formatMoney = (value) =>
+    Number(value || 0).toLocaleString("pt-BR", {
+      style: "currency",
+      currency: "BRL"
+    });
+
   ov.innerHTML = `
     <div class="endmatch-modal">
-      <div class="endmatch-title">Fim da Partida!</div>
+      <div class="endmatch-title">
+        ${isCompetition ? "Fim da Competição!" : "Fim da Partida!"}
+      </div>
 
       <div class="endmatch-body">
         <div class="endmatch-line"><b>${winnerName}</b></div>
-        <div class="endmatch-line">🏆 Vencedor da partida</div>
-
-        <div class="endmatch-line" style="margin-top:10px;">
-          Pote final: <b>${matchPot.toLocaleString("pt-BR")}</b>
-        </div>
 
         <div class="endmatch-line">
-          Taxa da casa: <b>${houseRake.toLocaleString("pt-BR")}</b> (${houseRakePct}%)
+          🏆 ${isCompetition ? "Campeão da competição" : "Vencedor da partida"}
         </div>
 
-        <div class="endmatch-line">
-          Prêmio do vencedor: <b>${winnerPayout.toLocaleString("pt-BR")}</b>
-        </div>
+        ${
+          isCompetition
+            ? `
+              <div class="endmatch-line" style="margin-top:10px;">
+                Total arrecadado:
+                <b>${formatMoney(competitionGross)}</b>
+              </div>
 
-      <div class="endmatch-actions" style="display:flex; gap:10px; justify-content:center; flex-wrap:wrap;">
-        <button id="btnRematch" class="endmatch-btn">Revanche</button>
-        <button id="btnBackTables" class="endmatch-btn">Voltar às mesas</button>
+              <div class="endmatch-line">
+                Taxa de organização:
+                <b>${formatMoney(competitionOrganizationFee)}</b>
+              </div>
+
+              <div class="endmatch-line">
+                Premiação:
+                <b>${formatMoney(competitionPrizePool)}</b>
+              </div>
+            `
+            : `
+              <div class="endmatch-line" style="margin-top:10px;">
+                Pote final:
+                <b>${matchPot.toLocaleString("pt-BR")}</b>
+              </div>
+
+              <div class="endmatch-line">
+                Taxa da casa:
+                <b>${houseRake.toLocaleString("pt-BR")}</b>
+                (${houseRakePct}%)
+              </div>
+
+              <div class="endmatch-line">
+                Prêmio do vencedor:
+                <b>${winnerPayout.toLocaleString("pt-BR")}</b>
+              </div>
+            `
+        }
+
+        <div class="endmatch-actions" style="display:flex; gap:10px; justify-content:center; flex-wrap:wrap;">
+          <button id="btnRematch" class="endmatch-btn">
+            ${isCompetition ? "Nova competição" : "Revanche"}
+          </button>
+
+          <button id="btnBackTables" class="endmatch-btn">
+            Voltar às mesas
+          </button>
+        </div>
       </div>
     </div>
   `;
