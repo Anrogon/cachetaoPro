@@ -111,12 +111,17 @@ h1{
   font-weight:800;
 }
 
-.password-fields{
+.password-fields,
+.withdraw-fields{
   display:grid;
   gap:10px;
+  margin-top:10px;
+  margin-bottom:14px;
 }
 
-.password-fields input{
+.password-fields input,
+.withdraw-fields input,
+.withdraw-fields select{
   width:100%;
   box-sizing:border-box;
   padding:12px 14px;
@@ -125,6 +130,10 @@ h1{
   background:rgba(255,255,255,.08);
   color:#fff;
   font-size:15px;
+}
+
+.withdraw-fields select option{
+  color:#111;
 }
 
 .actions{
@@ -259,18 +268,53 @@ button{
   </div>
 </div>
 
-<div class="password-wrap" style="margin-top:18px;">
-  <div class="password-title">Resgatar fichas</div>
+    <div class="password-wrap" style="margin-top:18px;">
+      <div class="password-title">Solicitar saque</div>
 
-  <div class="profile-line">
-    <strong>Status:</strong> Em breve
-  </div>
+      <div class="profile-line">
+        <strong>Saldo disponível:</strong>
+        <span id="withdrawCashBalance">R$ 0,00</span>
+      </div>
 
-  <div class="profile-line">
-    No momento, as fichas são usadas apenas dentro do Cachetão Pro.
-    O resgate ainda não está disponível.
-  </div>
-</div>
+      <div class="withdraw-fields">
+        <input
+          id="withdrawAmount"
+          type="number"
+          min="0.01"
+          step="0.01"
+          placeholder="Valor do saque"
+        >
+
+        <select id="withdrawPixKeyType">
+          <option value="">Tipo de chave PIX</option>
+          <option value="CPF">CPF</option>
+          <option value="EMAIL">E-mail</option>
+          <option value="PHONE">Telefone</option>
+          <option value="RANDOM">Chave aleatória</option>
+        </select>
+
+        <input
+          id="withdrawPixKey"
+          type="text"
+          placeholder="Chave PIX"
+          autocomplete="off"
+        >
+      </div>
+
+            <button
+              id="btnRequestWithdrawal"
+              class="primary"
+              type="button"
+            >
+              Solicitar saque
+            </button>
+
+            <div
+              id="withdrawMessage"
+              class="profile-line"
+              style="display:none;"
+            ></div>
+          </div>
 
     <div class="password-wrap">
       <div class="password-title">Trocar senha</div>

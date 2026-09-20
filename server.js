@@ -2027,46 +2027,113 @@ async function applyPendingReentries(room) {
     }
 
     let debitResult;
+      let dbClient;
 
-    try {
-      debitResult = await pool.query(
-        `
-        UPDATE users
-        SET
-          cash_balance = cash_balance - $1,
-          updated_at = NOW()
-        WHERE id = $2
-          AND cash_balance >= $1
-        RETURNING cash_balance
-        `,
-        [reentryFee, pl.userId]
-      );
-    } catch (err) {
-      console.error("[COMPETITION] erro ao cobrar Reentrada:", {
-        roomId: room.id,
-        userId: pl.userId,
-        reentryFee,
-        error: err.message
-      });
+      try {
+        dbClient = await pool.connect();
 
-      pl.pendingReentry = false;
-      pl.eliminated = true;
-      continue;
-    }
+        await dbClient.query("BEGIN");
 
-    // Nenhuma linha retornada = usuário inexistente
-    // ou saldo insuficiente.
-    if (!debitResult.rows.length) {
-      console.log("[COMPETITION] Reentrada recusada por saldo insuficiente:", {
-        roomId: room.id,
-        userId: pl.userId,
-        reentryFee
-      });
+        debitResult = await dbClient.query(
+          `
+          UPDATE users
+          SET
+            cash_balance = cash_balance - $1,
+            updated_at = NOW()
+          WHERE id = $2
+            AND cash_balance >= $1
+          RETURNING
+            cash_balance,
+            cash_balance + $1 AS balance_before
+          `,
+          [reentryFee, pl.userId]
+        );
 
-      pl.pendingReentry = false;
-      pl.eliminated = true;
-      continue;
-    }
+        // Saldo insuficiente:
+        // não registra movimentação e desfaz a transação.
+        if (!debitResult.rows.length) {
+          await dbClient.query("ROLLBACK");
+
+          console.log(
+            "[COMPETITION] Reentrada recusada por saldo insuficiente:",
+            {
+              roomId: room.id,
+              userId: pl.userId,
+              reentryFee
+            }
+          );
+
+          pl.pendingReentry = false;
+          pl.eliminated = true;
+          continue;
+        }
+
+        const balanceBefore =
+          Number(debitResult.rows[0].balance_before) || 0;
+
+        const balanceAfter =
+          Number(debitResult.rows[0].cash_balance) || 0;
+
+        await dbClient.query(
+          `
+          INSERT INTO cash_transactions (
+            user_id,
+            type,
+            status,
+            amount,
+            balance_before,
+            balance_after,
+            reference_type,
+            reference_id,
+            description
+          )
+          VALUES (
+            $1,
+            'COMPETITION_REENTRY',
+            'COMPLETED',
+            $2,
+            $3,
+            $4,
+            'COMPETITION',
+            $5,
+            $6
+          )
+          `,
+          [
+            pl.userId,
+            -reentryFee,
+            balanceBefore,
+            balanceAfter,
+            String(room.matchId || room.id),
+            `Reentrada na competição ${room.id}`
+          ]
+        );
+
+        await dbClient.query("COMMIT");
+
+      } catch (err) {
+        if (dbClient) {
+          try {
+            await dbClient.query("ROLLBACK");
+          } catch (_) {}
+        }
+
+        console.error("[COMPETITION] erro ao cobrar Reentrada:", {
+          roomId: room.id,
+          userId: pl.userId,
+          reentryFee,
+          error: err.message
+        });
+
+        pl.pendingReentry = false;
+        pl.eliminated = true;
+        continue;
+
+      } finally {
+        if (dbClient) {
+          dbClient.release();
+        }
+      }
 
     const newCashBalance =
       Number(debitResult.rows[0].cash_balance) || 0;
@@ -2973,13 +3040,31 @@ FROM users
 // Config de mesas
 // --------------------
 const TABLES = [
+
   { id: "K1", name: "Mesa 1", buyIn: 1000, variant: "CACHETAO", tableType: "RECREATIONAL" },
+
   { id: "K2", name: "Mesa 2", buyIn: 5000, variant: "CACHETAO", tableType: "RECREATIONAL" },
+
   { id: "K3", name: "Mesa 3", buyIn: 10000, variant: "CACHETAO", tableType: "RECREATIONAL" },
+
   { id: "K4", name: "Mesa 4", buyIn: 20000, variant: "CACHETAO", tableType: "RECREATIONAL" },
+
   { id: "K5", name: "Mesa 5", buyIn: 50000, variant: "CACHETAO", tableType: "RECREATIONAL" },
+
   { id: "K6", name: "Mesa 6", buyIn: 100000, variant: "CACHETAO", tableType: "RECREATIONAL" },
+
   { id: "C1", name: "Competição 1", buyIn: 1000, entryFee: 10, variant: "CACHETAO", tableType: "COMPETITION" },
+
+  { id: "C2", name: "Competição 2", buyIn: 1000, entryFee: 20, variant: "CACHETAO", tableType: "COMPETITION" },
+
+  { id: "C3", name: "Competição 3", buyIn: 1000, entryFee: 30, variant: "CACHETAO", tableType: "COMPETITION" },
+
+  { id: "C4", name: "Competição 4", buyIn: 1000, entryFee: 50, variant: "CACHETAO", tableType: "COMPETITION" },
+
+  { id: "C5", name: "Competição 5", buyIn: 1000, entryFee: 100, variant: "CACHETAO", tableType: "COMPETITION" },
+
+  { id: "C6", name: "Competição 6", buyIn: 1000, entryFee: 200, variant: "CACHETAO", tableType: "COMPETITION" },
+
 ];
 
 const rooms = new Map();
@@ -3741,7 +3826,9 @@ async function debitCompetitionEntries(room) {
             updated_at = NOW()
         WHERE id = $2
           AND cash_balance >= $1
-        RETURNING cash_balance
+        RETURNING
+          cash_balance,
+          cash_balance + $1 AS balance_before
         `,
         [entryFee, pl.userId]
       );
@@ -3751,6 +3838,47 @@ async function debitCompetitionEntries(room) {
           `INSUFFICIENT_CASH:${pl.userId}`
         );
       }
+
+      const balanceBefore =
+        Number(result.rows[0].balance_before) || 0;
+
+      const balanceAfter =
+        Number(result.rows[0].cash_balance) || 0;
+
+      await client.query(
+        `
+        INSERT INTO cash_transactions (
+          user_id,
+          type,
+          status,
+          amount,
+          balance_before,
+          balance_after,
+          reference_type,
+          reference_id,
+          description
+        )
+        VALUES (
+          $1,
+          'COMPETITION_ENTRY',
+          'COMPLETED',
+          $2,
+          $3,
+          $4,
+          'COMPETITION',
+          $5,
+          $6
+        )
+        `,
+        [
+          pl.userId,
+          -entryFee,
+          balanceBefore,
+          balanceAfter,
+          String(room.matchId || room.id),
+          `Inscrição na competição ${room.id}`
+        ]
+      );
 
       chargedPlayers.push({
         player: pl,
@@ -3987,20 +4115,30 @@ async function finalizeCompetitionMatch(room) {
       return;
     }
 
+    let dbClient;
+
     try {
-      const payoutResult = await pool.query(
+      dbClient = await pool.connect();
+
+      await dbClient.query("BEGIN");
+
+      const payoutResult = await dbClient.query(
         `
         UPDATE users
         SET
           cash_balance = cash_balance + $1,
           updated_at = NOW()
         WHERE id = $2
-        RETURNING cash_balance
+        RETURNING
+          cash_balance,
+          cash_balance - $1 AS balance_before
         `,
         [prizeAmount, winner.userId]
       );
 
       if (!payoutResult.rows.length) {
+        await dbClient.query("ROLLBACK");
+
         console.error("[COMPETITION] campeão não encontrado para pagamento:", {
           roomId: room.id,
           matchId: room.matchId || null,
@@ -4013,8 +4151,49 @@ async function finalizeCompetitionMatch(room) {
         return;
       }
 
+      const balanceBefore =
+        Number(payoutResult.rows[0].balance_before) || 0;
+
       const newCashBalance =
         Number(payoutResult.rows[0].cash_balance) || 0;
+
+      // Registra o prêmio no extrato da carteira.
+      await dbClient.query(
+        `
+        INSERT INTO cash_transactions (
+          user_id,
+          type,
+          status,
+          amount,
+          balance_before,
+          balance_after,
+          reference_type,
+          reference_id,
+          description
+        )
+        VALUES (
+          $1,
+          'COMPETITION_PRIZE',
+          'COMPLETED',
+          $2,
+          $3,
+          $4,
+          'COMPETITION',
+          $5,
+          $6
+        )
+        `,
+        [
+          winner.userId,
+          prizeAmount,
+          balanceBefore,
+          newCashBalance,
+          String(room.matchId || room.id),
+          `Premiação da competição ${room.id}`
+        ]
+      );
+
+      await dbClient.query("COMMIT");
 
       // Atualiza também o client conectado em memória.
       const winnerClient = winner.clientId
@@ -4056,6 +4235,12 @@ async function finalizeCompetitionMatch(room) {
       });
 
     } catch (err) {
+      if (dbClient) {
+        try {
+          await dbClient.query("ROLLBACK");
+        } catch (_) {}
+      }
+
       console.error("[COMPETITION] erro ao pagar premiação:", {
         roomId: room.id,
         matchId: room.matchId || null,
@@ -4067,6 +4252,11 @@ async function finalizeCompetitionMatch(room) {
       });
 
       return;
+
+    } finally {
+      if (dbClient) {
+        dbClient.release();
+      }
     }
   }
 

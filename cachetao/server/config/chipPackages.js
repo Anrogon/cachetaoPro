@@ -31,11 +31,58 @@ const CHIP_PACKAGES = [
   },
 ];
 
+
+// =========================================================
+// PACOTES DE DEPÓSITO — SALDO EM R$
+// =========================================================
+
+const CASH_PACKAGES = [
+  {
+    id: "cash_20",
+    label: "R$ 20,00",
+    amountCents: 2000,
+  },
+  {
+    id: "cash_50",
+    label: "R$ 50,00",
+    amountCents: 5000,
+  },
+  {
+    id: "cash_100",
+    label: "R$ 100,00",
+    amountCents: 10000,
+  },
+  {
+    id: "cash_150",
+    label: "R$ 150,00",
+    amountCents: 15000,
+  },
+  {
+    id: "cash_200",
+    label: "R$ 200,00",
+    amountCents: 20000,
+  },
+  {
+    id: "cash_250",
+    label: "R$ 250,00",
+    amountCents: 25000,
+  },
+];
+
+
 function getChipPackage(packageId) {
   return CHIP_PACKAGES.find(p => p.id === packageId) || null;
 }
 
+
+function getCashPackage(packageId) {
+  return CASH_PACKAGES.find(p => p.id === packageId) || null;
+}
+
+
 module.exports = {
   CHIP_PACKAGES,
+  CASH_PACKAGES,
   getChipPackage,
+  getCashPackage,
 };

@@ -5,6 +5,7 @@ const API_BASE =
 
 const financeMessage = document.getElementById("financeMessage");
 const financeTableBody = document.getElementById("financeTableBody");
+const withdrawalTableBody =  document.getElementById("withdrawalTableBody");
 
 function moneyFromCents(cents) {
   return (Number(cents || 0) / 100).toLocaleString("pt-BR", {
@@ -30,6 +31,7 @@ function statusLabel(status) {
   if (s === "pending") return "Pendente";
   if (s === "rejected") return "Recusado";
   if (s === "cancelled" || s === "canceled") return "Cancelado";
+  if (s === "completed") return "Concluído";
 
   return status || "-";
 }
@@ -40,6 +42,83 @@ function setText(id, value) {
 }
 
 async function loadFinance() {
+
+      // =====================================================
+    // SOLICITAÇÕES DE SAQUE
+    // =====================================================
+
+    const withdrawalRes = await fetch(
+      `${API_BASE}/admin/finance/withdrawals`,
+      {
+        credentials: "include",
+      }
+    );
+
+    const withdrawalData = await withdrawalRes.json();
+
+    if (!withdrawalRes.ok || !withdrawalData.ok) {
+      throw new Error(
+        withdrawalData.message ||
+        "Erro ao carregar solicitações de saque."
+      );
+    }
+
+    const withdrawals = Array.isArray(withdrawalData.withdrawals)
+      ? withdrawalData.withdrawals
+      : [];
+
+    if (withdrawalTableBody) {
+      if (!withdrawals.length) {
+        withdrawalTableBody.innerHTML = `
+          <tr>
+            <td colspan="8">
+              Nenhuma solicitação de saque encontrada.
+            </td>
+          </tr>
+        `;
+      } else {
+        withdrawalTableBody.innerHTML = withdrawals.map(w => `
+          <tr>
+            <td>${formatDate(w.requested_at)}</td>
+            <td>${w.username || "-"}</td>
+            <td>${w.email || "-"}</td>
+            <td>
+              ${Number(w.amount || 0).toLocaleString("pt-BR", {
+                style: "currency",
+                currency: "BRL"
+              })}
+            </td>
+            <td>${w.pix_key_type || "-"}</td>
+            <td>${w.pix_key || "-"}</td>
+            <td>${statusLabel(w.status)}</td>
+            <td>
+              ${
+                String(w.status || "").toUpperCase() === "PENDING"
+                  ? `
+                    <button
+                      type="button"
+                      class="admin-btn admin-btn-primary"
+                      onclick="completeWithdrawal(${Number(w.id)})"
+                    >
+                      Confirmar
+                    </button>
+
+                    <button
+                      type="button"
+                      class="admin-btn admin-btn-secondary"
+                      onclick="cancelWithdrawal(${Number(w.id)})"
+                    >
+                      Cancelar
+                    </button>
+                  `
+                  : "-"
+              }
+            </td>
+          </tr>
+        `).join("");
+      }
+    }
+
   if (financeMessage) {
     financeMessage.textContent = "Carregando financeiro...";
   }
@@ -110,5 +189,128 @@ async function loadFinance() {
   }
 }
 
+
+async function cancelWithdrawal(withdrawalId) {
+  const id = Number(withdrawalId);
+
+  if (!Number.isInteger(id) || id <= 0) {
+    return;
+  }
+
+  const confirmed = window.confirm(
+    `Confirma o cancelamento da solicitação de saque #${id}?`
+  );
+
+  if (!confirmed) {
+    return;
+  }
+
+  try {
+    if (financeMessage) {
+      financeMessage.textContent = "Cancelando saque...";
+    }
+
+    const res = await fetch(
+      `${API_BASE}/admin/finance/withdrawals/${id}/cancel`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        credentials: "include",
+        body: JSON.stringify({
+          adminNote: "Cancelado pelo administrador",
+        }),
+      }
+    );
+
+    const data = await res.json();
+
+    if (!res.ok || !data.ok) {
+      throw new Error(
+        data.message || "Erro ao cancelar saque."
+      );
+    }
+
+    if (financeMessage) {
+      financeMessage.textContent =
+        "Saque cancelado com sucesso.";
+    }
+
+    await loadFinance();
+
+  } catch (err) {
+    console.error("Erro ao cancelar saque:", err);
+
+    if (financeMessage) {
+      financeMessage.textContent =
+        err.message || "Erro ao cancelar saque.";
+    }
+  }
+}
+
+async function completeWithdrawal(withdrawalId) {
+  const id = Number(withdrawalId);
+
+  if (!Number.isInteger(id) || id <= 0) {
+    return;
+  }
+
+  const confirmed = window.confirm(
+    `Confirma que o PIX do saque #${id} já foi realizado?`
+  );
+
+  if (!confirmed) {
+    return;
+  }
+
+  try {
+    if (financeMessage) {
+      financeMessage.textContent =
+        "Confirmando pagamento do saque...";
+    }
+
+    const res = await fetch(
+      `${API_BASE}/admin/finance/withdrawals/${id}/complete`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        credentials: "include",
+        body: JSON.stringify({
+          adminNote: "PIX confirmado pelo administrador",
+        }),
+      }
+    );
+
+    const data = await res.json();
+
+    if (!res.ok || !data.ok) {
+      throw new Error(
+        data.message || "Erro ao concluir saque."
+      );
+    }
+
+    if (financeMessage) {
+      financeMessage.textContent =
+        "Saque concluído com sucesso.";
+    }
+
+    await loadFinance();
+
+  } catch (err) {
+    console.error("Erro ao concluir saque:", err);
+
+    if (financeMessage) {
+      financeMessage.textContent =
+        err.message || "Erro ao concluir saque.";
+    }
+  }
+}
+
+window.cancelWithdrawal = cancelWithdrawal;
+window.completeWithdrawal = completeWithdrawal;
 window.loadFinance = loadFinance;
+
 loadFinance();

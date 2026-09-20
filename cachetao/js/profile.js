@@ -132,6 +132,14 @@ async function loadProfile() {
     document.getElementById("profileCashBalance").textContent =
       formatCashBalance(user.cashBalance);
 
+    const withdrawCashBalance =
+      document.getElementById("withdrawCashBalance");
+
+    if (withdrawCashBalance) {
+      withdrawCashBalance.textContent =
+        formatCashBalance(user.cashBalance);
+    }
+
     document.getElementById("profileCreatedAt").textContent =
       formatDate(user.createdAt);
 
@@ -441,6 +449,141 @@ async function deleteAccount() {
   }
 }
 
+async function requestWithdrawal() {
+  const amountInput =
+    document.getElementById("withdrawAmount");
+
+  const pixKeyTypeInput =
+    document.getElementById("withdrawPixKeyType");
+
+  const pixKeyInput =
+    document.getElementById("withdrawPixKey");
+
+  const button =
+    document.getElementById("btnRequestWithdrawal");
+
+  const message =
+    document.getElementById("withdrawMessage");
+
+  const amount = Number(amountInput?.value);
+  const pixKeyType = String(
+    pixKeyTypeInput?.value || ""
+  ).trim();
+
+  const pixKey = String(
+    pixKeyInput?.value || ""
+  ).trim();
+
+  // =====================================================
+  // VALIDAÇÃO BÁSICA
+  // =====================================================
+
+  if (!Number.isFinite(amount) || amount <= 0) {
+    if (message) {
+      message.style.display = "block";
+      message.textContent = "Informe um valor de saque válido.";
+    }
+    return;
+  }
+
+  if (!pixKeyType) {
+    if (message) {
+      message.style.display = "block";
+      message.textContent = "Selecione o tipo da chave PIX.";
+    }
+    return;
+  }
+
+  if (!pixKey) {
+    if (message) {
+      message.style.display = "block";
+      message.textContent = "Informe a chave PIX.";
+    }
+    return;
+  }
+
+  // =====================================================
+  // SOLICITAÇÃO
+  // =====================================================
+
+  try {
+    if (button) {
+      button.disabled = true;
+      button.textContent = "Solicitando...";
+    }
+
+    if (message) {
+      message.style.display = "block";
+      message.textContent = "Enviando solicitação de saque...";
+    }
+
+    const res = await fetch(
+      `${API_BASE}/wallet/withdraw`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        credentials: "include",
+        body: JSON.stringify({
+          amount,
+          pixKeyType,
+          pixKey,
+        }),
+      }
+    );
+
+    const data = await res.json();
+
+    if (!res.ok || !data.ok) {
+      throw new Error(
+        data.message || "Erro ao solicitar saque."
+      );
+    }
+
+    // =====================================================
+    // ATUALIZA O SALDO MOSTRADO NO FORMULÁRIO
+    // =====================================================
+
+    const balanceAfter =
+      Number(data.withdrawal?.balanceAfter) || 0;
+
+    const withdrawCashBalance =
+      document.getElementById("withdrawCashBalance");
+
+    if (withdrawCashBalance) {
+      withdrawCashBalance.textContent =
+        formatCashBalance(balanceAfter);
+    }
+
+    // Limpa os campos somente depois do sucesso.
+    if (amountInput) amountInput.value = "";
+    if (pixKeyTypeInput) pixKeyTypeInput.value = "";
+    if (pixKeyInput) pixKeyInput.value = "";
+
+    if (message) {
+      message.style.display = "block";
+      message.textContent =
+        "Solicitação de saque enviada com sucesso. Aguarde o pagamento via PIX.";
+    }
+
+  } catch (err) {
+    console.error("Erro ao solicitar saque:", err);
+
+    if (message) {
+      message.style.display = "block";
+      message.textContent =
+        err.message || "Erro ao solicitar saque.";
+    }
+
+  } finally {
+    if (button) {
+      button.disabled = false;
+      button.textContent = "Solicitar saque";
+    }
+  }
+}
+
 
 function bindEvents() {
   document.getElementById("btnPrevAvatar")?.addEventListener("click", () => {
@@ -456,6 +599,10 @@ function bindEvents() {
   document.getElementById("btnSaveAvatar")?.addEventListener("click", saveAvatar);
   document.getElementById("btnChangePassword")?.addEventListener("click", changePassword);
   document.getElementById("btnDeleteAccount")?.addEventListener("click", deleteAccount);
+  document.getElementById("btnRequestWithdrawal")?.addEventListener(
+    "click",
+    requestWithdrawal
+  );
 
   /*document.getElementById("btnGoSettings")?.addEventListener("click", () => {
     alert("Configurações do perfil podem entrar aqui depois.");

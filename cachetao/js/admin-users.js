@@ -35,9 +35,15 @@ function logoutWithMessage(message) {
 }
 
 
-
 function formatBalance(value) {
   return (Number(value) || 0).toLocaleString("pt-BR");
+}
+
+function formatCashBalance(value) {
+  return Number(value || 0).toLocaleString("pt-BR", {
+    style: "currency",
+    currency: "BRL",
+  });
 }
 
 function formatDate(value) {
@@ -309,6 +315,7 @@ function renderUsers(users) {
           <td>${deleted ? "—" : (user.email ?? "—")}</td>
           <td>${buildStatusHtml(user)}</td>
           <td>${deleted ? "0" : formatBalance(user.chipsBalance)}</td>
+          <td>${deleted ? "R$ 0,00" : formatCashBalance(user.cashBalance)}</td>
           <td>${profileHtml}</td>
           <td>${formatDate(user.createdAt)}</td>
           <td>${buildActionsHtml(user)}</td>

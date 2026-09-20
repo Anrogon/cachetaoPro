@@ -1,6 +1,7 @@
 const express = require("express");
 const pool = require("../config/db");
 const { requireAuth, requireAdmin } = require("../middleware/auth");
+const { cancelWithdrawal, completeWithdrawal } = require("../services/cashWalletService");
 
 const router = express.Router();
 
@@ -70,5 +71,182 @@ router.get("/summary", requireAuth, requireAdmin, async (req, res) => {
     });
   }
 });
+
+
+// =========================================================
+// LISTAR SOLICITAÇÕES DE SAQUE
+// =========================================================
+
+router.get(
+  "/withdrawals",
+  requireAuth,
+  requireAdmin,
+  async (req, res) => {
+    try {
+      const result = await pool.query(
+        `
+          SELECT
+            wr.id,
+            wr.user_id,
+            u.username,
+            u.email,
+            wr.amount,
+            wr.pix_key_type,
+            wr.pix_key,
+            wr.status,
+            wr.admin_note,
+            wr.requested_at,
+            wr.completed_at,
+            wr.cancelled_at
+          FROM withdrawal_requests wr
+          LEFT JOIN users u
+            ON u.id = wr.user_id
+          ORDER BY
+            CASE
+              WHEN wr.status = 'PENDING' THEN 0
+              ELSE 1
+            END,
+            wr.requested_at DESC
+          LIMIT 100
+        `
+      );
+
+      return res.json({
+        ok: true,
+        withdrawals: result.rows,
+      });
+
+    } catch (err) {
+      console.error(
+        "GET /admin/finance/withdrawals error:",
+        err
+      );
+
+      return res.status(500).json({
+        ok: false,
+        message: "Erro ao carregar solicitações de saque.",
+      });
+    }
+  }
+);
+
+// =========================================================
+// CANCELAR SOLICITAÇÃO DE SAQUE
+// =========================================================
+
+router.post(
+  "/withdrawals/:id/cancel",
+  requireAuth,
+  requireAdmin,
+  async (req, res) => {
+    try {
+      const withdrawalId = Number(req.params.id);
+
+      const adminNote = String(
+        req.body?.adminNote || ""
+      ).trim();
+
+      const result = await cancelWithdrawal({
+        withdrawalId,
+        adminNote: adminNote || null,
+      });
+
+      return res.json({
+        ok: true,
+        withdrawal: result,
+        message: "Saque cancelado com sucesso.",
+      });
+
+    } catch (err) {
+      console.error(
+        "POST /admin/finance/withdrawals/:id/cancel error:",
+        err
+      );
+
+      const message =
+        err?.message || "Erro ao cancelar saque.";
+
+      if (
+        message === "Solicitação de saque inválida." ||
+        message === "Solicitação de saque não encontrada." ||
+        message === "Solicitação de saque não está pendente." ||
+        message === "Valor do saque inválido." ||
+        message === "Usuário não encontrado." ||
+        message === "Saldo bloqueado inconsistente." ||
+        message === "Transação financeira do saque não encontrada."
+      ) {
+        return res.status(400).json({
+          ok: false,
+          message,
+        });
+      }
+
+      return res.status(500).json({
+        ok: false,
+        message: "Erro ao cancelar saque.",
+      });
+    }
+  }
+);
+
+// =========================================================
+// CONFIRMAR PAGAMENTO DO SAQUE
+// =========================================================
+
+router.post(
+  "/withdrawals/:id/complete",
+  requireAuth,
+  requireAdmin,
+  async (req, res) => {
+    try {
+      const withdrawalId = Number(req.params.id);
+
+      const adminNote = String(
+        req.body?.adminNote || ""
+      ).trim();
+
+      const result = await completeWithdrawal({
+        withdrawalId,
+        adminNote: adminNote || null,
+      });
+
+      return res.json({
+        ok: true,
+        withdrawal: result,
+        message: "Saque concluído com sucesso.",
+      });
+
+    } catch (err) {
+      console.error(
+        "POST /admin/finance/withdrawals/:id/complete error:",
+        err
+      );
+
+      const message =
+        err?.message || "Erro ao concluir saque.";
+
+      if (
+        message === "Solicitação de saque inválida." ||
+        message === "Solicitação de saque não encontrada." ||
+        message === "Solicitação de saque não está pendente." ||
+        message === "Valor do saque inválido." ||
+        message === "Usuário não encontrado." ||
+        message === "Saldo bloqueado inconsistente." ||
+        message === "Transação financeira do saque não encontrada."
+      ) {
+        return res.status(400).json({
+          ok: false,
+          message,
+        });
+      }
+
+      return res.status(500).json({
+        ok: false,
+        message: "Erro ao concluir saque.",
+      });
+    }
+  }
+);
+
 
 module.exports = router;

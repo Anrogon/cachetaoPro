@@ -1570,15 +1570,40 @@ function requireAuthOrRedirect() {
 }
 
 
-async function openWalletModal() {
+async function openWalletModal(purpose = "CHIPS") {
   const walletModal = document.getElementById("walletModal");
+  const walletTitle = document.getElementById("walletTitle");
+  const walletSubtitle = document.getElementById("walletSubtitle");
   const walletPackages = document.getElementById("walletPackages");
   const walletMsg = document.getElementById("walletMsg");
   const walletPixArea = document.getElementById("walletPixArea");
   const walletPixQrImg = document.getElementById("walletPixQrImg");
   const walletPixCode = document.getElementById("walletPixCode");
   const walletCopyPixBtn = document.getElementById("walletCopyPixBtn");
-  const walletHistoryList = document.getElementById("walletHistoryList");
+
+  purpose = String(purpose || "CHIPS").toUpperCase();
+
+  if (purpose !== "CHIPS" && purpose !== "CASH") {
+    purpose = "CHIPS";
+  }
+
+  const isCash = purpose === "CASH";
+
+  // =====================================================
+  // TÍTULO / SUBTÍTULO DO MESMO MODAL
+  // =====================================================
+
+  if (walletTitle) {
+    walletTitle.textContent = isCash
+      ? "Fazer depósito"
+      : "Comprar fichas";
+  }
+
+  if (walletSubtitle) {
+    walletSubtitle.textContent = isCash
+      ? "Escolha um valor e pague via PIX."
+      : "Escolha um pacote e pague via PIX.";
+  }
 
   walletModal?.classList.remove("hidden");
 
@@ -1586,138 +1611,251 @@ async function openWalletModal() {
   if (walletPixArea) walletPixArea.classList.add("hidden");
   if (walletPixQrImg) walletPixQrImg.removeAttribute("src");
   if (walletPixCode) walletPixCode.value = "";
-  if (walletMsg) walletMsg.textContent = "Carregando pacotes...";
-
+  if (walletMsg) {
+    walletMsg.textContent = isCash
+      ? "Carregando valores..."
+      : "Carregando pacotes...";
+  }
 
   try {
-    const res = await fetch(`${API_BASE}/wallet/packages`, {
-      credentials: "include",
-    });
+    // =====================================================
+    // CARREGA CHIPS OU CASH
+    // =====================================================
+
+    const res = await fetch(
+      `${API_BASE}/wallet/packages?purpose=${purpose}`,
+      {
+        credentials: "include",
+      }
+    );
 
     const data = await res.json();
 
     if (!data.ok) {
-      throw new Error(data.message || "Erro ao carregar pacotes.");
+      throw new Error(
+        data.message || "Erro ao carregar pacotes."
+      );
     }
 
     if (walletMsg) walletMsg.textContent = "";
 
-    walletPackages.innerHTML = data.packages.map(p => `
-      <button class="wallet-package-btn" type="button" data-package-id="${p.id}">
-        <span>${p.label}</span>
-        <span>R$ ${(p.priceCents / 100).toFixed(2).replace(".", ",")}</span>
-      </button>
-    `).join("");
+    // =====================================================
+    // MONTA OS BOTÕES
+    // =====================================================
 
-    walletPackages.querySelectorAll(".wallet-package-btn").forEach(btn => {
-      btn.onclick = async () => {
-        const packageId = btn.dataset.packageId;
+    if (isCash) {
+      walletPackages.innerHTML = data.packages.map(p => `
+        <button
+          class="wallet-package-btn"
+          type="button"
+          data-package-id="${p.id}"
+        >
+          <span>${p.label}</span>
+        </button>
+      `).join("");
+    } else {
+      walletPackages.innerHTML = data.packages.map(p => `
+        <button
+          class="wallet-package-btn"
+          type="button"
+          data-package-id="${p.id}"
+        >
+          <span>${p.label}</span>
+          <span>
+            R$ ${(p.priceCents / 100)
+              .toFixed(2)
+              .replace(".", ",")}
+          </span>
+        </button>
+      `).join("");
+    }
 
-        if (walletMsg) walletMsg.textContent = "Gerando PIX...";
-        if (walletPixArea) walletPixArea.classList.add("hidden");
+    // =====================================================
+    // CLIQUE EM UM PACOTE
+    // =====================================================
 
-        try {
-          const depRes = await fetch(`${API_BASE}/wallet/deposit`, {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            credentials: "include",
-            body: JSON.stringify({ packageId }),
-          });
+    walletPackages
+      .querySelectorAll(".wallet-package-btn")
+      .forEach(btn => {
 
-          const depData = await depRes.json();
+        btn.onclick = async () => {
+          const packageId = btn.dataset.packageId;
 
-          if (!depData.ok) {
-            throw new Error(depData.message || "Erro ao gerar PIX.");
-          }
-
-          if (walletPixQrImg && depData.qrCodeBase64) {
-            walletPixQrImg.src = `data:image/png;base64,${depData.qrCodeBase64}`;
-          }
-
-          if (walletPixCode) {
-            walletPixCode.value = depData.qrCode || "";
+          if (walletMsg) {
+            walletMsg.textContent = "Gerando PIX...";
           }
 
           if (walletPixArea) {
-            walletPixArea.classList.remove("hidden");
+            walletPixArea.classList.add("hidden");
           }
 
-          if (walletMsg) {
-            walletMsg.textContent = `PIX de R$ ${Number(depData.amount).toFixed(2).replace(".", ",")} gerado.`;
-          }
+          try {
+            const depRes = await fetch(
+              `${API_BASE}/wallet/deposit`,
+              {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                },
+                credentials: "include",
 
-          const transactionId = depData.transactionId;
-
-          const pollInterval = setInterval(async () => {
-            try {
-              const statusRes = await fetch(
-                `${API_BASE}/wallet/deposit/${transactionId}/status`,
-                {
-                  credentials: "include",
-                }
-              );
-
-              const statusData = await statusRes.json();
-              if (statusData.status === "approved") {
-                clearInterval(pollInterval);
-
-                if (walletMsg) {
-                  walletMsg.textContent =
-                    `Pagamento aprovado. ${statusData.chips} fichas creditadas.`;
-                }
-
-                if (walletPixArea) {
-                  walletPixArea.classList.add("hidden");
-                }
-
-                try {
-                  const meRes = await fetch(`${API_BASE}/auth/me`, {
-                    credentials: "include",
-                  });
-
-                  const meData = await meRes.json();
-
-                  if (meData.ok && meData.user) {
-                    localStorage.setItem("pontinhoAuthUser", JSON.stringify(meData.user));
-                    updateAuthUI(meData.user);
-                  }
-                } catch (err) {
-                  console.error("Erro ao atualizar saldo após PIX:", err);
-                }
+                body: JSON.stringify({
+                  packageId,
+                  purpose,
+                }),
               }
+            );
 
-            } catch (err) {
-              console.error(err);
+            const depData = await depRes.json();
+
+            if (!depData.ok) {
+              throw new Error(
+                depData.message || "Erro ao gerar PIX."
+              );
             }
-          }, 5000);
 
+            // =================================================
+            // MOSTRA QR CODE / COPIA E COLA
+            // =================================================
 
-        } catch (err) {
-          if (walletMsg) walletMsg.textContent = err.message;
-        }
-      };
-    });
+            if (walletPixQrImg && depData.qrCodeBase64) {
+              walletPixQrImg.src =
+                `data:image/png;base64,${depData.qrCodeBase64}`;
+            }
+
+            if (walletPixCode) {
+              walletPixCode.value =
+                depData.qrCode || "";
+            }
+
+            if (walletPixArea) {
+              walletPixArea.classList.remove("hidden");
+            }
+
+            if (walletMsg) {
+              walletMsg.textContent =
+                `PIX de R$ ${Number(depData.amount)
+                  .toFixed(2)
+                  .replace(".", ",")} gerado.`;
+            }
+
+            const transactionId = depData.transactionId;
+
+            // =================================================
+            // AGUARDA APROVAÇÃO DO PIX
+            // =================================================
+
+            const pollInterval = setInterval(async () => {
+              try {
+                const statusRes = await fetch(
+                  `${API_BASE}/wallet/deposit/${transactionId}/status`,
+                  {
+                    credentials: "include",
+                  }
+                );
+
+                const statusData =
+                  await statusRes.json();
+
+                if (statusData.status === "approved") {
+                  clearInterval(pollInterval);
+
+                  if (walletMsg) {
+                    if (purpose === "CASH") {
+                      walletMsg.textContent =
+                        `Pagamento aprovado. R$ ${Number(
+                          statusData.amount
+                        )
+                          .toFixed(2)
+                          .replace(".", ",")} creditados no saldo.`;
+                    } else {
+                      walletMsg.textContent =
+                        `Pagamento aprovado. ${statusData.chips} fichas creditadas.`;
+                    }
+                  }
+
+                  if (walletPixArea) {
+                    walletPixArea.classList.add("hidden");
+                  }
+
+                  // =============================================
+                  // ATUALIZA FICHAS / SALDO DA HOME
+                  // =============================================
+
+                  try {
+                    const meRes = await fetch(
+                      `${API_BASE}/auth/me`,
+                      {
+                        credentials: "include",
+                      }
+                    );
+
+                    const meData = await meRes.json();
+
+                    if (meData.ok && meData.user) {
+                      localStorage.setItem(
+                        "pontinhoAuthUser",
+                        JSON.stringify(meData.user)
+                      );
+
+                      updateAuthUI(meData.user);
+                    }
+
+                  } catch (err) {
+                    console.error(
+                      "Erro ao atualizar saldo após PIX:",
+                      err
+                    );
+                  }
+                }
+
+              } catch (err) {
+                console.error(err);
+              }
+            }, 5000);
+
+          } catch (err) {
+            if (walletMsg) {
+              walletMsg.textContent = err.message;
+            }
+          }
+        };
+      });
+
+    // =====================================================
+    // COPIAR PIX
+    // =====================================================
 
     if (walletCopyPixBtn) {
       walletCopyPixBtn.onclick = async () => {
         const code = walletPixCode?.value || "";
+
         if (!code) return;
 
         try {
           await navigator.clipboard.writeText(code);
-          if (walletMsg) walletMsg.textContent = "Código PIX copiado.";
+
+          if (walletMsg) {
+            walletMsg.textContent =
+              "Código PIX copiado.";
+          }
+
         } catch {
           walletPixCode?.select();
           document.execCommand("copy");
-          if (walletMsg) walletMsg.textContent = "Código PIX copiado.";
+
+          if (walletMsg) {
+            walletMsg.textContent =
+              "Código PIX copiado.";
+          }
         }
       };
     }
 
   } catch (err) {
-    if (walletMsg) walletMsg.textContent = err.message;
+    if (walletMsg) {
+      walletMsg.textContent = err.message;
+    }
   }
 }
 
@@ -1743,16 +1881,26 @@ function bindHomeButtons() {
       window.location.href = "./profile.html";
     };
   }
-
   const btnBuyChips = document.getElementById("btnBuyChips");
-  if (btnBuyChips) {
-    const loggedUser = localStorage.getItem("pontinhoAuthUser");
+  const btnDeposit = document.getElementById("btnDeposit");
 
+  const loggedUser = localStorage.getItem("pontinhoAuthUser");
+
+  if (btnBuyChips) {
     btnBuyChips.style.display = loggedUser ? "flex" : "none";
 
     btnBuyChips.onclick = () => {
       if (!requireAuthOrRedirect()) return;
-      openWalletModal();
+      openWalletModal("CHIPS");
+    };
+  }
+
+  if (btnDeposit) {
+    btnDeposit.style.display = loggedUser ? "flex" : "none";
+
+    btnDeposit.onclick = () => {
+      if (!requireAuthOrRedirect()) return;
+      openWalletModal("CASH");
     };
   }
 
@@ -1789,6 +1937,15 @@ function bindHomeButtons() {
       document.getElementById("btnBuyChips")?.click();
     };
   }
+
+  const navDeposit = document.getElementById("navDeposit");
+
+    if (navDeposit) {
+      navDeposit.onclick = (e) => {
+        e.preventDefault();
+        document.getElementById("btnDeposit")?.click();
+      };
+    }
 
   const navProfile = document.getElementById("navProfile");
   if (navProfile) {
@@ -1861,6 +2018,7 @@ async function refreshHomeUser() {
   const btnCachetao = document.getElementById("btnCachetao");
 
   const btnBuyChips = document.getElementById("btnBuyChips");
+  const btnDeposit = document.getElementById("btnDeposit");
   const walletModal = document.getElementById("walletModal");
   const walletCloseBtn = document.getElementById("walletCloseBtn");
 
@@ -1880,6 +2038,7 @@ async function refreshHomeUser() {
     if (btnSettings) btnSettings.style.display = "none";
     if (btnProfile) btnProfile.style.display = "none";
     if (btnBuyChips) btnBuyChips.style.display = "none";
+    if (btnDeposit) btnDeposit.style.display = "none";
 
     if (walletCloseBtn) {
       walletCloseBtn.onclick = () => {
@@ -1923,6 +2082,7 @@ async function refreshHomeUser() {
     if (btnSettings) btnSettings.style.display = "none";
     if (btnProfile) btnProfile.style.display = "";
     if (btnBuyChips) btnBuyChips.style.display = "";
+    if (btnDeposit) btnDeposit.style.display = "";
     if (btnCachetao) btnCachetao.style.display = "";
 
   }
