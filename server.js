@@ -7870,6 +7870,58 @@ if (msg.type === "joinTableGroup") {
     return send(ws, "error", { message: "Assento inválido." });
   }
 
+// =====================================================
+// REENTRADA: antes de procurar/criar outra instância,
+// verifica se este usuário já está em alguma sala
+// deste mesmo grupo.
+// =====================================================
+if (c.userId != null) {
+  for (const existingRoom of rooms.values()) {
+    const sameGroup =
+      String(
+        existingRoom.tableGroupId ||
+        existingRoom.baseTableId ||
+        existingRoom.id
+      ) === String(tableGroupId);
+
+    if (!sameGroup) continue;
+
+    const existingSeatIndex =
+      (existingRoom.playersBySeat || []).findIndex(player =>
+        player &&
+        player.isBot !== true &&
+        player.userId != null &&
+        String(player.userId) === String(c.userId) &&
+        !player.eliminated
+      );
+
+    if (existingSeatIndex >= 0) {
+      const existingSeat = existingSeatIndex + 1;
+      const existingPlayer =
+        existingRoom.playersBySeat[existingSeatIndex];
+
+      console.log("[REENTRADA] jogador encontrado na instância original", {
+        userId: c.userId,
+        roomId: existingRoom.id,
+        seat: existingSeat
+      });
+
+      msg.type = "joinTable";
+      msg.payload = {
+        ...payload,
+        tableId: existingRoom.id,
+        seat: existingSeat,
+        reconnectToken: existingPlayer.reconnectToken
+      };
+
+      break;
+    }
+  }
+}
+
+  // Só procura/cria outra instância se não encontrou
+// o próprio jogador em uma instância existente.
+if (msg.type === "joinTableGroup") {
   const realRoom = findOrCreateRoomForGroup(tableGroupId, seat);
 
   if (!realRoom) {
@@ -7878,12 +7930,12 @@ if (msg.type === "joinTableGroup") {
     });
   }
 
-  // reaproveita o fluxo antigo, mas agora com o tableId real
   msg.type = "joinTable";
   msg.payload = {
     ...payload,
     tableId: realRoom.id
   };
+}
 
   // deixa cair no joinTable abaixo
 }
@@ -7908,20 +7960,86 @@ if (msg.type === "joinTableGroup") {
     }
 
 
-  // sai da mesa atual antes de entrar em outra
-    leaveCurrentTable(clientId);
+  // =====================================================
+// COMPETIÇÃO — UMA CONTA SÓ PODE OCUPAR UMA MESA
+// =====================================================
 
-    // IMPORTANTE:
-    // leaveCurrentTable pode remover uma instância dinâmica vazia.
-    // Por isso precisamos validar novamente depois da saída.
-    const room = rooms.get(tableId);
+// Consulta a mesa de destino ANTES de sair da mesa atual.
+const targetRoom = rooms.get(tableId);
 
-    if (!room) {
-      return send(ws, "error", {
-        message: "Esta mesa não está mais disponível. Selecione a mesa novamente."
-      });
+if (!targetRoom) {
+  return send(ws, "error", {
+    message: "Esta mesa não está mais disponível. Selecione a mesa novamente."
+  });
+}
+
+const targetIsCompetition =
+  String(
+    targetRoom?.tableType || "RECREATIONAL"
+  ).toUpperCase() === "COMPETITION";
+
+if (targetIsCompetition && c.userId != null) {
+
+  for (const existingRoom of rooms.values()) {
+
+    const existingIsCompetition =
+      String(
+        existingRoom?.tableType || "RECREATIONAL"
+      ).toUpperCase() === "COMPETITION";
+
+    if (!existingIsCompetition) {
+      continue;
     }
 
+    const existingSeatIndex =
+      (existingRoom.playersBySeat || []).findIndex(player =>
+        player &&
+        player.isBot !== true &&
+        player.userId != null &&
+        String(player.userId) === String(c.userId) &&
+        !player.eliminated
+      );
+
+    if (existingSeatIndex === -1) {
+      continue;
+    }
+
+    const existingPlayer =
+      existingRoom.playersBySeat[existingSeatIndex];
+
+    const existingSeat =
+      existingSeatIndex + 1;
+
+    const isLegitimateReconnect =
+      existingRoom.id === targetRoom.id &&
+      Boolean(reconnectToken) &&
+      existingPlayer.reconnectToken === reconnectToken &&
+      existingSeat === Number(seat);
+
+    if (!isLegitimateReconnect) {
+      return send(ws, "error", {
+        message:
+          "Você já está participando de outra mesa no modo Competição."
+      });
+    }
+  }
+}
+
+// Só agora abandona a sala anterior.
+// Uma tentativa bloqueada de entrar em outra Competição
+// não remove o jogador da mesa atual.
+leaveCurrentTable(clientId);
+
+// IMPORTANTE:
+// leaveCurrentTable pode remover uma instância dinâmica vazia.
+// Por isso precisamos validar novamente depois da saída.
+const room = rooms.get(tableId);
+
+if (!room) {
+  return send(ws, "error", {
+    message: "Esta mesa não está mais disponível. Selecione a mesa novamente."
+  });
+}
     if (mode === "spectator") {
       joinAsSpectator(room, c, clientId, tableId, ws);
       return;
