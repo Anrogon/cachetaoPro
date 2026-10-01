@@ -104,8 +104,8 @@
 }
 
 .tables-tab.active {
-  background: rgba(255,255,255,0.22);
-  border-color: rgba(255,255,255,0.30);
+  background: rgba(67, 158, 31, 0.22);
+  border-color: rgba(255, 215, 0, 0.85);
   box-shadow: 0 6px 18px rgba(0,0,0,0.18);
 }
 
@@ -283,13 +283,6 @@
   margin-left: -10px;
   transform-origin: bottom center;
 }
-
-
-
-
-
-
-
 
 
 /* =========================================================
