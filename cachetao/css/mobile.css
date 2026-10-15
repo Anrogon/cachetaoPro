@@ -203,7 +203,7 @@
     border: 2px solid rgba(255, 215, 0, 0.55) !important;
     border-radius: 30px !important;
 
-    background: radial-gradient(ellipse at center, #00ff88, #00a86b, #004d40);
+    /*background: radial-gradient(ellipse at center, #00ff88, #00a86b, #004d40);*/
 
 /*
     background:
@@ -324,7 +324,7 @@
 }
 
   /* =========================
-     POSIÇÕES
+     POSIÇÕES SALA de MESAS
   ========================= */
 
   .mobile-seat.pos1 {  left: 50%;  top: 92%;  transform: translate(-50%, -50%);}

@@ -24,7 +24,7 @@
     margin: 0 !important;
     padding: 0 !important;
 
-    background-image: url("/assets/image/bg-g.jpg");
+    /*background-image: url("/assets/image/bg-g.jpg");*/
     background-size: cover !important;
     background-position: center !important;
 
@@ -87,7 +87,7 @@
   padding: 4px 8px !important;
   margin: 0 !important;
 
-  background: rgba(0, 0, 0, 0.18) !important;
+  /*background: rgba(0, 0, 0, 0.18) !important;*/
   border-radius: 22px !important;
 
   z-index: 16000 !important;
