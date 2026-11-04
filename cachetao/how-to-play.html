@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -11,42 +12,129 @@
   <link rel="stylesheet" href="./css/pages.css">
 
   <style>
-  /* =========================================================
-     COMO JOGAR — SOMENTE AJUSTES EXCLUSIVOS
-  ========================================================= */
+    /* =========================================================
+       COMO JOGAR — SOMENTE AJUSTES EXCLUSIVOS
+    ========================================================= */
 
-  .howto-steps{
-    list-style:decimal;
-    margin:12px 0 20px;
-    padding-left:28px;
-  }
+    .howto-steps{
+      list-style:decimal;
+      margin:12px 0 20px;
+      padding-left:28px;
+    }
 
-  .howto-steps li{
-    margin-bottom:10px;
-    padding:0;
+    .howto-steps li{
+      margin-bottom:10px;
+      padding:0;
+      background:transparent;
+      border:0;
+    }
 
-    background:transparent;
-    border:0;
-  }
+    .howto-example{
+      margin:14px 0 18px;
+      padding:14px 16px;
+      border-radius:14px;
+      background:rgba(255,255,255,.07);
+      border:1px solid rgba(212,175,55,.22);
+    }
 
-  .howto-example{
-    margin:14px 0 18px;
-    padding:14px 16px;
+    .howto-example strong{
+      color:#ffd86b;
+    }
 
-    border-radius:14px;
+    .howto-final-alert{
+      margin-top:30px;
+    }
 
-    background:rgba(255,255,255,.07);
-    border:1px solid rgba(212,175,55,.22);
-  }
+    /* =========================================================
+       EXEMPLOS DE CARTAS E COMBINAÇÕES
+    ========================================================= */
 
-  .howto-example strong{
-    color:#ffd86b;
-  }
+    .howto-combination{
+      margin:16px 0;
+      padding:16px;
+      border-radius:14px;
+      background:rgba(255,255,255,.06);
+      border:1px solid rgba(212,175,55,.22);
+    }
 
-  .howto-final-alert{
-    margin-top:30px;
-  }
-</style>
+    .howto-combination h3{
+      margin:0 0 10px;
+      color:#ffd86b;
+      font-size:17px;
+    }
+
+    .howto-combination p{
+      margin:8px 0 0;
+      line-height:1.6;
+    }
+
+    .howto-cards{
+      display:flex;
+      align-items:center;
+      gap:6px;
+      flex-wrap:wrap;
+      margin:10px 0;
+    }
+
+    .howto-card{
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      width:48px;
+      height:66px;
+      box-sizing:border-box;
+      border-radius:7px;
+      border:1px solid #c9c9c9;
+      background:#fff;
+      color:#151515;
+      font-size:19px;
+      font-weight:900;
+      box-shadow:0 3px 7px rgba(0,0,0,.22);
+    }
+
+    .howto-card.red{
+      color:#c52232;
+    }
+
+    .howto-card.joker{
+      color:#0754a8;
+      background:#fff5d8;
+      border-color:#d5a32c;
+      font-size:23px;
+    }
+
+    .howto-plus{
+      padding:0 5px;
+      color:#ffd86b;
+      font-size:22px;
+      font-weight:900;
+    }
+
+    .howto-combination-note{
+      font-size:13px;
+      color:rgba(255,255,255,.82);
+    }
+
+    @media(max-width:700px){
+      .howto-card{
+        width:40px;
+        height:56px;
+        font-size:16px;
+      }
+
+      .howto-card.joker{
+        font-size:19px;
+      }
+
+      .howto-cards{
+        gap:4px;
+      }
+
+      .howto-combination{
+        padding:12px;
+      }
+    }
+  </style>
 </head>
 
 <body class="page-theme">
@@ -66,12 +154,15 @@
         e entre preparado para sua primeira partida.
       </div>
 
+      <!-- ÍNDICE -->
+
       <nav class="cp-index" aria-label="Índice de Como Jogar">
         <div class="cp-index-title">Índice</div>
 
         <div class="cp-index-links">
           <a href="#objetivo">🎯 Objetivo</a>
           <a href="#rodada">🎴 Rodada</a>
+          <a href="#combinacoes">🃏 Combinações Válidas</a>
           <a href="#coringa">🃏 Coringa</a>
           <a href="#jogar">🟢 Jogar</a>
           <a href="#jogar-vira">🎴 Jogar com a Vira</a>
@@ -84,10 +175,13 @@
         </div>
       </nav>
 
+      <!-- OBJETIVO -->
+
       <h2 id="objetivo">🎯 Objetivo</h2>
 
       <p>
-        Todos os jogadores iniciam a partida com <strong>10 pontos</strong>.
+        Todos os jogadores iniciam a partida com
+        <strong>10 pontos</strong>.
       </p>
 
       <p>
@@ -96,6 +190,8 @@
       </p>
 
       <hr>
+
+      <!-- RODADA -->
 
       <h2 id="rodada">🎴 Como funciona uma rodada</h2>
 
@@ -135,6 +231,125 @@
 
       <hr>
 
+      <!-- COMBINAÇÕES VÁLIDAS -->
+
+      <h2 id="combinacoes">🃏 Combinações Válidas</h2>
+
+      <p>
+        No Cachetão Pro, os jogos podem ser formados por
+        <strong>sequências do mesmo naipe</strong> ou por
+        <strong>cartas do mesmo valor</strong>.
+      </p>
+
+      <p>
+        Como são utilizados dois baralhos, é possível formar jogos
+        com cartas repetidas, inclusive do mesmo naipe.
+      </p>
+
+      <h3>Sequências do mesmo naipe</h3>
+
+      <p>
+        São formadas por três ou mais cartas consecutivas
+        do mesmo naipe.
+      </p>
+
+      <div class="howto-combination">
+        <h3>Exemplo 1 — Sequência de três cartas</h3>
+
+        <div class="howto-cards">
+          <span class="howto-card red">7♥</span>
+          <span class="howto-card red">8♥</span>
+          <span class="howto-card red">9♥</span>
+        </div>
+
+        <p>Três cartas consecutivas de copas.</p>
+      </div>
+
+      <div class="howto-combination">
+        <h3>Exemplo 2 — Sequência de quatro cartas</h3>
+
+        <div class="howto-cards">
+          <span class="howto-card">10♣</span>
+          <span class="howto-card">J♣</span>
+          <span class="howto-card">Q♣</span>
+          <span class="howto-card">K♣</span>
+        </div>
+
+        <p>Quatro cartas consecutivas de paus.</p>
+      </div>
+
+      <div class="howto-combination">
+        <h3>Exemplo 3 — Sequência de cinco cartas</h3>
+
+        <div class="howto-cards">
+          <span class="howto-card">4♠</span>
+          <span class="howto-card">5♠</span>
+          <span class="howto-card">6♠</span>
+          <span class="howto-card">7♠</span>
+          <span class="howto-card">8♠</span>
+        </div>
+
+        <p>Cinco cartas consecutivas de espadas.</p>
+      </div>
+
+      <h3>Cartas do mesmo valor</h3>
+
+      <p>
+        Também são válidos jogos formados por três, quatro ou cinco
+        cartas do mesmo valor.
+      </p>
+
+      <div class="howto-combination">
+        <h3>Exemplo 4 — Trinca</h3>
+
+        <div class="howto-cards">
+          <span class="howto-card">Q♣</span>
+          <span class="howto-card red">Q♥</span>
+          <span class="howto-card">Q♠</span>
+        </div>
+
+        <p>Três damas de naipes diferentes.</p>
+      </div>
+
+      <div class="howto-combination">
+        <h3>Exemplo 5 — Quadra do mesmo valor</h3>
+
+        <div class="howto-cards">
+          <span class="howto-card">7♣</span>
+          <span class="howto-card red">7♦</span>
+          <span class="howto-card red">7♥</span>
+          <span class="howto-card">7♣</span>
+        </div>
+
+        <p>
+          Quatro cartas de valor 7. Observe que o
+          <strong>7♣ aparece duas vezes</strong>,
+          o que é permitido porque existem dois baralhos.
+        </p>
+      </div>
+
+      <div class="howto-combination">
+        <h3>Exemplo 6 — Quina do mesmo valor</h3>
+
+        <div class="howto-cards">
+          <span class="howto-card red">A♦</span>
+          <span class="howto-card">A♣</span>
+          <span class="howto-card">A♠</span>
+          <span class="howto-card">A♣</span>
+          <span class="howto-card">A♠</span>
+        </div>
+
+        <p>
+          Cinco ases. É permitido repetir cartas do mesmo
+          valor e naipe, respeitando as cartas disponíveis
+          nos dois baralhos.
+        </p>
+      </div>
+
+      <hr>
+
+      <!-- CORINGA -->
+
       <h2 id="coringa">🃏 O Coringa</h2>
 
       <p>
@@ -152,11 +367,93 @@
       </div>
 
       <p>
-        O coringa pode substituir qualquer carta em sequências e trincas.
-        Também é permitido utilizar dois coringas no mesmo jogo.
+        O coringa pode substituir qualquer carta em sequências
+        e jogos do mesmo valor.
+        Também é permitido utilizar
+        <strong>dois coringas no mesmo jogo</strong>.
       </p>
 
+      <h3>Exemplos de utilização dos coringas</h3>
+
+      <div class="howto-combination">
+        <h3>Exemplo 1 — Trinca com um coringa</h3>
+
+        <div class="howto-cards">
+          <span class="howto-card">10♣</span>
+          <span class="howto-card red">10♦</span>
+          <span class="howto-card joker">🃏</span>
+        </div>
+
+        <p>
+          O coringa substitui outro 10, completando a trinca.
+        </p>
+      </div>
+
+      <div class="howto-combination">
+        <h3>Exemplo 2 — Quadra com um coringa</h3>
+
+        <div class="howto-cards">
+          <span class="howto-card">10♣</span>
+          <span class="howto-card red">10♦</span>
+          <span class="howto-card red">10♦</span>
+          <span class="howto-card joker">🃏</span>
+        </div>
+
+        <p>
+          Três cartas de valor 10 e um coringa formam
+          uma quadra válida.
+        </p>
+      </div>
+
+      <div class="howto-combination">
+        <h3>Exemplo 3 — Trinca com dois coringas</h3>
+
+        <div class="howto-cards">
+          <span class="howto-card">9♠</span>
+          <span class="howto-card joker">🃏</span>
+          <span class="howto-card joker">🃏</span>
+        </div>
+
+        <p>
+          Uma carta natural de valor 9 e dois coringas
+          formam uma trinca válida.
+        </p>
+      </div>
+
+      <div class="howto-combination">
+        <h3>Exemplo 4 — Sequência com um coringa</h3>
+
+        <div class="howto-cards">
+          <span class="howto-card">10♣</span>
+          <span class="howto-card joker">🃏</span>
+          <span class="howto-card">Q♣</span>
+        </div>
+
+        <p>
+          O coringa representa o J♣, formando a sequência
+          10♣, J♣ e Q♣.
+        </p>
+      </div>
+
+      <div class="howto-combination">
+        <h3>Exemplo 5 — Sequência com dois coringas</h3>
+
+        <div class="howto-cards">
+          <span class="howto-card">7♠</span>
+          <span class="howto-card joker">🃏</span>
+          <span class="howto-card joker">🃏</span>
+          <span class="howto-card">10♠</span>
+        </div>
+
+        <p>
+          Os dois coringas representam 8♠ e 9♠,
+          completando uma sequência de quatro cartas.
+        </p>
+      </div>
+
       <hr>
+
+      <!-- JOGAR -->
 
       <h2 id="jogar">🟢 Jogar</h2>
 
@@ -169,6 +466,8 @@
       </p>
 
       <hr>
+
+      <!-- JOGAR COM A VIRA -->
 
       <h2 id="jogar-vira">🎴 Jogar com a Vira</h2>
 
@@ -219,6 +518,8 @@
 
       <hr>
 
+      <!-- CORRER -->
+
       <h2 id="correr">⚪ Correr</h2>
 
       <p>Ao escolher <strong>Correr</strong>:</p>
@@ -235,6 +536,8 @@
 
       <hr>
 
+      <!-- MARRA -->
+
       <h2 id="marra">⚔ Marra</h2>
 
       <p>
@@ -250,6 +553,8 @@
       </ul>
 
       <hr>
+
+      <!-- FORMAS DE BATIDA -->
 
       <h2 id="bati">🏆 Formas de Batida</h2>
 
@@ -272,6 +577,87 @@
         </li>
       </ul>
 
+      <h3>Exemplos completos de batida</h3>
+
+      <div class="howto-combination">
+        <h3>Batida Simples — 3 + 3 + 3</h3>
+
+        <div class="howto-cards">
+          <span class="howto-card">3♣</span>
+          <span class="howto-card">4♣</span>
+          <span class="howto-card">5♣</span>
+
+          <span class="howto-plus">+</span>
+
+          <span class="howto-card red">7♥</span>
+          <span class="howto-card red">8♥</span>
+          <span class="howto-card red">9♥</span>
+
+          <span class="howto-plus">+</span>
+
+          <span class="howto-card">K♣</span>
+          <span class="howto-card red">K♦</span>
+          <span class="howto-card">K♠</span>
+        </div>
+
+        <p>
+          Três jogos válidos de três cartas cada.
+          O jogador utiliza suas nove cartas para bater.
+        </p>
+      </div>
+
+      <div class="howto-combination">
+        <h3>Batida de Quadra e Quina — 4 + 5</h3>
+
+        <div class="howto-cards">
+          <span class="howto-card">7♣</span>
+          <span class="howto-card red">7♦</span>
+          <span class="howto-card red">7♥</span>
+          <span class="howto-card">7♣</span>
+
+          <span class="howto-plus">+</span>
+
+          <span class="howto-card red">A♦</span>
+          <span class="howto-card">A♣</span>
+          <span class="howto-card">A♠</span>
+          <span class="howto-card">A♣</span>
+          <span class="howto-card">A♠</span>
+        </div>
+
+        <p>
+          Uma quadra de valor 7 e uma quina de ases.
+          São nove cartas organizadas em dois jogos válidos.
+        </p>
+      </div>
+
+      <div class="howto-combination">
+        <h3>Batida de Dez — 3 + 3 + 4</h3>
+
+        <div class="howto-cards">
+          <span class="howto-card">3♣</span>
+          <span class="howto-card">4♣</span>
+          <span class="howto-card">5♣</span>
+
+          <span class="howto-plus">+</span>
+
+          <span class="howto-card red">7♥</span>
+          <span class="howto-card red">8♥</span>
+          <span class="howto-card red">9♥</span>
+
+          <span class="howto-plus">+</span>
+
+          <span class="howto-card">J♠</span>
+          <span class="howto-card">Q♠</span>
+          <span class="howto-card">K♠</span>
+          <span class="howto-card">A♠</span>
+        </div>
+
+        <p>
+          Dois jogos de três cartas e um jogo de quatro cartas.
+          O jogador utiliza as dez cartas, sem descarte.
+        </p>
+      </div>
+
       <p>
         O jogador pode declarar <strong>BATI</strong> inclusive fora do seu turno,
         respeitando a prioridade do jogador da vez.
@@ -283,6 +669,8 @@
       </p>
 
       <hr>
+
+      <!-- BATER COM A VIRA -->
 
       <h2 id="bater-vira">🏆 Bater com a Vira</h2>
 
@@ -347,6 +735,8 @@
 
       <hr>
 
+      <!-- PONTUAÇÃO -->
+
       <h2 id="pontuacao">💰 Pontuação</h2>
 
       <table class="rules-table">
@@ -386,6 +776,8 @@
       </table>
 
       <hr>
+
+      <!-- DICAS -->
 
       <h2 id="dicas">💡 Dicas</h2>
 
