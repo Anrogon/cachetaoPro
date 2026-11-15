@@ -2270,7 +2270,7 @@ function resetRoomForRematch(room) {
 
   for (const p of room.playersBySeat || []) {
     if (!p) continue;
-    p.nextMatchReady = false;
+    p.nextMatchReady = true;
 
     p.hand = [];
     p.totalPoints = 10;
@@ -3091,24 +3091,66 @@ function hasFreeSeat(room, seat) {
 function findOrCreateRoomForGroup(tableGroupId, seat) {
   const groupId = String(tableGroupId);
 
+  let waitingRoom = null;
+  let waitingCount = 0;
+
+  // Prioridade 1: instância com jogadores aguardando revanche.
   for (const room of rooms.values()) {
-    const sameGroup = String(room.tableGroupId || room.id) === groupId;
+    const sameGroup =
+      String(room.tableGroupId || room.id) === groupId;
+
+    if (!sameGroup || !hasFreeSeat(room, seat)) continue;
+
+    const players = (room.playersBySeat || []).filter(Boolean);
+
+    const allReady =
+      players.length > 0 &&
+      players.every(p => p.nextMatchReady === true);
+
+    const available =
+      (!room.started && !room.matchEnded) ||
+      (room.matchEnded && allReady);
+
+    if (!available) continue;
+
+    if (players.length > waitingCount) {
+      waitingRoom = room;
+      waitingCount = players.length;
+    }
+  }
+
+  if (waitingRoom) {
+    // Prepara a próxima partida, preservando os jogadores sentados.
+    if (waitingRoom.matchEnded) {
+      resetRoomForRematch(waitingRoom);
+    }
+
+    return waitingRoom;
+  }
+
+  // Prioridade 2: instância disponível, mesmo vazia.
+  for (const room of rooms.values()) {
+    const sameGroup =
+      String(room.tableGroupId || room.id) === groupId;
+
     if (!sameGroup) continue;
 
-    const canJoin =
+    if (
       !room.started &&
       !room.matchEnded &&
-      hasFreeSeat(room, seat);
-
-    if (canJoin) {
+      hasFreeSeat(room, seat)
+    ) {
       return room;
     }
   }
 
+  // Prioridade 3: criar uma nova instância.
   const base = getBaseTableConfig(groupId);
   if (!base) return null;
 
-  const nextNo = (Number(roomInstanceCounters.get(groupId)) || 1) + 1;
+  const nextNo =
+    (Number(roomInstanceCounters.get(groupId)) || 1) + 1;
+
   roomInstanceCounters.set(groupId, nextNo);
 
   const newRoomId = `${groupId}#${nextNo}`;
@@ -3123,6 +3165,7 @@ function findOrCreateRoomForGroup(tableGroupId, seat) {
   room.instanceNo = nextNo;
 
   rooms.set(newRoomId, room);
+
   return room;
 }
 
@@ -3693,7 +3736,43 @@ function findPlayerRoomInGroupByUserId(tableGroupId, userId) {
 function getLobbyRoomForGroup(tableGroupId) {
   const groupId = String(tableGroupId);
 
-  // prioridade 1: room do grupo que ainda não começou
+  // Prioridade 1: mesa disponível com jogadores aguardando.
+  let waitingRoom = null;
+  let waitingCount = 0;
+
+  for (const room of rooms.values()) {
+    if (String(room.tableGroupId || room.id) !== groupId) continue;
+
+    const players = (room.playersBySeat || []).filter(Boolean);
+    const count = players.length;
+
+    // Mesa disponível para uma nova partida.
+    if (!room.started && !room.matchEnded) {
+      if (count > waitingCount) {
+        waitingRoom = room;
+        waitingCount = count;
+      }
+      continue;
+    }
+
+    // Partida encerrada: somente jogadores que escolheram revanche.
+    if (
+      room.matchEnded &&
+      count > 0 &&
+      players.every(p => p.nextMatchReady === true)
+    ) {
+      if (count > waitingCount) {
+        waitingRoom = room;
+        waitingCount = count;
+      }
+    }
+  }
+
+  if (waitingRoom) {
+    return waitingRoom;
+  }
+
+  // Prioridade 2: instância normal disponível.
   for (const room of rooms.values()) {
     if (String(room.tableGroupId || room.id) !== groupId) continue;
 
@@ -3702,7 +3781,7 @@ function getLobbyRoomForGroup(tableGroupId) {
     }
   }
 
-  // prioridade 2: se todas começaram, cria nova instância vazia
+  // Prioridade 3: criar ou localizar uma instância disponível.
   const base = getBaseTableConfig(groupId);
   if (!base) return rooms.get(groupId) || null;
 
