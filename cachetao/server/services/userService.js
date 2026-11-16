@@ -14,6 +14,7 @@ async function findUserByEmail(email) {
       is_blocked,
       blocked_reason,
       must_reset_password,
+      email_verified,
       session_version,
       created_at,
       updated_at

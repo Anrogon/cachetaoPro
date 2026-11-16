@@ -28,6 +28,7 @@ async function doSignup() {
   const password = document.getElementById("signupPassword")?.value || "";
   const avatarUrl = "./assets/avatars/avatar-01.png";
   const acceptTerms = document.getElementById("acceptTerms");
+  const turnstileToken = window.turnstile?.getResponse() || "";
 
   if (!username || !email || !password) {
     showMessage("Preencha nome, e-mail e senha.", true);
@@ -38,6 +39,13 @@ async function doSignup() {
 
   if (!acceptTerms?.checked) {
     showMessage("Você precisa aceitar os Termos de Uso e a Política de Privacidade.", true);
+    signupBusy = false;
+    if (btn) btn.disabled = false;
+    return;
+  }
+
+  if (!turnstileToken) {
+    showMessage("Confirme a verificação Sou humano antes de criar sua conta.", true);
     signupBusy = false;
     if (btn) btn.disabled = false;
     return;
@@ -58,6 +66,7 @@ async function doSignup() {
         password,
         avatarUrl,
         acceptedTerms: true,
+        turnstileToken,
       }),
     });
 
@@ -72,11 +81,16 @@ async function doSignup() {
       return;
     }
 
-    showMessage("Conta criada com sucesso.");
+    showMessage(
+    data?.message ||
+    "Cadastro realizado com sucesso! Enviamos um link de confirmação para seu e-mail."
+  );
 
-    setTimeout(() => {
-      window.location.href = "./login.html";
-    }, 800);
+  setTimeout(() => {
+    window.location.href = "./login.html";
+  }, 5000);
+
+  
   } catch (err) {
     console.error("Erro no cadastro:", err);
     showMessage(`Não foi possível conectar ao servidor de autenticação. (${err.message})`, true);

@@ -276,6 +276,13 @@ button{
 
 }
 
+/* Verificação Sou humano */
+.turnstile-container {
+  display: flex;
+  justify-content: center;
+  margin: 0 0 18px;
+}
+
 </style>
 
 </head>
@@ -329,9 +336,14 @@ Política de Privacidade
 
 </div>
 
-<div class="signup-info">
-  🎮 Seu avatar poderá ser escolhido posteriormente na página <strong>Perfil</strong>.
+<div class="turnstile-container">
+  <div
+    class="cf-turnstile"
+    data-sitekey="0x4AAAAAAGCt4qtodU5XiiF6"
+    data-theme="light">
+  </div>
 </div>
+
 <div class="auth-actions">
 
 <button
@@ -375,6 +387,8 @@ Entrar
 </div>
 
 </div>
+
+<script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
 
 <script src="../js/signup.js"></script>
 

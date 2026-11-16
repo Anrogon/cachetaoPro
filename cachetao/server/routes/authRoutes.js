@@ -4,6 +4,12 @@ const jwt = require("jsonwebtoken");
 const pool = require("../config/db");
 const { findUserByEmail, findUserById, createUser, logAdminAction } = require("../services/userService");
 const { requireAuth, requireAdmin } = require("../middleware/auth");
+const { createEmailVerificationToken, verifyEmailToken} = require("../services/emailVerificationService");
+const { sendVerificationEmail, sendPasswordResetEmail} = require("../services/emailService");
+const { createPasswordResetToken, resetPasswordWithToken} = require("../services/passwordResetService");
+
+
+
 const router = express.Router();
 
 
@@ -37,6 +43,7 @@ router.post("/signup", async (req, res) => {
     const email = String(req.body?.email || "").trim().toLowerCase();
     const password = String(req.body?.password || "");
     const avatarUrl = String(req.body?.avatarUrl || "").trim() || null;
+    const turnstileToken = String(req.body?.turnstileToken || "").trim();
 
     if (!username || username.length < 3) {
       return res.status(400).json({
@@ -59,7 +66,47 @@ router.post("/signup", async (req, res) => {
       });
     }
 
+    // Validação do Cloudflare Turnstile
+    if (!turnstileToken) {
+      return res.status(400).json({
+        ok: false,
+        message: "Confirme a verificação Sou humano antes de criar sua conta.",
+      });
+    }
+
+    const verificationResponse = await fetch(
+      "https://challenges.cloudflare.com/turnstile/v0/siteverify",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded",
+        },
+        body: new URLSearchParams({
+          secret: process.env.TURNSTILE_SECRET_KEY || "",
+          response: turnstileToken,
+        }),
+        signal: AbortSignal.timeout(10000),
+      }
+    );
+
+    if (!verificationResponse.ok) {
+      return res.status(502).json({
+        ok: false,
+        message: "Não foi possível validar a verificação Sou humano. Tente novamente.",
+      });
+    }
+
+    const verificationResult = await verificationResponse.json();
+
+    if (!verificationResult.success) {
+      return res.status(400).json({
+        ok: false,
+        message: "Verificação Sou humano inválida ou expirada. Tente novamente.",
+      });
+    }
+
     const existing = await findUserByEmail(email);
+
     if (existing) {
       return res.status(409).json({
         ok: false,
@@ -76,18 +123,301 @@ router.post("/signup", async (req, res) => {
       avatarUrl,
     });
 
+    // Gera um token de confirmação válido por 24 horas.
+    const verificationToken = await createEmailVerificationToken(user.id);
+
+    // Envia o link de confirmação para o e-mail cadastrado.
+    try {
+      await sendVerificationEmail(email, verificationToken);
+    } catch (emailError) {
+      console.error("Erro ao enviar e-mail de confirmação:", emailError);
+    }
+
     return res.status(201).json({
       ok: true,
+      message: "Cadastro realizado com sucesso! Enviamos um link de confirmação para seu e-mail.",
       user: sanitizeUser(user),
     });
+
   } catch (err) {
     console.error("POST /signup error:", err);
+
     return res.status(500).json({
       ok: false,
       message: "Erro interno ao criar conta.",
     });
   }
 });
+
+
+// =========================================================
+// CONFIRMAÇÃO DE E-MAIL
+// =========================================================
+
+router.get("/verify-email", async (req, res) => {
+  try {
+    const token = String(req.query?.token || "").trim();
+
+    const result = await verifyEmailToken(token);
+
+    const success = result.success;
+
+    const title = success
+      ? "E-mail confirmado!"
+      : "Link inválido ou expirado";
+
+    const message = success
+      ? "Seu e-mail foi confirmado com sucesso! Você já pode acessar sua conta."
+      : "O link de confirmação é inválido ou expirou. Solicite um novo link de confirmação.";
+
+    const loginUrl = `${
+      process.env.FRONTEND_BASE_URL || "https://www.cachetaopro.com.br"
+    }/login.html`;
+
+    return res.status(success ? 200 : 400).send(`
+      <!DOCTYPE html>
+      <html lang="pt-BR">
+      <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+        <title>Confirmação de E-mail - Cachetão Pro</title>
+
+        <style>
+          * {
+            box-sizing: border-box;
+          }
+
+          body {
+            margin: 0;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            background: #103c2b;
+            font-family: Arial, sans-serif;
+            color: #ffffff;
+          }
+
+          .verification-card {
+            width: 100%;
+            max-width: 440px;
+            padding: 35px 25px;
+            background: #18543c;
+            border: 1px solid #36845f;
+            border-radius: 14px;
+            text-align: center;
+          }
+
+          h1 {
+            margin: 0 0 18px;
+            font-size: 26px;
+            color: #ffd54f;
+          }
+
+          p {
+            font-size: 16px;
+            line-height: 1.6;
+            margin-bottom: 28px;
+          }
+
+          a {
+            display: inline-block;
+            padding: 13px 24px;
+            border-radius: 8px;
+            background: #ffd54f;
+            color: #183a2c;
+            font-weight: bold;
+            text-decoration: none;
+          }
+
+          a:hover {
+            background: #ffe47f;
+          }
+        </style>
+      </head>
+
+      <body>
+        <div class="verification-card">
+          <h1>${title}</h1>
+          <p>${message}</p>
+          <a href="${loginUrl}">Ir para o Login</a>
+        </div>
+      </body>
+      </html>
+    `);
+
+  } catch (err) {
+    console.error("GET /verify-email error:", err);
+
+    return res.status(500).send(
+      "Erro interno ao confirmar o e-mail."
+    );
+  }
+});
+
+
+// =========================================================
+// REENVIAR CONFIRMAÇÃO DE E-MAIL
+// =========================================================
+
+router.post("/resend-verification", async (req, res) => {
+  try {
+    const email = String(req.body?.email || "").trim().toLowerCase();
+
+    if (!email || !email.includes("@")) {
+      return res.status(400).json({
+        ok: false,
+        message: "Informe um e-mail válido.",
+      });
+    }
+
+    const response = {
+      ok: true,
+      message: "Solicitação recebida! Confira sua caixa de entrada.",
+    };
+
+    const user = await findUserByEmail(email);
+
+    // Não revela se o e-mail está cadastrado ou já confirmado.
+    if (!user || user.email_verified === true) {
+      return res.json(response);
+    }
+
+    // Impede reenvios sucessivos em um intervalo de 5 minutos.
+    const recentToken = await pool.query(
+      `SELECT 1
+       FROM email_verification_tokens
+       WHERE user_id = $1
+         AND created_at > NOW() - INTERVAL '5 minutes'
+       LIMIT 1`,
+      [user.id]
+    );
+
+    if (recentToken.rows.length > 0) {
+      return res.json(response);
+    }
+
+    const token = await createEmailVerificationToken(user.id);
+
+    try {
+      await sendVerificationEmail(user.email, token);
+    } catch (emailError) {
+      console.error(
+        "Erro ao reenviar confirmação de e-mail:",
+        emailError
+      );
+    }
+
+    return res.json(response);
+
+  } catch (err) {
+    console.error("POST /resend-verification error:", err);
+
+    return res.status(500).json({
+      ok: false,
+      message: "Erro interno ao solicitar confirmação de e-mail.",
+    });
+  }
+});
+
+
+
+/* =========================================================
+   RECUPERAÇÃO DE SENHA POR E-MAIL
+========================================================= */
+
+router.post("/forgot-password", async (req, res) => {
+  const response = {
+    ok: true,
+    message: "Solicitação recebida! Confira sua caixa de entrada.",
+  };
+
+  try {
+    const email = String(req.body?.email || "").trim().toLowerCase();
+
+    if (!email || !email.includes("@")) {
+      return res.status(400).json({
+        ok: false,
+        message: "Informe um e-mail válido.",
+      });
+    }
+
+    const user = await findUserByEmail(email);
+
+    // Não revela se o e-mail está cadastrado.
+    if (!user) {
+      return res.json(response);
+    }
+
+    const token = await createPasswordResetToken(user.id);
+
+    try {
+      await sendPasswordResetEmail(user.email, token);
+    } catch (emailError) {
+      console.error("Erro ao enviar e-mail de recuperação:", emailError);
+    }
+
+    return res.json(response);
+
+  } catch (err) {
+    console.error("POST /forgot-password error:", err);
+
+    return res.status(500).json({
+      ok: false,
+      message: "Erro ao processar a recuperação de senha.",
+    });
+  }
+});
+
+
+router.post("/reset-password", async (req, res) => {
+  try {
+    const token = String(req.body?.token || "").trim();
+    const newPassword = String(req.body?.newPassword || "");
+
+    if (!token) {
+      return res.status(400).json({
+        ok: false,
+        message: "O link de recuperação é inválido ou expirou. Solicite um novo link.",
+      });
+    }
+
+    if (newPassword.length < 6) {
+      return res.status(400).json({
+        ok: false,
+        message: "A nova senha deve ter pelo menos 6 caracteres.",
+      });
+    }
+
+    const passwordHash = await bcrypt.hash(newPassword, 10);
+
+    const success = await resetPasswordWithToken(token, passwordHash);
+
+    if (!success) {
+      return res.status(400).json({
+        ok: false,
+        message: "O link de recuperação é inválido ou expirou. Solicite um novo link.",
+      });
+    }
+
+    return res.json({
+      ok: true,
+      message: "Senha redefinida com sucesso! Você já pode acessar sua conta.",
+    });
+
+  } catch (err) {
+    console.error("POST /reset-password error:", err);
+
+    return res.status(500).json({
+      ok: false,
+      message: "Erro ao redefinir senha.",
+    });
+  }
+});
+
+
 
 router.post("/login", async (req, res) => {
   try {
@@ -117,26 +447,33 @@ router.post("/login", async (req, res) => {
       });
     }
 
+    // Verifica se a conta está bloqueada pela administração.
     if (user.is_blocked === true || user.is_blocked === 1) {
-    return res.status(403).json({
-    ok: false,
-    message: user.blocked_reason
-      ? `Conta bloqueada. Motivo: ${user.blocked_reason}`
-      : "Conta bloqueada.",
-    });
+      return res.status(403).json({
+        ok: false,
+        message: user.blocked_reason
+          ? `Conta bloqueada. Motivo: ${user.blocked_reason}`
+          : "Conta bloqueada.",
+      });
     }
 
-
+    // Impede o login enquanto o e-mail não for confirmado.
+    if (user.email_verified === false) {
+      return res.status(403).json({
+        ok: false,
+        message: "Seu e-mail ainda não foi confirmado.",
+      });
+    }
 
     const token = jwt.sign(
-  {
-    userId: user.id,
-    email: user.email,
-    sessionVersion: Number(user.session_version || 1),
-  },
-  process.env.JWT_SECRET,
-  { expiresIn: "7d" }
-  );
+      {
+        userId: user.id,
+        email: user.email,
+        sessionVersion: Number(user.session_version || 1),
+      },
+      process.env.JWT_SECRET,
+      { expiresIn: "7d" }
+    );
 
     res.cookie("pontinho_token", token, {
       httpOnly: true,
@@ -150,8 +487,10 @@ router.post("/login", async (req, res) => {
       token,
       user: sanitizeUser(user),
     });
+
   } catch (err) {
     console.error("POST /login error:", err);
+
     return res.status(500).json({
       ok: false,
       message: "Erro interno ao fazer login.",

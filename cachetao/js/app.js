@@ -206,9 +206,29 @@ if (msg.type === "table_public") {
   window.state = window.state || {};
   window.state.tables = window.state.tables || {};
 
+  const prev = window.state.tables[table.id] || {};
+
+  const mergedSeats = Array.isArray(table.seats)
+    ? table.seats.map((seat, idx) => {
+        if (!seat) return null;
+
+        const oldSeat = Array.isArray(prev.seats)
+          ? prev.seats[idx]
+          : null;
+
+        
+      return {
+        ...oldSeat,
+        ...seat
+      };
+      })
+      : prev.seats;
+
+
   window.state.tables[table.id] = {
-    ...(window.state.tables[table.id] || {}),
-    ...table
+    ...prev,
+    ...table,
+    seats: mergedSeats
   };
 
   const tablesScreen = document.getElementById("tablesScreen");

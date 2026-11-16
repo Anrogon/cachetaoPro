@@ -167,20 +167,77 @@
 
   #homeScreen .home-banner {
     width: min(92vw, 360px);
+    height: auto;
+    display: grid;
+    grid-template-columns: 1fr;
     margin: 14px auto 0;
-    padding: 14px;
+    padding: 12px;
+    gap: 10px;
+    box-sizing: border-box;
 
+    background: linear-gradient(135deg, #07351f, #041f14);
+    border: 1px solid rgba(255,255,255,0.12);
     border-radius: 16px;
   }
 
-  #homeScreen .home-banner-title {
-    font-size: 16px;
-    line-height: 1.2;
+  #homeScreen .home-banner-heading {
+    font-size: 15px;
   }
 
-  #homeScreen .home-banner-sub {
-    font-size: 13px;
-    line-height: 1.25;
+  #homeScreen .home-banner-game {
+    display: flex;
+    align-items: center;
+    padding: 10px;
+    gap: 10px;
+
+    min-width: 0;
+    border-radius: 12px;
+    background: rgba(255,255,255,0.09);
+    border: 1px solid rgba(255,255,255,0.16);
+
+    color: #fff;
+    text-decoration: none;
+  }
+
+  #homeScreen .home-banner-game-logo {
+    width: 70px;
+    height: 70px;
+  }
+
+  #homeScreen .home-banner-game-title {
+    font-size: 15px;
+  }
+
+  #homeScreen .home-banner-game-sub {
+    font-size: 12px;
+  }
+
+  #homeScreen .home-banner-game-button {
+    font-size: 11px;
+    padding: 6px 10px;
+  }
+
+  #homeScreen .home-banner-game-title,
+  #homeScreen .home-banner-game-sub {
+    color: #fff;
+    text-decoration: none;
+  }
+
+  #homeScreen .home-banner-game-info {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+    min-width: 0;
+  }
+
+  #homeScreen .home-banner-game-button {
+    display: inline-block;
+    background: #e5b74a;
+    color: #182417;
+    border-radius: 8px;
+    font-weight: 900;
+    text-decoration: none;
   }
 
   #homeScreen .home-live-section,
@@ -205,9 +262,6 @@
     display: none !important;
   }
 
-  #homeScreen .home-banner {
-    display: none !important;
-  }
 
   #homeScreen .home-lastrow,
   #homeScreen .home-panels {
